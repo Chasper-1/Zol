@@ -19,6 +19,8 @@ impl EditorWidget {
 
         area.set_draw_func(move |widget, cr, width, height| {
             cr.set_antialias(Antialias::Best);
+            let scale = widget.scale_factor() as f64;
+            cr.scale(1.0 / scale, 1.0 / scale);
 
             let (theme, mx, my, scale) = {
                 let st = state_rc.borrow();
@@ -38,24 +40,22 @@ impl EditorWidget {
                 return;
             }
 
-            // --- Отрисовка фона и рамки (восстановлено) ---
-            // Заливка фона
+            // Отрисовка фона
             if let Some((r, g, b, a)) = hex_to_rgba(&theme.background) {
                 cr.set_source_rgba(r, g, b, a);
                 rounded_rect(cr, padding, padding, w, h, theme.radius as f64);
                 cr.fill().unwrap();
             }
 
-            // Рамка
+            // Отрисовка рамки
             if let Some((r, g, b, a)) = hex_to_rgba(&theme.border_color) {
                 cr.set_source_rgba(r, g, b, a);
                 cr.set_line_width(theme.border_width as f64);
                 rounded_rect(cr, padding, padding, w, h, theme.radius as f64);
                 cr.stroke().unwrap();
             }
-            // --- Конец отрисовки фона и рамки ---
 
-            // Обновление размера буфера и применение shape_until_scroll
+            // Обновление размера буфера и shape_until_scroll
             {
                 let mut st = state_rc.borrow_mut();
                 st.buffer
@@ -82,8 +82,8 @@ impl EditorWidget {
             for (line_y, glyphs) in layout_runs {
                 for glyph in glyphs {
                     let physical = glyph.physical(
-                        ((padding + mx) as f32, (padding + my + line_y) as f32),
-                        scale as f32,
+                        ((padding + mx) as f32 * scale as f32, (padding + my + line_y) as f32 * scale as f32),
+                        scale as f32
                     );
 
                     {
@@ -102,24 +102,53 @@ impl EditorWidget {
                                 continue;
                             }
 
+                            let data = &image.data;
+                            let data_len = data.len();
+                            let width_orig = image.placement.width as usize;
+                            let height_orig = image.placement.height as usize;
+                            let expected_len = width_orig * height_orig;
+
+                            // Определяем реальные размеры поверхности на основе длины данных
+                            let (surface_width, surface_height) = if data_len == expected_len {
+                                (width_orig, height_orig)
+                            } else if data_len % height_orig == 0 {
+                                (data_len / height_orig, height_orig)
+                            } else if data_len % width_orig == 0 {
+                                (width_orig, data_len / width_orig)
+                            } else {
+                                // Некорректные данные — используем оригинальные размеры,
+                                // но скопируем только доступную часть
+                                (width_orig, height_orig)
+                            };
+
                             let mut surface = ImageSurface::create(
                                 Format::A8,
-                                image.placement.width as i32,
-                                image.placement.height as i32,
+                                surface_width as i32,
+                                surface_height as i32,
                             )
                             .unwrap();
-                            if let Ok(mut data) = surface.data() {
-                                data.copy_from_slice(&image.data);
+
+                            if let Ok(mut surf_data) = surface.data() {
+                                let surf_len = surf_data.len();
+                                if surf_len == data_len {
+                                    surf_data.copy_from_slice(data);
+                                } else {
+                                    let copy_len = surf_len.min(data_len);
+                                    // Побайтовое копирование, чтобы избежать паники при несовпадении длин
+                                    for i in 0..copy_len {
+                                        surf_data[i] = data[i];
+                                    }
+                                    // Остальные байты уже нулевые (ImageSurface::create обнуляет)
+                                }
                             }
 
                             cr.save().unwrap();
                             cr.set_source_rgba(tr, tg, tb, ta);
                             cr.mask_surface(
                                 &surface,
-                                (physical.x as f64 / scale) + image.placement.left as f64,
-                                (physical.y as f64 / scale) + image.placement.top as f64,
-                            )
-                            .unwrap();
+                                physical.x as f64 + image.placement.left as f64,
+                                physical.y as f64 + image.placement.top as f64
+                            ).unwrap();
                             cr.restore().unwrap();
                         }
                     }
