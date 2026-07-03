@@ -1,0 +1,50 @@
+/* src/webkit/render.css */
+
+.workspace-grid {
+    background-color: #16161a;
+    padding: 20px;
+}
+
+/* Наглухо срезаем рамки со скроллбара и самого текстового поля */
+scrolledwindow,
+textview,
+text {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.editor-card {
+    background-color: #1f1f2e;
+    border: 1px solid #333344 !important;
+    border-radius: 8px;
+    padding: 24px;
+}
+
+.editor-content {
+    color: #fffffe;
+    font-family: "Segoe UI", sans-serif;
+    font-size: 13pt;
+}
+
+#h1 {
+    font-size: 26pt;
+    font-weight: bold;
+    color: #df6e41;
+}
+
+#bold {
+    font-weight: bold;
+    color: #ff85a2;
+}
+
+#italic {
+    font-style: italic;
+    color: #b3e5fc;
+}
+
+#code_block {
+    font-family: "Monospace";
+    background-color: #111116;
+    color: #a8ff60;
+}

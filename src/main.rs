@@ -1,9 +1,9 @@
 // src/main.rs
-use gtk::Application;
-use gtk::prelude::*;
+use gtk4::Application;
+use gtk4::prelude::*;
 
-// Подключаем изолированный модуль из папки webkit
-mod webkit;
+// Подключаем изолированный модуль из папки gui
+mod gui;
 
 fn main() {
     let app = Application::builder()
@@ -11,7 +11,7 @@ fn main() {
         .build();
 
     // Запускаем временный интерфейс
-    app.connect_activate(webkit::build_ui);
+    app.connect_activate(gui::build_ui);
 
     app.run();
 }
