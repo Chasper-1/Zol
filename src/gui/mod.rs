@@ -1,7 +1,9 @@
-// src/gui/mod.rs
+use crate::editor::EditorWidget;
 use gtk4::Application;
 use gtk4::prelude::*;
-use crate::editor::EditorWidget;
+
+use rhai::Engine;
+use std::fs;
 
 pub fn build_ui(app: &Application) {
     let window = gtk4::ApplicationWindow::builder()
@@ -11,27 +13,36 @@ pub fn build_ui(app: &Application) {
         .default_height(768)
         .build();
 
+    let src = match fs::read_to_string("theme.rhai") {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("theme.rhai load error: {e}");
+            String::new()
+        }
+    };
+
+    let engine = Engine::new();
+
+    let result = match engine.eval::<rhai::Map>(&src) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Rhai error: {e}");
+            rhai::Map::new()
+        }
+    };
+
+    eprintln!("Rhai OK: {:?}", result);
+
     let main_paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
-    main_paned.set_position(250);
 
     let sidebar_container = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
-    sidebar_container.set_width_request(150);
-
     let preview_container = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
-    preview_container.set_width_request(400);
-    preview_container.set_vexpand(true);
-    preview_container.set_hexpand(true);
 
     let text_view = EditorWidget::new();
-
-    let scrolled_window = gtk4::ScrolledWindow::builder()
-        .hscrollbar_policy(gtk4::PolicyType::Never)
-        .vscrollbar_policy(gtk4::PolicyType::Automatic)
-        .child(&text_view)
-        .build();
-
     text_view.set_css_classes(&["editor"]);
-    
+
+    let scrolled_window = gtk4::ScrolledWindow::builder().child(&text_view).build();
+
     preview_container.append(&scrolled_window);
 
     main_paned.set_start_child(Some(&sidebar_container));
