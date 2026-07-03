@@ -1,54 +1,53 @@
 /* src/webkit/render.css */
-/* Базовые настройки рабочей области */
-html, body {
+html,
+body {
     margin: 0;
     padding: 0;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
     background-color: #1a1a1a;
     font-family: sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
     box-sizing: border-box;
+    overflow: hidden;
 }
 
-/* Контейнер-плитка для центрирования */
+/* Главный контейнер, который теперь жестко рулит полями */
 .workspace-grid {
     width: 100%;
     height: 100%;
-    padding: 40px;
+    padding: 30px; /* Задавай любые отступы от краев нативного окна здесь */
     display: flex;
-    justify-content: center;
-    align-items: center;
     box-sizing: border-box;
 }
 
-/* Карточка редактора */
+/* Карточка редактора — занимает 100% ширины и высоты за вычетом padding выше */
 .editor-card {
     width: 100%;
-    max-width: 800px;
     height: 100%;
     background-color: #21252b;
     border: 1px solid #3e4451;
-    border-radius: 8px;
-    padding: 30px;
+    border-radius: 6px;
+    padding: 40px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
 }
 
-/* Внутреннее пространство для текста */
+/* Текстовая область */
 .editor-content {
     color: #e0e0e0;
     line-height: 1.6;
     outline: none;
-    height: 100%;
+    flex: 1;
     overflow-y: auto;
 }
 
 .editor-content h1 {
     color: #61afef;
     margin-top: 0;
+    margin-bottom: 20px;
     border-bottom: 1px solid #3e4451;
     padding-bottom: 10px;
+    font-size: 2rem;
 }
