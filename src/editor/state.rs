@@ -24,3 +24,14 @@ impl EditorState {
         &self.theme
     }
 }
+
+impl EditorState {
+    pub fn move_left(&mut self) { /* логика */ }
+    pub fn move_right(&mut self) { /* логика */ }
+    pub fn move_up(&mut self) { /* логика */ }
+    pub fn move_down(&mut self) { /* логика */ }
+
+    pub fn backspace(&mut self) { /* логика */ }
+    pub fn newline(&mut self) { /* логика */ }
+    pub fn insert_char(&mut self, _ch: char) {}
+}

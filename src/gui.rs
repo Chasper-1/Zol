@@ -1,8 +1,9 @@
 use crate::editor::renderer::Renderer;
 use crate::editor::{state::EditorState, theme};
+use crate::editor::input::Input;
 
 use gtk4::prelude::*;
-use gtk4::{Application, ApplicationWindow, DrawingArea, EventControllerKey, gdk};
+use gtk4::{Application, ApplicationWindow, DrawingArea, EventControllerKey};
 
 use rhai::Engine;
 
@@ -60,103 +61,13 @@ pub fn build_ui(app: &Application) {
 
         let controller = EventControllerKey::new();
 
-        controller.connect_key_pressed(move |_, key, _, _| {
+        controller.connect_key_pressed(move |_, key, _keycode, modifiers| {
             let mut state = state.borrow_mut();
-
-            fn char_to_byte(s: &str, column: usize) -> usize {
-                s.char_indices()
-                    .nth(column)
-                    .map(|(i, _)| i)
-                    .unwrap_or(s.len())
-            }
-
-            match key {
-                gdk::Key::Left => {
-                    if state.cursor.column > 0 {
-                        state.cursor.column -= 1;
-                    }
-                }
-
-                gdk::Key::Right => {
-                    if let Some(line) = state.lines.get(state.cursor.line) {
-                        let len = line.chars().count();
-
-                        if state.cursor.column < len {
-                            state.cursor.column += 1;
-                        }
-                    }
-                }
-
-                gdk::Key::Up => {
-                    if state.cursor.line > 0 {
-                        state.cursor.line -= 1;
-
-                        if let Some(line) = state.lines.get(state.cursor.line) {
-                            state.cursor.column =
-                                state.cursor.column.min(line.chars().count());
-                        }
-                    }
-                }
-
-                gdk::Key::Down => {
-                    if state.cursor.line + 1 < state.lines.len() {
-                        state.cursor.line += 1;
-
-                        if let Some(line) = state.lines.get(state.cursor.line) {
-                            state.cursor.column =
-                                state.cursor.column.min(line.chars().count());
-                        }
-                    }
-                }
-
-                gdk::Key::BackSpace => {
-                    let line = state.cursor.line;
-                    let col = state.cursor.column;
-
-                    if col > 0 {
-                        if let Some(text) = state.lines.get_mut(line) {
-                            let byte = char_to_byte(text, col - 1);
-                            text.remove(byte);
-                            state.cursor.column -= 1;
-                        }
-                    }
-                }
-
-                gdk::Key::Return => {
-                    let line = state.cursor.line;
-                    let col = state.cursor.column;
-
-                    if let Some(text) = state.lines.get_mut(line) {
-                        let byte = char_to_byte(text, col);
-                        let tail = text.split_off(byte);
-
-                        state.lines.insert(line + 1, tail);
-
-                        state.cursor.line += 1;
-                        state.cursor.column = 0;
-                    }
-                }
-
-                _ => {
-                    if let Some(ch) = key.to_unicode() {
-                        if !ch.is_control() {
-                            let line = state.cursor.line;
-                            let col = state.cursor.column;
-
-                            if let Some(text) = state.lines.get_mut(line) {
-                                let byte = char_to_byte(text, col);
-
-                                text.insert(byte, ch);
-
-                                state.cursor.column += 1;
-                            }
-                        }
-                    }
-                }
-            }
-
+        
+            Input::handle_key(&mut state, key, modifiers);
+        
             area_clone.queue_draw();
-
+        
             gtk4::glib::Propagation::Stop
         });
 
