@@ -1,5 +1,5 @@
 use crate::editor::state::EditorState;
-use crate::editor::layout::VisualLine;
+use crate::editor::layout::build;
 
 use gtk4::cairo::Context;
 use gtk4::pango::{FontDescription, Layout};
@@ -32,15 +32,7 @@ impl Renderer {
 
         let pango_ctx = pangocairo::functions::create_context(cr);
 
-        let lines = vec![
-            VisualLine {
-                text: "Flint Notes".into(),
-                font_size: theme.text.size,
-                font_family: theme.text.font_family.clone(),
-                x: theme.padding,
-                y: theme.padding,
-            },
-        ];
+        let lines = build(state);
 
         cr.set_source_rgb(1.0, 1.0, 1.0);
 

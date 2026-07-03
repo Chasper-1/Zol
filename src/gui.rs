@@ -31,13 +31,18 @@ pub fn build_ui(app: &Application) {
 
     let theme = theme::parse_theme(rhai_map);
 
-    let _state = Rc::new(RefCell::new(
-        EditorState::new(theme)
+    let text = std::fs::read_to_string("notes.md")
+        .unwrap_or_else(|_| String::from(
+            "Создай рядом с программой файл notes.md"
+        ));
+    
+    let state = Rc::new(RefCell::new(
+        EditorState::new(theme, text),
     ));
 
     let area = DrawingArea::new();
 
-    let state = _state.clone();
+    let state = state.clone();
     
     area.set_draw_func(move |_, cr, width, height| {
         Renderer::draw(
