@@ -30,24 +30,24 @@ pub struct Rgba {
 
 // Вспомогательная функция для получения цвета из Map
 fn map_to_color(map: &Map) -> Rgba {
+    let get_val = |key: &str| -> f32 {
+        map.get(key)
+            .map(|v| {
+                // Преобразуем f64 в f32
+                v.as_float()
+                    .unwrap_or_else(|_| v.as_int().unwrap_or(0) as f64) as f32
+            })
+            .unwrap_or(0.0)
+    };
+
     Rgba {
-        // Мы берем число, приводим к f32 и делим на 255.0
-        r: map
-            .get("r")
-            .map(|v| v.clone().cast::<f64>() as f32 / 255.0)
-            .unwrap_or(0.0),
-        g: map
-            .get("g")
-            .map(|v| v.clone().cast::<f64>() as f32 / 255.0)
-            .unwrap_or(0.0),
-        b: map
-            .get("b")
-            .map(|v| v.clone().cast::<f64>() as f32 / 255.0)
-            .unwrap_or(0.0),
-        // Альфа обычно остается в диапазоне 0.0 - 1.0, так что ее не трогаем
+        r: get_val("r") / 255.0,
+        g: get_val("g") / 255.0,
+        b: get_val("b") / 255.0,
+        // Здесь тоже приводим результат к f32
         a: map
             .get("a")
-            .map(|v| v.clone().cast::<f64>() as f32)
+            .map(|v| v.as_float().unwrap_or(1.0) as f32)
             .unwrap_or(1.0),
     }
 }
