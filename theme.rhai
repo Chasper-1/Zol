@@ -1,13 +1,12 @@
 #{
     editor: #{
-        padding: 32,
-        radius: 16,
-        background: "#18181b"
+        padding: 20.0,
+        radius: 25.0, // Измени это значение, чтобы увидеть как закругляется окно!
+        background: "#1e1e2e", // Цвет подгрузится прямо в Cairo context
     },
-
     text: #{
-        size: 16,
-        line_height: 1.5,
-        color: "#ffffff"
+        size: 14.0,
+        line_height: 22.0,
+        color: "#cdd6f4",
     }
 }
