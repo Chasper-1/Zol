@@ -1,0 +1,16 @@
+[package]
+name = "Flint"
+version = "0.1.1"
+edition = "2024"
+
+[dependencies]
+gtk = { package = "gtk4", version = "0.11.4", features = ["v4_12"] }
+#gtk4 = "0.11.4"
+webkit6 = "0.6.1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

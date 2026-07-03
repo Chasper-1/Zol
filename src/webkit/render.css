@@ -1,0 +1,54 @@
+/* src/webkit/render.css */
+/* Базовые настройки рабочей области */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #1a1a1a;
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+/* Контейнер-плитка для центрирования */
+.workspace-grid {
+    width: 100%;
+    height: 100%;
+    padding: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+/* Карточка редактора */
+.editor-card {
+    width: 100%;
+    max-width: 800px;
+    height: 100%;
+    background-color: #21252b;
+    border: 1px solid #3e4451;
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-sizing: border-box;
+}
+
+/* Внутреннее пространство для текста */
+.editor-content {
+    color: #e0e0e0;
+    line-height: 1.6;
+    outline: none;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.editor-content h1 {
+    color: #61afef;
+    margin-top: 0;
+    border-bottom: 1px solid #3e4451;
+    padding-bottom: 10px;
+}
