@@ -4,6 +4,7 @@ use gtk4::prelude::*;
 
 // Подключаем изолированный модуль из папки gui
 mod gui;
+mod editor;
 
 fn main() {
     let app = Application::builder()

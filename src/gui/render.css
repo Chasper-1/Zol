@@ -1,50 +1,50 @@
-/* src/webkit/render.css */
+/* src/gui/render.css */
 
+/* Сбрасываем фон вообще у всего окна, включая левую панель и все контейнеры */
+window,
+box,
+paned,
+sidebar,
 .workspace-grid {
-    background-color: #16161a;
-    padding: 20px;
+    background-color: #16161a !important; /* Единый тёмный фон для всего приложения */
 }
 
-/* Наглухо срезаем рамки со скроллбара и самого текстового поля */
+/* Смерть скрытым рамкам и фонам скролла и текстового поля */
 scrolledwindow,
+viewport,
 textview,
 text {
     background: transparent !important;
+    background-color: transparent !important;
     border: none !important;
+    border-width: 0 !important;
     box-shadow: none !important;
+    outline: none !important;
 }
 
+/* Сама карточка редактора справа — теперь граница СТРОГО ОДНА */
 .editor-card {
-    background-color: #1f1f2e;
-    border: 1px solid #333344 !important;
-    border-radius: 8px;
-    padding: 24px;
+    background-color: #1f1f2e !important; 
+    border: 1px solid #333344 !important; 
+    border-radius: 8px !important;
+    
+    /* ОТСТУПЫ: Просто делаем отступы по 30 пикселей со всех сторон карточки */
+    margin: 30px !important; 
+
+    /* Внутренние отступы для текста внутри карточки */
+    padding: 32px !important; 
 }
 
+/* Текст внутри карточки */
 .editor-content {
-    color: #fffffe;
-    font-family: "Segoe UI", sans-serif;
-    font-size: 13pt;
+    color: #fffffe !important;
+    font-family: "Segoe UI", sans-serif !important;
+    font-size: 13pt !important;
 }
 
+/* Стили заголовка */
 #h1 {
-    font-size: 26pt;
-    font-weight: bold;
-    color: #df6e41;
-}
-
-#bold {
-    font-weight: bold;
-    color: #ff85a2;
-}
-
-#italic {
-    font-style: italic;
-    color: #b3e5fc;
-}
-
-#code_block {
-    font-family: "Monospace";
-    background-color: #111116;
-    color: #a8ff60;
+    font-size: 26pt !important;
+    font-weight: bold !important;
+    color: #df6e41 !important;
 }
