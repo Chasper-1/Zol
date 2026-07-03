@@ -1,8 +1,9 @@
-use crate::editor::{EditorState, EditorWidget, theme};
+use crate::editor::theme;
 use gtk4::Application;
 use gtk4::prelude::*;
-
 use rhai::Engine;
+use sourceview5::prelude::*;
+use sourceview5::{Buffer, LanguageManager, StyleSchemeManager, View};
 use std::fs;
 
 pub fn build_ui(app: &Application) {
@@ -19,23 +20,39 @@ pub fn build_ui(app: &Application) {
     let sidebar_container = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
     let preview_container = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
 
-    // Читаем конфиг
+    // Читаем конфиг (логика темы остается для других частей UI)
     let src = fs::read_to_string("theme.rhai").expect("theme.rhai not found");
     let engine = Engine::new();
     let ast = engine.compile(&src).expect("Rhai compile error");
     let rhai_map: rhai::Map = engine.eval_ast(&ast).expect("Rhai runtime error");
-
-    // Передаем карту в изолированный парсер темы
     let parsed_theme = theme::parse_theme(rhai_map);
 
-    // Создаем независимое состояние редактора
-    let editor_state = EditorState::new(parsed_theme);
+    // Создаем SourceBuffer — это сердце твоего нового редактора
+    let buffer = Buffer::builder().build();
 
-    // Передаем стейт в виджет отрисовки
-    let editor_area = EditorWidget::new(editor_state);
+    // Подключаем Markdown (если нужен синтаксис)
+    let lm = LanguageManager::default();
+    if let Some(lang) = lm.language("markdown") {
+        buffer.set_language(Some(&lang));
+    }
+
+    // Создаем View (виджет редактора)
+    let editor_view = View::builder()
+        .buffer(&buffer)
+        .editable(true)
+        .show_line_numbers(true)
+        .wrap_mode(gtk4::WrapMode::Word)
+        .highlight_current_line(true)
+        .build();
+
+    // Применяем темную тему, чтобы было похоже на Obsidian
+    let sm = StyleSchemeManager::default();
+    if let Some(scheme) = sm.scheme("classic-dark") {
+        buffer.set_style_scheme(Some(&scheme));
+    }
 
     let scrolled_window = gtk4::ScrolledWindow::builder()
-        .child(&editor_area)
+        .child(&editor_view)
         .vexpand(true)
         .hexpand(true)
         .build();
