@@ -5,7 +5,7 @@
         background: rgba(39, 46, 51, 0.9),
     },
     text: #{
-        size: 14.0,
+        size: 16.0,
         color: rgba(205, 214, 244, 1.0),
     }
 }

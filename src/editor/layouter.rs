@@ -1,5 +1,5 @@
 use crate::editor::markup::{LineMarkup, parse_line};
-use eframe::egui::text::{CCursorRange, LayoutJob};
+use eframe::egui::text::{CCursorRange, CharIndex, LayoutJob};
 use eframe::egui::{Color32, Context, FontFamily, FontId, Galley, Id, TextEdit, TextFormat};
 
 fn append_compensated(
@@ -9,7 +9,6 @@ fn append_compensated(
     markup_right: Option<&str>,
     format: TextFormat,
 ) {
-    // Вставляем невидимые символы, чтобы сдвинуть текст, сохранив индексы курсора
     if !markup_left.is_empty() {
         job.append(
             &"\u{200B}".repeat(markup_left.chars().count()),
@@ -35,7 +34,6 @@ pub fn render_line(
     show_markup: bool,
 ) {
     if show_markup || is_active {
-        // Режим отображения разметки: рисуем всё "как есть"[cite: 2]
         let is_heading = line.starts_with("# ");
         let format = TextFormat::simple(
             FontId::new(
@@ -46,7 +44,6 @@ pub fn render_line(
         );
         job.append(line, 0.0, format);
     } else {
-        // Режим скрытия: делегируем парсинг и компенсацию[cite: 2]
         match parse_line(line) {
             LineMarkup::Heading { content, marker } => {
                 let format = TextFormat::simple(
@@ -88,15 +85,14 @@ pub fn adjust_cursor_for_markup(
 
             if let Some(range) = state.cursor.char_range() {
                 let mut c = range.primary;
+                let current_index = c.index.0; // CharIndex -> usize
                 let new_index = if right {
-                    c.index + offset
+                    current_index + offset
                 } else {
-                    c.index.saturating_sub(offset)
+                    current_index.saturating_sub(offset)
                 };
-
-                // Используем clamp, чтобы индекс не вышел за пределы galley
-                c.index = new_index.clamp(0, galley.text().chars().count());
-
+                let clamped = new_index.clamp(0, galley.text().chars().count());
+                c.index = CharIndex(clamped);
                 state.cursor.set_char_range(Some(CCursorRange::one(c)));
                 state.store(ctx, id);
             }

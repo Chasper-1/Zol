@@ -26,8 +26,9 @@ impl FlintApp {
 }
 
 impl eframe::App for FlintApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        // Панель инструментов
+        egui::Panel::top("toolbar").show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.selectable_value(&mut self.state.mode, EditMode::Preview, "👁 Preview");
                 ui.selectable_value(&mut self.state.mode, EditMode::LivePreview, "⚡ Live");
@@ -35,7 +36,7 @@ impl eframe::App for FlintApp {
             });
         });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             egui::Frame::NONE
                 .inner_margin(self.state.theme.padding)
                 .show(ui, |ui| {
@@ -53,97 +54,101 @@ impl eframe::App for FlintApp {
                                     egui::FontFamily::Name(std::sync::Arc::from(name.as_str()))
                                 });
 
-                            let mut layouter_func = |ui: &egui::Ui, text: &str, wrap_width: f32| {
-                                let mut job = egui::text::LayoutJob::default();
-                                job.wrap.max_width = wrap_width;
+                            let mut layouter_func =
+                                |ui: &egui::Ui, text: &dyn egui::TextBuffer, wrap_width: f32| {
+                                    let text_str = text.as_str();
+                                    let mut job = egui::text::LayoutJob::default();
+                                    job.wrap.max_width = wrap_width;
 
-                                let lines: Vec<&str> = text.split('\n').collect();
-                                let line_count = lines.len();
+                                    let lines: Vec<&str> = text_str.split('\n').collect();
+                                    let line_count = lines.len();
 
-                                for (idx, line) in lines.iter().enumerate() {
-                                    let is_active = Some(idx) == self.state.active_line_index;
-                                    let show_markup = self.state.mode == EditMode::Source
-                                        || (self.state.mode == EditMode::LivePreview && is_active);
+                                    for (idx, line) in lines.iter().enumerate() {
+                                        let is_active = Some(idx) == self.state.active_line_index;
+                                        let show_markup = self.state.mode == EditMode::Source
+                                            || (self.state.mode == EditMode::LivePreview
+                                                && is_active);
 
-                                    layouter::render_line(
-                                        &mut job,
-                                        line,
-                                        is_active,
-                                        base_size,
-                                        heading_size,
-                                        font_family.clone(),
-                                        show_markup,
-                                    );
+                                        layouter::render_line(
+                                            &mut job,
+                                            line,
+                                            is_active,
+                                            base_size,
+                                            heading_size,
+                                            font_family.clone(),
+                                            show_markup,
+                                        );
 
-                                    if idx < line_count - 1 {
-                                        job.append("\n", 0.0, egui::TextFormat::default());
+                                        if idx < line_count - 1 {
+                                            job.append("\n", 0.0, egui::TextFormat::default());
+                                        }
                                     }
-                                }
-                                ui.fonts(|f| f.layout_job(job))
-                            };
+                                    ui.fonts_mut(|f| f.layout_job(job))
+                                };
 
                             let text_edit = egui::TextEdit::multiline(&mut self.state.content)
                                 .desired_width(f32::INFINITY)
                                 .min_size(ui.available_size())
-                                .frame(false)
+                                .frame(egui::Frame::NONE)
                                 .lock_focus(true)
                                 .interactive(self.state.mode != EditMode::Preview)
                                 .text_color(self.state.theme.text.color.to_color32())
                                 .layouter(&mut layouter_func);
 
-                            // Вместо прямого вызова внутри ctx.input, используй response от TextEdit
                             let output = text_edit.show(ui);
 
-                            // 1. Сначала обрабатываем обновление индекса строки (это безопасно)
-                            if let Some(state) = egui::TextEdit::load_state(ctx, output.response.id)
+                            // Обновление активной строки
+                            if let Some(state) =
+                                egui::TextEdit::load_state(ui.ctx(), output.response.id)
                             {
                                 if let Some(range) = state.cursor.char_range() {
-                                    // Считаем переносы как обычно
                                     let total_newlines =
                                         self.state.content.chars().filter(|&c| c == '\n').count();
                                     let current_line = self
                                         .state
                                         .content
                                         .chars()
-                                        .take(range.primary.index)
+                                        .take(range.primary.index.into())
                                         .filter(|&c| c == '\n')
                                         .count();
-
-                                    // Если курсор на последней строке и она пустая/виртуальная,
-                                    // ограничиваем индекс максимальным количеством существующих строк
                                     let line = current_line.min(total_newlines);
-
                                     if self.state.active_line_index != Some(line) {
                                         self.state.active_line_index = Some(line);
-                                        ctx.request_repaint();
+                                        ui.ctx().request_repaint();
                                     }
                                 }
                             }
 
-                            // 2. Корректировка курсора только при нажатии клавиш
+                            // Коррекция курсора
                             if output.response.has_focus() {
-                                // Получаем состояние ввода
-                                let right = ctx.input(|i| i.key_pressed(egui::Key::ArrowRight));
-                                let left = ctx.input(|i| i.key_pressed(egui::Key::ArrowLeft));
-
-                                // Убираем условие ctrl, чтобы компенсация работала всегда
+                                let right =
+                                    ui.ctx().input(|i| i.key_pressed(egui::Key::ArrowRight));
+                                let left = ui.ctx().input(|i| i.key_pressed(egui::Key::ArrowLeft));
                                 if right || left {
                                     if let Some(line_idx) = self.state.active_line_index {
                                         if let Some(line) = self.state.content.lines().nth(line_idx)
                                         {
-                                            crate::editor::layouter::adjust_cursor_for_markup(
-                                                ctx,
-                                                output.response.id,
-                                                line,
-                                                right,
-                                                &output.galley,
-                                            );
+                                            let is_active =
+                                                Some(line_idx) == self.state.active_line_index;
+                                            let show_markup = self.state.mode == EditMode::Source
+                                                || (self.state.mode == EditMode::LivePreview
+                                                    && is_active);
+                                            if !show_markup {
+                                                crate::editor::layouter::adjust_cursor_for_markup(
+                                                    ui.ctx(),
+                                                    output.response.id,
+                                                    line,
+                                                    right,
+                                                    &output.galley,
+                                                );
+                                            }
                                         }
                                     }
                                 }
                             }
 
-                            ctx.input(|i| {
+                            // Горячие клавиши
+                            ui.ctx().input(|i| {
                                 if i.modifiers.command {
                                     if i.key_pressed(egui::Key::Num1) {
                                         self.state.mode = EditMode::Preview;
