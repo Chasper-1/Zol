@@ -1,5 +1,6 @@
 use crate::editor::markup::{LineMarkup, parse_line};
-use eframe::egui::{Color32, FontFamily, FontId, TextFormat, text::LayoutJob};
+use eframe::egui::text::{CCursorRange, LayoutJob};
+use eframe::egui::{Color32, Context, FontFamily, FontId, Galley, Id, TextEdit, TextFormat};
 
 fn append_compensated(
     job: &mut LayoutJob,
@@ -67,6 +68,37 @@ pub fn render_line(
                     Color32::from_rgb(180, 180, 180),
                 );
                 job.append(&text, 0.0, format);
+            }
+        }
+    }
+}
+
+pub fn adjust_cursor_for_markup(
+    ctx: &Context,
+    id: Id,
+    line_text: &str,
+    right: bool,
+    galley: &Galley,
+) {
+    if let Some(mut state) = TextEdit::load_state(ctx, id) {
+        if let LineMarkup::Heading { marker, .. } | LineMarkup::Bold { marker, .. } =
+            parse_line(line_text)
+        {
+            let offset = marker.chars().count();
+
+            if let Some(range) = state.cursor.char_range() {
+                let mut c = range.primary;
+                let new_index = if right {
+                    c.index + offset
+                } else {
+                    c.index.saturating_sub(offset)
+                };
+
+                // Используем clamp, чтобы индекс не вышел за пределы galley
+                c.index = new_index.clamp(0, galley.text().chars().count());
+
+                state.cursor.set_char_range(Some(CCursorRange::one(c)));
+                state.store(ctx, id);
             }
         }
     }

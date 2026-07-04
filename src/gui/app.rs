@@ -88,9 +88,19 @@ impl eframe::App for FlintApp {
                             }
                         }
 
-                        if !output.response.has_focus() && self.state.active_line_index.is_some() {
-                            self.state.active_line_index = None;
-                            ctx.request_repaint();
+                        if output.response.has_focus() {
+                            ctx.input(|i| {
+                                let ctrl = i.modifiers.ctrl;
+                                let right = i.key_pressed(egui::Key::ArrowRight);
+                                let left = i.key_pressed(egui::Key::ArrowLeft);
+                        
+                                if ctrl && (right || left) {
+                                    if let Some(line) = self.state.content.lines().nth(self.state.active_line_index.unwrap_or(0)) {
+                                        // Вызываем нашу функцию из layouter
+                                        crate::editor::layouter::adjust_cursor_for_markup(ctx, output.response.id, line, right, &output.galley);
+                                    }
+                                }
+                            });
                         }
 
                         ctx.input(|i| {
