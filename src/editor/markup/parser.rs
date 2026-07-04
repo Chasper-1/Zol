@@ -1,6 +1,7 @@
 use super::cache::MarkupCache;
 use super::markers::{marker_style, MARKERS};
 use super::segment::{Segment, SegmentStyle};
+use super::document_cache::DocumentCache;
 
 pub fn parse_line(line: &str) -> MarkupCache {
     let mut cache = MarkupCache::default();
@@ -103,4 +104,14 @@ pub fn parse_line(line: &str) -> MarkupCache {
     }
 
     cache
+}
+
+pub fn parse_document(text: &str) -> DocumentCache {
+    let mut document = DocumentCache::default();
+
+    for line in text.lines() {
+        document.lines.push(parse_line(line));
+    }
+
+    document
 }

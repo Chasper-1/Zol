@@ -1,4 +1,5 @@
 use crate::editor::layouter;
+use crate::editor::markup::parse_document;
 use crate::editor::state::{EditMode, EditorState};
 use eframe::egui;
 use std::fs;
@@ -47,6 +48,9 @@ impl eframe::App for FlintApp {
                             let theme = self.state.theme.clone();
                             let base_size = theme.text.size;
                             let heading_size = base_size * 1.6;
+
+                            self.state.document_cache = parse_document(&self.state.content);
+
                             let font_family = theme
                                 .text
                                 .font_family
@@ -65,9 +69,12 @@ impl eframe::App for FlintApp {
 
                                     for (idx, line) in lines.iter().enumerate() {
                                         let show_markup = self.state.mode == EditMode::Source;
+                                        let cache = &self.state.document_cache.lines[idx];
+
                                         layouter::render_line(
                                             &mut job,
                                             line,
+                                            cache,
                                             base_size,
                                             heading_size,
                                             font_family.clone(),
@@ -90,7 +97,7 @@ impl eframe::App for FlintApp {
                                 .text_color(self.state.theme.text.color.to_color32())
                                 .layouter(&mut layouter_func);
 
-                            let output = text_edit.show(ui);
+                            text_edit.show(ui);
 
                             // Горячие клавиши
                             ui.ctx().input(|i| {

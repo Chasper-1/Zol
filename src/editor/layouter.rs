@@ -1,4 +1,4 @@
-use crate::editor::markup::{SegmentStyle, parse_line};
+use crate::editor::markup::{MarkupCache, SegmentStyle};
 use eframe::egui::text::{CCursorRange, CharIndex, LayoutJob};
 use eframe::egui::{
     Align, Color32, Context, FontFamily, FontId, Galley, Id, Stroke, TextEdit, TextFormat,
@@ -25,6 +25,7 @@ fn append_compensated(
 pub fn render_line(
     job: &mut LayoutJob,
     line: &str,
+    cache: &MarkupCache,
     base_size: f32,
     heading_size: f32,
     font_family: FontFamily,
@@ -52,8 +53,6 @@ pub fn render_line(
     }
 
     // Парсим разметку
-    let cache = parse_line(line);
-
     for seg in &cache.segments {
         let format = match seg.style {
             SegmentStyle::Plain => default_format.clone(),
@@ -115,7 +114,7 @@ pub fn render_line(
     }
 }
 
-pub fn adjust_cursor_for_markup(
+/*pub fn adjust_cursor_for_markup(
     ctx: &Context,
     id: Id,
     line_text: &str,
@@ -156,4 +155,4 @@ pub fn adjust_cursor_for_markup(
             state.store(ctx, id);
         }
     }
-}
+}*/
