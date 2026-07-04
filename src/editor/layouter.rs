@@ -1,6 +1,6 @@
 use crate::editor::markup::{LineMarkup, parse_line};
 use eframe::egui::text::{CCursorRange, CharIndex, LayoutJob};
-use eframe::egui::{Color32, Context, FontFamily, FontId, Galley, Id, TextEdit, TextFormat};
+use eframe::egui::{Color32, Context, FontFamily, FontId, Galley, Id, TextEdit, TextFormat, Stroke};
 
 fn append_compensated(
     job: &mut LayoutJob,
@@ -56,6 +56,43 @@ pub fn render_line(
                 let format = TextFormat::simple(
                     FontId::new(base_size, font_family),
                     Color32::from_rgb(255, 100, 100),
+                );
+                append_compensated(job, &marker, &content, Some(&marker), format);
+            }
+            LineMarkup::Italic { content, marker } => {
+                let mut format = TextFormat::simple(
+                    FontId::new(base_size, font_family),
+                    Color32::from_rgb(100, 200, 255),
+                );
+                format.italics = true;
+                append_compensated(job, &marker, &content, Some(&marker), format);
+            }
+            LineMarkup::Strikethrough { content, marker } => {
+                let mut format = TextFormat::simple(
+                    FontId::new(base_size, font_family),
+                    Color32::from_rgb(200, 150, 150),
+                );
+                format.strikethrough = Stroke::new(1.0, Color32::from_rgb(200, 150, 150));
+                append_compensated(job, &marker, &content, Some(&marker), format);
+            }
+            LineMarkup::Superscript { content, marker } => {
+                let format = TextFormat::simple(
+                    FontId::new(base_size * 0.7, font_family),
+                    Color32::from_rgb(150, 255, 150),
+                );
+                append_compensated(job, &marker, &content, Some(&marker), format);
+            }
+            LineMarkup::Subscript { content, marker } => {
+                let format = TextFormat::simple(
+                    FontId::new(base_size * 0.7, font_family),
+                    Color32::from_rgb(255, 200, 100),
+                );
+                append_compensated(job, &marker, &content, Some(&marker), format);
+            }
+            LineMarkup::Code { content, marker } => {
+                let format = TextFormat::simple(
+                    FontId::new(base_size, FontFamily::Monospace),
+                    Color32::from_rgb(200, 200, 200),
                 );
                 append_compensated(job, &marker, &content, Some(&marker), format);
             }
