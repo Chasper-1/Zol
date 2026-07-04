@@ -50,22 +50,55 @@ impl eframe::App for FlintApp {
                     .id_salt("editor_scroll")
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
-                        // Передаем сохраненный с прошлого кадра индекс в леяутер
-                        let mut smart_layouter = crate::editor::layouter::create_smart_layouter(
-                            self.state.mode,
-                            self.state.active_line_index,
-                            self.state.theme.clone(),
-                        );
+                        let mode = self.state.mode;
+                        let active_line = self.state.active_line_index;
+                        let theme = self.state.theme.clone();
+                        let base_size = theme.text.size;
+                        let heading_size = base_size * 1.6;
+                        let font_family = if let Some(ref family_name) = theme.text.font_family {
+                            egui::FontFamily::Name(std::sync::Arc::from(family_name.as_str()))
+                        } else {
+                            egui::FontFamily::Proportional // Дефолт, если в конфиге пусто
+                        };
+
+                        // Замыкание, которое вызывает твою render_line из layouter.rs
+                        let mut layouter_func = |ui: &egui::Ui, text: &str, wrap_width: f32| {
+                            let mut job = egui::text::LayoutJob::default();
+                            job.wrap.max_width = wrap_width;
+
+                            let lines: Vec<&str> = text.split('\n').collect();
+                            for (idx, line) in lines.iter().enumerate() {
+                                let is_active = Some(idx) == active_line;
+                                let show_markup = mode == EditMode::Source
+                                    || (mode == EditMode::LivePreview && is_active);
+
+                                // Вызов функции из layouter.rs
+                                crate::editor::layouter::render_line(
+                                    &mut job,
+                                    line,
+                                    is_active,
+                                    base_size,
+                                    heading_size,
+                                    font_family.clone(),
+                                    show_markup,
+                                );
+
+                                if idx < lines.len() - 1 {
+                                    job.append("\n", 0.0, egui::TextFormat::default());
+                                }
+                            }
+                            ui.fonts(|f| f.layout_job(job))
+                        };
 
                         let is_editable = self.state.mode != EditMode::Preview;
                         let text_edit = egui::TextEdit::multiline(&mut self.state.content)
                             .desired_width(f32::INFINITY)
-                            .min_size(ui.available_size()) // Растягиваем на всё окно
-                            .frame(false) // Убираем только уродливый дефолтный фон
+                            .min_size(ui.available_size())
+                            .frame(false)
                             .lock_focus(true)
                             .interactive(is_editable)
                             .text_color(self.state.theme.text.color.to_color32())
-                            .layouter(&mut smart_layouter);
+                            .layouter(&mut layouter_func);
 
                         // Достаем output, в котором egui отдает всю инфу о прошедшем рендере
                         let output = text_edit.show(ui);

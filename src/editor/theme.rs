@@ -4,8 +4,8 @@ use rhai::Map;
 #[derive(Debug, Clone)]
 pub struct TextTheme {
     pub size: f32,
-    pub color: Rgba, // Цвет оставили, он используется
-    pub font_family: String,
+    pub color: Rgba,
+    pub font_family: Option<String>, // Используем Option, чтобы не хардкодить
 }
 
 #[derive(Debug, Clone)]
@@ -71,7 +71,7 @@ pub fn parse_theme(map: Map) -> EditorTheme {
         b: 1.0,
         a: 1.0,
     };
-    let mut font_family = "SansSerif".to_string();
+    let mut font_family = None; // Инициализируем пустотой
 
     if let Some(editor) = map.get("editor") {
         let m = editor.clone().cast::<Map>();
@@ -94,8 +94,9 @@ pub fn parse_theme(map: Map) -> EditorTheme {
         if let Some(c) = m.get("color") {
             text_color = parse_rgba_string(&c.clone().cast::<String>());
         }
+        // Теперь мы просто берем то, что есть в конфиге, без хардкода
         if let Some(ff) = m.get("font_family") {
-            font_family = ff.clone().cast::<String>();
+            font_family = Some(ff.clone().cast::<String>());
         }
     }
 
