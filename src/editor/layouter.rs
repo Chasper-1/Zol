@@ -1,6 +1,8 @@
 use crate::editor::markup::{LineMarkup, parse_line};
 use eframe::egui::text::{CCursorRange, CharIndex, LayoutJob};
-use eframe::egui::{Color32, Context, FontFamily, FontId, Galley, Id, TextEdit, TextFormat, Stroke};
+use eframe::egui::{
+    Color32, Context, FontFamily, FontId, Galley, Id, Stroke, TextEdit, TextFormat,
+};
 
 fn append_compensated(
     job: &mut LayoutJob,
@@ -44,6 +46,11 @@ pub fn render_line(
         );
         job.append(line, 0.0, format);
     } else {
+        let default_format = TextFormat::simple(
+            FontId::new(base_size, font_family.clone()),
+            Color32::from_rgb(180, 180, 180),
+        );
+        
         match parse_line(line) {
             LineMarkup::Heading { content, marker } => {
                 let format = TextFormat::simple(
@@ -52,56 +59,118 @@ pub fn render_line(
                 );
                 append_compensated(job, &marker, &content, None, format);
             }
-            LineMarkup::Bold { content, marker } => {
+            LineMarkup::Bold {
+                before,
+                content,
+                after,
+                marker,
+            } => {
                 let format = TextFormat::simple(
                     FontId::new(base_size, font_family),
                     Color32::from_rgb(255, 100, 100),
                 );
+                if !before.is_empty() {
+                    job.append(&before, 0.0, default_format.clone());
+                }
                 append_compensated(job, &marker, &content, Some(&marker), format);
+                if !after.is_empty() {
+                    job.append(&after, 0.0, default_format.clone());
+                }
             }
-            LineMarkup::Italic { content, marker } => {
+            LineMarkup::Italic {
+                before,
+                content,
+                after,
+                marker,
+            } => {
                 let mut format = TextFormat::simple(
                     FontId::new(base_size, font_family),
                     Color32::from_rgb(100, 200, 255),
                 );
                 format.italics = true;
+                if !before.is_empty() {
+                    job.append(&before, 0.0, default_format.clone());
+                }
                 append_compensated(job, &marker, &content, Some(&marker), format);
+                if !after.is_empty() {
+                    job.append(&after, 0.0, default_format.clone());
+                }
             }
-            LineMarkup::Strikethrough { content, marker } => {
+            LineMarkup::Strikethrough {
+                before,
+                content,
+                after,
+                marker,
+            } => {
                 let mut format = TextFormat::simple(
                     FontId::new(base_size, font_family),
                     Color32::from_rgb(200, 150, 150),
                 );
                 format.strikethrough = Stroke::new(1.0, Color32::from_rgb(200, 150, 150));
+                if !before.is_empty() {
+                    job.append(&before, 0.0, default_format.clone());
+                }
                 append_compensated(job, &marker, &content, Some(&marker), format);
+                if !after.is_empty() {
+                    job.append(&after, 0.0, default_format.clone());
+                }
             }
-            LineMarkup::Superscript { content, marker } => {
+            LineMarkup::Superscript {
+                before,
+                content,
+                after,
+                marker,
+            } => {
                 let format = TextFormat::simple(
                     FontId::new(base_size * 0.7, font_family),
                     Color32::from_rgb(150, 255, 150),
                 );
+                if !before.is_empty() {
+                    job.append(&before, 0.0, default_format.clone());
+                }
                 append_compensated(job, &marker, &content, Some(&marker), format);
+                if !after.is_empty() {
+                    job.append(&after, 0.0, default_format.clone());
+                }
             }
-            LineMarkup::Subscript { content, marker } => {
+            LineMarkup::Subscript {
+                before,
+                content,
+                after,
+                marker,
+            } => {
                 let format = TextFormat::simple(
                     FontId::new(base_size * 0.7, font_family),
                     Color32::from_rgb(255, 200, 100),
                 );
+                if !before.is_empty() {
+                    job.append(&before, 0.0, default_format.clone());
+                }
                 append_compensated(job, &marker, &content, Some(&marker), format);
+                if !after.is_empty() {
+                    job.append(&after, 0.0, default_format.clone());
+                }
             }
-            LineMarkup::Code { content, marker } => {
+            LineMarkup::Code {
+                before,
+                content,
+                after,
+                marker,
+            } => {
                 let format = TextFormat::simple(
                     FontId::new(base_size, FontFamily::Monospace),
                     Color32::from_rgb(200, 200, 200),
                 );
+                if !before.is_empty() {
+                    job.append(&before, 0.0, default_format.clone());
+                }
                 append_compensated(job, &marker, &content, Some(&marker), format);
+                if !after.is_empty() {
+                    job.append(&after, 0.0, default_format.clone());
+                }
             }
             LineMarkup::Plain(text) => {
-                let format = TextFormat::simple(
-                    FontId::new(base_size, font_family),
-                    Color32::from_rgb(180, 180, 180),
-                );
-                job.append(&text, 0.0, format);
+                job.append(&text, 0.0, default_format);
             }
         }
     }
