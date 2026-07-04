@@ -1,14 +1,11 @@
 #{
     editor: #{
-        padding: 20.0,
-        radius: 25.0,
-        // Теперь цвета понятны: 30, 30, 46 — это и есть твой фон
-        background: #{ r: 30, g: 30, b: 46, a: 1.0 },
+        padding: 10.0,
+        radius: 16.0,
+        background: rgba(39, 46, 51, 0.9),
     },
     text: #{
         size: 14.0,
-        line_height: 22.0,
-        // Просто числа от 0 до 255
-        color: #{ r: 205, g: 214, b: 244, a: 1.0 },
+        color: rgba(205, 214, 244, 1.0),
     }
 }

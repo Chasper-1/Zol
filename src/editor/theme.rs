@@ -4,15 +4,15 @@ use rhai::Map;
 #[derive(Debug, Clone)]
 pub struct TextTheme {
     pub size: f32,
+    pub color: Rgba, // Цвет оставили, он используется
     pub font_family: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct EditorTheme {
     pub padding: f32,
+    pub radius: f32,
     pub background: Rgba,
-    pub border_color: Rgba,
-    pub border_width: f32,
     pub text: TextTheme,
 }
 
@@ -21,50 +21,56 @@ pub struct Rgba {
     pub r: f32,
     pub g: f32,
     pub b: f32,
+    pub a: f32,
 }
 
 impl Rgba {
-    // Удобный хелпер для конвертации в родной цвет egui
     pub fn to_color32(&self) -> Color32 {
-        Color32::from_rgb(
+        Color32::from_rgba_unmultiplied(
             (self.r * 255.0) as u8,
             (self.g * 255.0) as u8,
             (self.b * 255.0) as u8,
+            (self.a * 255.0) as u8,
         )
     }
 }
 
-fn map_to_color(map: &Map) -> Rgba {
-    let get_val = |key: &str| -> f32 {
-        map.get(key)
-            .map(|v| {
-                v.as_float()
-                    .unwrap_or_else(|_| v.as_int().unwrap_or(0) as f64) as f32
-            })
-            .unwrap_or(0.0)
-    };
-
-    Rgba {
-        r: get_val("r") / 255.0,
-        g: get_val("g") / 255.0,
-        b: get_val("b") / 255.0,
+fn parse_rgba_string(s: &str) -> Rgba {
+    let cleaned = s.replace("rgba(", "").replace(")", "");
+    let parts: Vec<&str> = cleaned.split(',').map(|p| p.trim()).collect();
+    if parts.len() == 4 {
+        Rgba {
+            r: parts[0].parse::<f32>().unwrap_or(0.0) / 255.0,
+            g: parts[1].parse::<f32>().unwrap_or(0.0) / 255.0,
+            b: parts[2].parse::<f32>().unwrap_or(0.0) / 255.0,
+            a: parts[3].parse::<f32>().unwrap_or(1.0),
+        }
+    } else {
+        Rgba {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        }
     }
 }
 
 pub fn parse_theme(map: Map) -> EditorTheme {
-    let mut padding = 12.0;
+    let mut padding = 10.0;
+    let mut radius = 16.0;
     let mut background = Rgba {
-        r: 0.078,
-        g: 0.078,
-        b: 0.086,
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+        a: 0.9,
     };
-    let mut border_color = Rgba {
-        r: 0.141,
-        g: 0.141,
-        b: 0.157,
+    let mut text_size = 14.0;
+    let mut text_color = Rgba {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+        a: 1.0,
     };
-    let mut border_width = 1.0;
-    let mut text_size = 16.0;
     let mut font_family = "SansSerif".to_string();
 
     if let Some(editor) = map.get("editor") {
@@ -72,14 +78,11 @@ pub fn parse_theme(map: Map) -> EditorTheme {
         if let Some(p) = m.get("padding") {
             padding = p.clone().cast::<f64>() as f32;
         }
+        if let Some(r) = m.get("radius") {
+            radius = r.clone().cast::<f64>() as f32;
+        }
         if let Some(b) = m.get("background") {
-            background = map_to_color(&b.clone().cast::<Map>());
-        }
-        if let Some(bc) = m.get("border_color") {
-            border_color = map_to_color(&bc.clone().cast::<Map>());
-        }
-        if let Some(bw) = m.get("border_width") {
-            border_width = bw.clone().cast::<f64>() as f32;
+            background = parse_rgba_string(&b.clone().cast::<String>());
         }
     }
 
@@ -88,6 +91,9 @@ pub fn parse_theme(map: Map) -> EditorTheme {
         if let Some(s) = m.get("size") {
             text_size = s.clone().cast::<f64>() as f32;
         }
+        if let Some(c) = m.get("color") {
+            text_color = parse_rgba_string(&c.clone().cast::<String>());
+        }
         if let Some(ff) = m.get("font_family") {
             font_family = ff.clone().cast::<String>();
         }
@@ -95,11 +101,11 @@ pub fn parse_theme(map: Map) -> EditorTheme {
 
     EditorTheme {
         padding,
+        radius,
         background,
-        border_color,
-        border_width,
         text: TextTheme {
             size: text_size,
+            color: text_color,
             font_family,
         },
     }

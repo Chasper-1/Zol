@@ -10,13 +10,11 @@ pub fn create_smart_layouter(
     theme: EditorTheme,
 ) -> impl Fn(&egui::Ui, &str, f32) -> Arc<egui::Galley> {
     let base_size = theme.text.size;
-    let heading_size = base_size * 1.6;
+    let heading_size = base_size * 1.6; // Заголовок всегда больше
 
-    // Умный маппинг строки из конфига в гарантированно существующие семейства шрифтов egui
     let font_family = match theme.text.font_family.to_lowercase().as_str() {
         "monospace" | "mono" => egui::FontFamily::Monospace,
         "sansserif" | "sans-serif" | "sans" | "proportional" => egui::FontFamily::Proportional,
-        // Если написано что-то другое, пытаемся взять как кастомное имя
         _ => egui::FontFamily::Name(Arc::from(theme.text.font_family.clone())),
     };
 
@@ -31,39 +29,38 @@ pub fn create_smart_layouter(
 
             match mode {
                 EditMode::Source => {
-                    let format = egui::TextFormat::simple(
-                        egui::FontId::new(base_size, font_family.clone()),
-                        egui::Color32::from_rgb(200, 200, 200),
-                    );
-                    job.append(line, 0.0, format);
-                }
-                EditMode::Preview => {
-                    render_pretty_line(
+                    render_line(
                         &mut job,
                         line,
+                        is_active,
                         base_size,
                         heading_size,
                         font_family.clone(),
+                        true,
+                    );
+                }
+                EditMode::Preview => {
+                    render_line(
+                        &mut job,
+                        line,
+                        is_active,
+                        base_size,
+                        heading_size,
+                        font_family.clone(),
+                        false,
                     );
                 }
                 EditMode::LivePreview => {
-                    if is_active {
-                        let mut format = egui::TextFormat::simple(
-                            egui::FontId::new(base_size, font_family.clone()),
-                            egui::Color32::from_rgb(255, 215, 0),
-                        );
-                        format.background =
-                            egui::Color32::from_rgba_unmultiplied(255, 255, 255, 10);
-                        job.append(line, 0.0, format);
-                    } else {
-                        render_pretty_line(
-                            &mut job,
-                            line,
-                            base_size,
-                            heading_size,
-                            font_family.clone(),
-                        );
-                    }
+                    // Передаем флаг активности: на активной строке покажем разметку, но размер заголовка не уменьшим!
+                    render_line(
+                        &mut job,
+                        line,
+                        is_active,
+                        base_size,
+                        heading_size,
+                        font_family.clone(),
+                        is_active,
+                    );
                 }
             }
 
@@ -83,30 +80,49 @@ pub fn create_smart_layouter(
     }
 }
 
-fn render_pretty_line(
+// Универсальная функция отрисовки строки
+fn render_line(
     job: &mut LayoutJob,
     line: &str,
+    is_active: bool,
     base_size: f32,
     heading_size: f32,
     font_family: egui::FontFamily,
+    show_markup: bool, // Показывать ли маркеры типа # или **
 ) {
     if line.starts_with("# ") {
         let format = egui::TextFormat::simple(
             egui::FontId::new(heading_size, egui::FontFamily::Proportional),
             egui::Color32::WHITE,
         );
-        job.append(&line[2..], 0.0, format);
+
+        if show_markup {
+            job.append(line, 0.0, format);
+        } else {
+            // В режиме чистого просмотра скрываем "# "
+            job.append(&line[2..], 0.0, format);
+        }
     } else if line.starts_with("**") && line.ends_with("**") && line.len() > 4 {
-        let format = egui::TextFormat::simple(
+        let mut format = egui::TextFormat::simple(
             egui::FontId::new(base_size, font_family.clone()),
             egui::Color32::from_rgb(255, 100, 100),
         );
-        job.append(&line[2..line.len() - 2], 0.0, format);
+        if is_active && show_markup {
+            format.background = egui::Color32::from_rgba_unmultiplied(255, 255, 255, 10);
+            job.append(line, 0.0, format);
+        } else if show_markup {
+            job.append(line, 0.0, format);
+        } else {
+            job.append(&line[2..line.len() - 2], 0.0, format);
+        }
     } else {
-        let format = egui::TextFormat::simple(
+        let mut format = egui::TextFormat::simple(
             egui::FontId::new(base_size, font_family),
             egui::Color32::from_rgb(180, 180, 180),
         );
+        if is_active && show_markup {
+            format.background = egui::Color32::from_rgba_unmultiplied(255, 255, 255, 10);
+        }
         job.append(line, 0.0, format);
     }
 }
