@@ -1,8 +1,17 @@
 use crate::editor::theme::EditorTheme;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum EditMode {
+    Preview,     // Чистый просмотр, ссылки кликабельны
+    LivePreview, // Гибрид: активная строка — код, остальные — красивые
+    Source,      // Чистый исходный код
+}
+
 pub struct EditorState {
     pub theme: EditorTheme,
-    pub content: String, // Теперь храним весь текст единой строкой, egui это любит
+    pub content: String,
+    pub mode: EditMode,
+    pub active_line_index: Option<usize>,
 }
 
 impl EditorState {
@@ -10,10 +19,8 @@ impl EditorState {
         Self {
             theme,
             content: text,
+            mode: EditMode::LivePreview,
+            active_line_index: None,
         }
-    }
-
-    pub fn get_theme(&self) -> &EditorTheme {
-        &self.theme
     }
 }
