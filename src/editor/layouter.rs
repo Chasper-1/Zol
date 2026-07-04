@@ -91,16 +91,21 @@ fn render_line(
     show_markup: bool, // Показывать ли маркеры типа # или **
 ) {
     if line.starts_with("# ") {
-        let format = egui::TextFormat::simple(
+        let format_visible = egui::TextFormat::simple(
             egui::FontId::new(heading_size, egui::FontFamily::Proportional),
             egui::Color32::WHITE,
         );
+        let format_hidden = egui::TextFormat::simple(
+            egui::FontId::new(heading_size, egui::FontFamily::Proportional),
+            egui::Color32::TRANSPARENT, // Ставим прозрачность вместо удаления
+        );
 
         if show_markup {
-            job.append(line, 0.0, format);
+            job.append(line, 0.0, format_visible);
         } else {
-            // В режиме чистого просмотра скрываем "# "
-            job.append(&line[2..], 0.0, format);
+            // Рисуем оба куска, но первый - прозрачный
+            job.append("# ", 0.0, format_hidden); // Позиция сохранена!
+            job.append(&line[2..], 0.0, format_visible);
         }
     } else if line.starts_with("**") && line.ends_with("**") && line.len() > 4 {
         let mut format = egui::TextFormat::simple(

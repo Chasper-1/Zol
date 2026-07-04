@@ -74,18 +74,19 @@ impl eframe::App for FlintApp {
                         // Магия: если редактор в фокусе, вытаскиваем курсор через официальный state
                         if let Some(state) = egui::TextEdit::load_state(ctx, response.id) {
                             if let Some(range) = state.cursor.range(&output.galley) {
-                                let char_index = range.primary.ccursor.index;
+                                // Получаем байтовый индекс курсора
+                                let cursor_index = range.primary.ccursor.index;
 
-                                // БЕЗОПАСНЫЙ СЧЕТ: берем символы, а не байты, чтобы не ломать кириллицу
+                                // БЕЗОПАСНЫЙ СПОСОБ: считаем переносы через итератор символов,
+                                // который сам корректно обрабатывает UTF-8.
                                 let current_line = self
                                     .state
                                     .content
                                     .chars()
-                                    .take(char_index)
+                                    .take(cursor_index) // Берем символы до байтового индекса
                                     .filter(|&c| c == '\n')
                                     .count();
 
-                                // Если юзер перешел на другую строку, сохраняем её и триггерим перерисовку
                                 if self.state.active_line_index != Some(current_line) {
                                     self.state.active_line_index = Some(current_line);
                                     ctx.request_repaint();
