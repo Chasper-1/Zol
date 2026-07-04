@@ -22,7 +22,11 @@ pub fn run_app() -> eframe::Result {
             });
 
             let mut engine = Engine::new();
-            engine.register_fn("rgba", |r: f64, g: f64, b: f64, a: f64| format!("rgba({}, {}, {}, {})", r, g, b, a));
+            
+            // Регистрируем для всех комбинаций, которые может выдать парсер Rhai
+            engine.register_fn("rgba", |r: i64, g: i64, b: i64, a: f64| {
+                format!("rgba({}, {}, {}, {})", r, g, b, a)
+            });
             
             let ast = engine.compile(&src).expect("Rhai compile error");
             let rhai_map: rhai::Map = engine.eval_ast(&ast).expect("Rhai runtime error");
