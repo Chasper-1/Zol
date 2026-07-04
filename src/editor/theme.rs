@@ -1,3 +1,4 @@
+use eframe::egui::Color32;
 use rhai::Map;
 
 #[derive(Debug, Clone)]
@@ -20,6 +21,17 @@ pub struct Rgba {
     pub r: f32,
     pub g: f32,
     pub b: f32,
+}
+
+impl Rgba {
+    // Удобный хелпер для конвертации в родной цвет egui
+    pub fn to_color32(&self) -> Color32 {
+        Color32::from_rgb(
+            (self.r * 255.0) as u8,
+            (self.g * 255.0) as u8,
+            (self.b * 255.0) as u8,
+        )
+    }
 }
 
 fn map_to_color(map: &Map) -> Rgba {
