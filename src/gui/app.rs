@@ -97,7 +97,7 @@ impl eframe::App for FlintApp {
                                 .text_color(self.state.theme.text.color.to_color32())
                                 .layouter(&mut layouter_func);
 
-                            text_edit.show(ui);
+                            let output = text_edit.show(ui);
 
                             // Горячие клавиши
                             ui.ctx().input(|i| {
