@@ -1,7 +1,9 @@
 use crate::editor::cache::DocumentCache;
 use crate::editor::cursor::Cursor;
 use crate::editor::markup::segment::{
-    STYLE_BOLD, STYLE_CODE, STYLE_ITALIC, STYLE_STRIKETHROUGH, STYLE_SUBSCRIPT, STYLE_SUPERSCRIPT,
+    STYLE_BOLD, STYLE_CODE, STYLE_COMMENT, STYLE_DELETION, STYLE_DISPLAY_FORMULA, STYLE_FORMULA,
+    STYLE_HIGHLIGHT, STYLE_INSERTION, STYLE_ITALIC, STYLE_STRIKETHROUGH, STYLE_SUBSCRIPT,
+    STYLE_SUPERSCRIPT, STYLE_UNDERLINE,
 };
 use crate::editor::state::EditMode;
 use crate::editor::theme::EditorTheme;
@@ -51,7 +53,15 @@ pub fn build(
         let is_active = mode == EditMode::LivePreview && i == active_line;
         let source_mode = mode == EditMode::Source || is_active;
 
-        let job = if source_mode {
+        let job = if line.is_empty() {
+            let mut job = LayoutJob::default();
+            let fmt = TextFormat::simple(
+                FontId::new(base_size, font_family.clone()),
+                Color32::from_rgb(200, 200, 200),
+            );
+            job.append("\u{200B}", 0.0, fmt);
+            job
+        } else if source_mode {
             source_layout(line, line_start, cache.lines.get(i), base_size, heading_size, &font_family)
         } else {
             preview_layout(line, cache.lines.get(i), base_size, heading_size, &font_family)
@@ -225,6 +235,31 @@ fn segment_format(style: u32, base_size: f32, _heading_size: f32, font_family: &
     if style & STYLE_CODE != 0 {
         format.font_id = FontId::new(base_size, FontFamily::Monospace);
         format.color = Color32::from_rgb(200, 200, 200);
+    }
+    if style & STYLE_UNDERLINE != 0 {
+        format.underline = Stroke::new(1.0, format.color);
+    }
+    if style & STYLE_HIGHLIGHT != 0 {
+        format.background = Color32::from_rgba_unmultiplied(255, 255, 0, 40);
+    }
+    if style & STYLE_INSERTION != 0 {
+        format.color = Color32::from_rgb(100, 255, 100);
+    }
+    if style & STYLE_DELETION != 0 {
+        format.color = Color32::from_rgb(255, 80, 80);
+        format.strikethrough = Stroke::new(1.0, Color32::from_rgb(255, 80, 80));
+    }
+    if style & STYLE_COMMENT != 0 {
+        format.color = Color32::from_rgb(140, 140, 140);
+        format.italics = true;
+    }
+    if style & STYLE_FORMULA != 0 {
+        format.font_id = FontId::new(base_size, FontFamily::Monospace);
+        format.color = Color32::from_rgb(80, 220, 120);
+    }
+    if style & STYLE_DISPLAY_FORMULA != 0 {
+        format.font_id = FontId::new(base_size * 1.3, FontFamily::Monospace);
+        format.color = Color32::from_rgb(80, 220, 120);
     }
 
     format

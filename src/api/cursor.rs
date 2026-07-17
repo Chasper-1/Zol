@@ -66,6 +66,129 @@ pub fn move_end(widget: &mut EditorWidget) {
     widget.cursor.move_end(&widget.content);
 }
 
+pub fn move_word_left(widget: &mut EditorWidget) {
+    let raw = widget.cursor.raw;
+    let pos = prev_word_start(&widget.content, raw);
+    widget.cursor.raw = pos;
+    widget.cursor.update_line(&widget.content);
+    widget.cursor.reset_col_visual();
+}
+
+pub fn move_word_right(widget: &mut EditorWidget) {
+    let raw = widget.cursor.raw;
+    let pos = next_word_start(&widget.content, raw);
+    widget.cursor.raw = pos;
+    widget.cursor.update_line(&widget.content);
+    widget.cursor.reset_col_visual();
+}
+
+pub fn prev_char(content: &str, from: usize) -> usize {
+    if from == 0 || content.is_empty() {
+        return 0;
+    }
+    let from = from.min(content.len());
+    content[..from].char_indices().last().map(|(i, _)| i).unwrap_or(0)
+}
+
+pub fn next_char(content: &str, from: usize) -> usize {
+    let len = content.len();
+    let from = from.min(len);
+    if from >= len {
+        return len;
+    }
+    if let Some((n, _)) = content[from..].char_indices().nth(1) {
+        from + n
+    } else {
+        len
+    }
+}
+
+pub fn prev_word_start(content: &str, from: usize) -> usize {
+    if from == 0 || content.is_empty() {
+        return 0;
+    }
+    let pos = from.min(content.len());
+
+    let bytes = content.as_bytes();
+
+    // 1. Skip whitespace/newline backward
+    let mut i = pos;
+    while i > 0 && is_space_or_newline(bytes[i - 1]) {
+        i -= 1;
+    }
+
+    if i == 0 {
+        return 0;
+    }
+
+    // 2. Skip word backward to its start
+    let mut j = i;
+    while j > 0 && !is_space_or_newline(bytes[j - 1]) {
+        j -= 1;
+    }
+
+    // If we found a word boundary (moved), return it
+    if j < i {
+        return j;
+    }
+
+    // Already at word start. Move to start of previous word.
+    // Skip current word backward
+    while i > 0 && !is_space_or_newline(bytes[i - 1]) {
+        i -= 1;
+    }
+    // Skip whitespace backward
+    while i > 0 && is_space_or_newline(bytes[i - 1]) {
+        i -= 1;
+    }
+    // Skip to start of previous word
+    while i > 0 && !is_space_or_newline(bytes[i - 1]) {
+        i -= 1;
+    }
+    i
+}
+
+pub fn next_word_start(content: &str, from: usize) -> usize {
+    let len = content.len();
+    if from >= len {
+        return len;
+    }
+
+    let bytes = content.as_bytes();
+    let mut pos = from;
+
+    // 1. If on word char, skip to end of word
+    if !is_space_or_newline(bytes[pos]) {
+        while pos < len && !is_space_or_newline(bytes[pos]) {
+            pos += 1;
+        }
+    }
+
+    // 2. Skip whitespace/newline to find start of next word
+    while pos < len && is_space_or_newline(bytes[pos]) {
+        pos += 1;
+    }
+
+    pos
+}
+
+pub fn next_word_end(content: &str, from: usize) -> usize {
+    let len = content.len();
+    if from >= len {
+        return len;
+    }
+
+    let bytes = content.as_bytes();
+    let mut pos = next_word_start(content, from);
+
+    // Skip to end of the word we landed at
+    while pos < len && !is_space_or_newline(bytes[pos]) {
+        pos += 1;
+    }
+
+    pos
+}
+
 pub fn cursor_pos(widget: &EditorWidget) -> usize {
     widget.cursor.raw
 }
@@ -79,6 +202,10 @@ fn line_count(content: &str) -> usize {
         return 1;
     }
     content.chars().filter(|&c| c == '\n').count() + 1
+}
+
+fn is_space_or_newline(b: u8) -> bool {
+    b == b' ' || b == b'\n'
 }
 
 fn line_text<'a>(content: &'a str, line: usize) -> &'a str {
