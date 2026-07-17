@@ -99,6 +99,7 @@ impl EditorWidget {
             origin,
             text_color,
             &self.content,
+            mode,
         );
 
         self.repaint_control(ui.ctx(), mode);

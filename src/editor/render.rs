@@ -235,6 +235,7 @@ pub fn paint(
     origin: Pos2,
     text_color: Color32,
     content: &str,
+    mode: EditMode,
 ) {
     let mut y_offset = origin.y;
 
@@ -245,7 +246,7 @@ pub fn paint(
 
             painter.galley(pos, galley.clone(), text_color);
 
-            if i == cursor.line {
+            if mode != EditMode::Preview && i == cursor.line {
                 if let Some(cursor_rect) = cursor_rect(content, cursor, galley) {
                     let cursor_x = origin.x + cursor_rect.min.x;
                     let cursor_y = y_offset + cursor_rect.min.y;
