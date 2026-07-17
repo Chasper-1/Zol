@@ -1,4 +1,4 @@
-// src/main.rs
+mod api;
 mod editor;
 mod gui;
 mod mdplus;
