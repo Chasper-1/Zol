@@ -1,7 +1,7 @@
 use crate::editor::markup::segment::StyleFlags;
 use crate::editor::markup::segment::{
     STYLE_BOLD, STYLE_COMMENT, STYLE_DELETION, STYLE_DISPLAY_FORMULA, STYLE_FORMULA,
-    STYLE_HIGHLIGHT, STYLE_INSERTION, STYLE_ITALIC, STYLE_SPOILER, STYLE_STRIKETHROUGH,
+    STYLE_HIGHLIGHT, STYLE_INSERTION, STYLE_ITALIC, STYLE_STRIKETHROUGH,
     STYLE_SUBSCRIPT, STYLE_SUPERSCRIPT, STYLE_UNDERLINE,
 };
 
@@ -13,7 +13,6 @@ pub struct MarkerDef {
 }
 
 pub const MARKERS: &[MarkerDef] = &[
-    MarkerDef { open: "!!!", close: "!!!", style: STYLE_SPOILER, multiline: true },
     MarkerDef { open: "/*",  close: "*\\", style: STYLE_COMMENT, multiline: true },
     MarkerDef { open: "$$",  close: "$$",  style: STYLE_DISPLAY_FORMULA, multiline: true },
     MarkerDef { open: "//",  close: "//",  style: STYLE_ITALIC, multiline: false },
@@ -23,7 +22,6 @@ pub const MARKERS: &[MarkerDef] = &[
     MarkerDef { open: ",,",  close: ",,",  style: STYLE_SUBSCRIPT, multiline: false },
     MarkerDef { open: "~~",  close: "~~",  style: STYLE_STRIKETHROUGH, multiline: false },
     MarkerDef { open: "==",  close: "==",  style: STYLE_HIGHLIGHT, multiline: false },
-    MarkerDef { open: "!!",  close: "!!",  style: STYLE_SPOILER, multiline: false },
     MarkerDef { open: "++",  close: "++",  style: STYLE_INSERTION, multiline: false },
     MarkerDef { open: "--",  close: "--",  style: STYLE_DELETION, multiline: false },
     MarkerDef { open: "$",   close: "$",   style: STYLE_FORMULA, multiline: false },

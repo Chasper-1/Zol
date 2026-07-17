@@ -165,6 +165,12 @@ fn source_layout(
         }
     }
 
+    if let Some(cache) = line_cache {
+        if cache.segments.iter().any(|s| s.style & STYLE_DISPLAY_FORMULA != 0) {
+            job.halign = Align::Center;
+        }
+    }
+
     job
 }
 
@@ -182,8 +188,7 @@ fn segment_format(style: u32, base_size: f32, _heading_size: f32, font_family: &
         format.italics = true;
     }
     if style & STYLE_STRIKETHROUGH != 0 {
-        format.color = Color32::from_rgb(200, 150, 150);
-        format.strikethrough = Stroke::new(1.0, Color32::from_rgb(200, 150, 150));
+        format.strikethrough = Stroke::new(1.0, format.color);
     }
     if style & STYLE_SUPERSCRIPT != 0 {
         format.font_id = FontId::new(base_size * 0.7, format.font_id.family);
@@ -221,7 +226,7 @@ fn segment_format(style: u32, base_size: f32, _heading_size: f32, font_family: &
         format.color = Color32::from_rgb(80, 220, 120);
     }
     if style & STYLE_DISPLAY_FORMULA != 0 {
-        format.font_id = FontId::new(base_size * 1.3, FontFamily::Monospace);
+        format.font_id = FontId::new(base_size, FontFamily::Monospace);
         format.color = Color32::from_rgb(80, 220, 120);
     }
     format

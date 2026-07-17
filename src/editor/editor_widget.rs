@@ -46,18 +46,33 @@ impl EditorWidget {
     }
 
     pub fn ui(&mut self, ui: &mut eframe::egui::Ui, state: &mut EditorState) {
+        let mode = state.mode;
+
+        let old_raw = self.cursor.raw;
+        let had_input = crate::editor::input::handle_input(self, mode, ui);
+
+        if had_input || self.cursor.raw != old_raw {
+            ui.ctx().request_repaint();
+        }
+
+        if self.cursor.line != self.last_active_line && mode == EditMode::LivePreview {
+            self.dirty = true;
+        }
+        self.last_active_line = self.cursor.line;
+
+        let needs_rebuild = had_input || self.dirty;
+
+        let theme = &state.theme;
+        let base_size = theme.text.size;
+        let heading_size = base_size * 1.6;
+        let text_color = theme.text.color.to_color32();
+
         let height = self.galleys.total_height.max(ui.available_height());
 
         let (response, painter) = ui.allocate_painter(
             eframe::egui::vec2(ui.available_width(), height),
             eframe::egui::Sense::click(),
         );
-
-        let theme = &state.theme;
-        let base_size = theme.text.size;
-        let heading_size = base_size * 1.6;
-        let text_color = theme.text.color.to_color32();
-        let mode = state.mode;
 
         if response.clicked() {
             if let Some(pos) = response.interact_pointer_pos() {
@@ -66,14 +81,7 @@ impl EditorWidget {
             }
         }
 
-        let dirty = crate::editor::input::handle_input(self, mode, ui);
-
-        if self.cursor.line != self.last_active_line && mode == EditMode::LivePreview {
-            self.dirty = true;
-        }
-        self.last_active_line = self.cursor.line;
-
-        if dirty || self.dirty {
+        if needs_rebuild {
             self.document_cache = crate::editor::markup::parse_document(&self.content);
             render::build(
                 &mut self.galleys,
@@ -91,12 +99,11 @@ impl EditorWidget {
 
         self.cursor.blink();
 
-        let origin = eframe::egui::Pos2::new(response.rect.min.x, response.rect.min.y);
         render::paint(
             &self.galleys,
             &self.cursor,
             &painter,
-            origin,
+            response.rect.min,
             text_color,
             &self.content,
             mode,

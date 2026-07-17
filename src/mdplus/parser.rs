@@ -181,7 +181,7 @@ mod tests {
     use super::*;
     use crate::editor::markup::segment::{
         STYLE_BOLD, STYLE_COMMENT, STYLE_DELETION, STYLE_DISPLAY_FORMULA, STYLE_FORMULA,
-        STYLE_HIGHLIGHT, STYLE_INSERTION, STYLE_ITALIC, STYLE_PLAIN, STYLE_SPOILER,
+        STYLE_HIGHLIGHT, STYLE_INSERTION, STYLE_ITALIC, STYLE_PLAIN,
         STYLE_STRIKETHROUGH, STYLE_SUBSCRIPT, STYLE_SUPERSCRIPT, STYLE_UNDERLINE,
     };
 
@@ -304,11 +304,6 @@ mod tests {
     #[test]
     fn highlight() {
         check_segments("==mark==", &[("mark", STYLE_HIGHLIGHT, 2, 2)]);
-    }
-
-    #[test]
-    fn spoiler() {
-        check_segments("!!secret!!", &[("secret", STYLE_SPOILER, 2, 2)]);
     }
 
     #[test]

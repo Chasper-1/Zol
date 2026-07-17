@@ -8,7 +8,7 @@ __underline__
 !!spoiler!!
 ++insertion++
 --deletion--
-/* comment *\
+/*comment*\
 $formula$
 $$display formula$$
 !!!spoiler multiline!!!
