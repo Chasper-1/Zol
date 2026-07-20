@@ -19,14 +19,22 @@ pub fn move_up(widget: &mut EditorWidget) {
     let col_x = widget.cursor.col_visual();
     let prev_line = line - 1;
     let prev_text = line_utils::line_text(&widget.content, prev_line).unwrap_or("");
-    let target_pos = if col_x.is_infinite() {
-        prev_text.len()
+    let target_char = if col_x.is_infinite() {
+        prev_text.chars().count()
     } else {
         x_to_char_pos(prev_text, col_x)
     };
 
+    // target_char — это ИНДЕКС СИМВОЛА, а не байт. Переводим в байтовый
+    // offset внутри строки через char_indices (UTF-8-безопасно).
+    let byte_offset = prev_text
+        .char_indices()
+        .nth(target_char)
+        .map(|(b, _)| b)
+        .unwrap_or(prev_text.len());
+
     let start = line_utils::line_start_byte(&widget.content, prev_line);
-    widget.cursor.set_raw(&widget.content, start + target_pos);
+    widget.cursor.set_raw(&widget.content, start + byte_offset);
     widget.cursor.set_line(prev_line);
     widget.cursor.set_col_visual(col_x);
 }
@@ -43,14 +51,20 @@ pub fn move_down(widget: &mut EditorWidget) {
     let col_x = widget.cursor.col_visual();
     let next_line = line + 1;
     let next_text = line_utils::line_text(&widget.content, next_line).unwrap_or("");
-    let target_pos = if col_x.is_infinite() {
-        next_text.len()
+    let target_char = if col_x.is_infinite() {
+        next_text.chars().count()
     } else {
         x_to_char_pos(next_text, col_x)
     };
 
+    let byte_offset = next_text
+        .char_indices()
+        .nth(target_char)
+        .map(|(b, _)| b)
+        .unwrap_or(next_text.len());
+
     let start = line_utils::line_start_byte(&widget.content, next_line);
-    widget.cursor.set_raw(&widget.content, start + target_pos);
+    widget.cursor.set_raw(&widget.content, start + byte_offset);
     widget.cursor.set_line(next_line);
     widget.cursor.set_col_visual(col_x);
 }
