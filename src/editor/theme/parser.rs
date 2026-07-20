@@ -32,7 +32,7 @@ pub fn parse_theme(rhai: Map) -> EditorTheme {
             match parse_color(&s) {
                 Ok(c) => background = c,
                 Err(e) => {
-                    eprintln!("[Flint] Ошибка парсинга цвета «editor.background»: {}", e);
+                    eprintln!("[Zol] Ошибка парсинга цвета «editor.background»: {}", e);
                 }
             }
         }
@@ -49,7 +49,7 @@ pub fn parse_theme(rhai: Map) -> EditorTheme {
             match parse_color(&s) {
                 Ok(c) => text_color = c,
                 Err(e) => {
-                    eprintln!("[Flint] Ошибка парсинга цвета «text.color»: {}", e);
+                    eprintln!("[Zol] Ошибка парсинга цвета «text.color»: {}", e);
                 }
             }
         }

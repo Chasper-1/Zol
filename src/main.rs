@@ -9,7 +9,7 @@ fn main() {
     if args.iter().any(|a| a == "--iced") {
         match gui::app_iced::run() {
             Ok(_) => {}
-            Err(e) => eprintln!("[Flint] Iced завершился с ошибкой: {:?}", e),
+            Err(e) => eprintln!("[Zol] Iced завершился с ошибкой: {:?}", e),
         }
     } else {
         // egui-версия (основной режим до полного переезда)

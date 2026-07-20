@@ -12,13 +12,13 @@ fn rgba_to_color32(c: &Rgba) -> egui::Color32 {
     )
 }
 
-pub struct FlintApp {
+pub struct ZolApp {
     state: EditorState,
     editor: EditorWidget,
     last_mode: EditMode,
 }
 
-impl FlintApp {
+impl ZolApp {
     pub fn new(cc: &eframe::CreationContext<'_>, state: EditorState) -> Self {
         let mut visuals = egui::Visuals::dark();
         visuals.panel_fill = rgba_to_color32(&state.theme.background);
@@ -40,7 +40,7 @@ impl FlintApp {
     }
 }
 
-impl eframe::App for FlintApp {
+impl eframe::App for ZolApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::Panel::top("toolbar").show(ui, |ui| {
             ui.horizontal(|ui| {

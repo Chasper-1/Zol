@@ -255,7 +255,7 @@ where
                             .to_latin(*physical_key)
                             .is_some_and(|c| c == 's')
                     {
-                        eprintln!("[Flint] Сохранение не подключено в Iced");
+                        eprintln!("[Zol] Сохранение не подключено в Iced");
                         return;
                     }
 

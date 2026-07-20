@@ -69,10 +69,10 @@ pub fn handle_input(widget: &mut EditorWidget, mode: EditMode, ui: &egui::Ui) ->
     if command && key_s {
         match fs::write("notes.md", widget.content()) {
             Ok(_) => {
-                eprintln!("[Flint] Saved notes.md");
+                eprintln!("[Zol] Saved notes.md");
             }
             Err(e) => {
-                eprintln!("[Flint] Ошибка сохранения: {}", e);
+                eprintln!("[Zol] Ошибка сохранения: {}", e);
                 // Визуальный сигнал: показываем ошибку через контекст egui
                 // Запрашиваем перерисовку
                 ui.ctx().request_repaint();
