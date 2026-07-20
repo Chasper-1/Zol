@@ -7,7 +7,7 @@ edition = "2024"
 rhai = "1.25.1"
 #notify = "8.2.0"
 eframe = "0.35.0"
-iced = "0.14.0"
+iced = { version = "0.14.0", features = ["advanced"] }
 cosmic-text = "0.19"
 unicode-segmentation = "1.13.3"
 
