@@ -1,5 +1,5 @@
 use crate::editor::editor_widget::EditorWidget;
-use crate::editor::line_utils;
+use crate::editor::utils::line_utils;
 
 pub fn move_left(widget: &mut EditorWidget) {
     widget.cursor.move_left(&widget.content);

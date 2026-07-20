@@ -1,4 +1,4 @@
-use crate::editor::line_utils;
+use crate::editor::utils::line_utils;
 use std::time::{Duration, Instant};
 
 pub struct Cursor {

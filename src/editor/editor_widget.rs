@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::editor::cache::DocumentCache;
 use crate::editor::cursor::Cursor;
-use crate::editor::line_utils;
+use crate::editor::utils::line_utils;
 use crate::editor::render::{self, Galleys};
 use crate::editor::state::EditMode;
 use crate::editor::state::EditorState;

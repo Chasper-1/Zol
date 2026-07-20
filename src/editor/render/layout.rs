@@ -1,101 +1,17 @@
-use crate::editor::cache::DocumentCache;
-use crate::editor::cursor::Cursor;
-use crate::editor::line_utils;
+use crate::editor::cache::MarkupCache;
+use crate::editor::utils::line_utils;
 use crate::editor::markup::segment::{
     STYLE_BOLD, STYLE_CODE, STYLE_COMMENT, STYLE_DELETION, STYLE_DISPLAY_FORMULA, STYLE_FORMULA,
     STYLE_HIGHLIGHT, STYLE_INSERTION, STYLE_ITALIC, STYLE_STRIKETHROUGH, STYLE_SUBSCRIPT,
     STYLE_SUPERSCRIPT, STYLE_UNDERLINE,
 };
-use crate::editor::state::EditMode;
-use crate::editor::theme::EditorTheme;
-use eframe::egui::text::{CCursor, Galley, LayoutJob};
-use eframe::egui::{Align, Color32, FontFamily, FontId, Painter, Pos2, Stroke, TextFormat, Ui};
-use std::sync::Arc;
+use eframe::egui::text::LayoutJob;
+use eframe::egui::{Align, Color32, FontFamily, FontId, Stroke, TextFormat};
 
-pub struct Galleys {
-    pub galleys: Vec<Option<Arc<Galley>>>,
-    pub total_height: f32,
-}
-
-impl Galleys {
-    pub fn new() -> Self {
-        Self {
-            galleys: Vec::new(),
-            total_height: 0.0,
-        }
-    }
-}
-
-pub fn build(
-    galleys: &mut Galleys,
-    content: &str,
-    cache: &DocumentCache,
-    mode: EditMode,
-    active_line: usize,
-    ui: &Ui,
-    theme: &EditorTheme,
-    base_size: f32,
-    heading_size: f32,
-) {
-    let font_family = theme
-        .text
-        .font_family
-        .as_deref()
-        .map(|name| FontFamily::Name(Arc::from(name)))
-        .unwrap_or(FontFamily::Proportional);
-
-    let lines: Vec<&str> = content.split('\n').collect();
-    let num_lines = lines.len();
-    let mut new_galleys = Vec::with_capacity(num_lines);
-    let mut total_height = 0.0;
-
-    let mut line_start = 0usize;
-    for (i, line) in lines.iter().enumerate() {
-        let show_markers = match mode {
-            EditMode::Source => true,
-            EditMode::Preview => false,
-            EditMode::LivePreview => i == active_line,
-        };
-
-        let job = if line.is_empty() {
-            let mut job = LayoutJob::default();
-            let fmt = TextFormat::simple(
-                FontId::new(base_size, font_family.clone()),
-                Color32::from_rgb(200, 200, 200),
-            );
-            job.append("\u{200B}", 0.0, fmt);
-            job
-        } else {
-            source_layout(
-                line,
-                line_start,
-                cache.lines.get(i),
-                base_size,
-                heading_size,
-                &font_family,
-                show_markers,
-                ui.available_width(),
-            )
-        };
-
-        let galley = ui.fonts_mut(|f| f.layout_job(job));
-        total_height += galley.size().y;
-        new_galleys.push(Some(galley));
-
-        line_start += line.len() + 1;
-        if line_start > content.len() {
-            line_start = content.len();
-        }
-    }
-
-    galleys.galleys = new_galleys;
-    galleys.total_height = total_height;
-}
-
-fn source_layout(
+pub(super) fn source_layout(
     line: &str,
     line_start: usize,
-    line_cache: Option<&crate::editor::cache::MarkupCache>,
+    line_cache: Option<&MarkupCache>,
     base_size: f32,
     heading_size: f32,
     font_family: &FontFamily,
@@ -252,69 +168,7 @@ fn segment_format(
     format
 }
 
-pub fn paint(
-    galleys: &Galleys,
-    cursor: &Cursor,
-    painter: &Painter,
-    origin: Pos2,
-    text_color: Color32,
-    content: &str,
-    mode: EditMode,
-) {
-    let mut y_offset = origin.y;
-
-    for (i, galley_opt) in galleys.galleys.iter().enumerate() {
-        if let Some(galley) = galley_opt {
-            let galley_size = galley.size();
-            let pos = Pos2::new(origin.x, y_offset);
-
-            painter.galley(pos, galley.clone(), text_color);
-
-            if mode != EditMode::Preview
-                && i == cursor.line
-                && let Some(cursor_rect) = cursor_rect(content, cursor, galley)
-            {
-                let cursor_x = origin.x + cursor_rect.min.x;
-                let cursor_y = y_offset + cursor_rect.min.y;
-                let line_h = cursor_rect.height().max(galley_size.y * 0.8);
-
-                painter.line_segment(
-                    [
-                        Pos2::new(cursor_x, cursor_y),
-                        Pos2::new(cursor_x, cursor_y + line_h),
-                    ],
-                    Stroke::new(2.0, text_color),
-                );
-            }
-
-            y_offset += galley_size.y;
-        }
-    }
-}
-
-fn cursor_rect(content: &str, cursor: &Cursor, galley: &Galley) -> Option<eframe::egui::Rect> {
-    let (line_start, line_end) = cursor_line_bounds(content, cursor.line);
-    let byte_in_line = cursor.raw.saturating_sub(line_start);
-    // Безопасный срез: используем line_utils::safe_slice, который корректирует границы UTF-8
-    let line_text = crate::editor::line_utils::safe_slice(content, line_start, line_end);
-    let byte_in_line = byte_in_line.min(line_text.len());
-    // Приводим byte_in_line к границе char для безопасного chars().count()
-    let safe_byte = if line_text.is_char_boundary(byte_in_line) {
-        byte_in_line
-    } else {
-        // Ищем предыдущую границу
-        let mut b = byte_in_line;
-        while b > 0 && !line_text.is_char_boundary(b) {
-            b -= 1;
-        }
-        b
-    };
-    let char_idx = line_text[..safe_byte].chars().count();
-    let egui_cursor = CCursor::new(char_idx);
-    Some(galley.pos_from_cursor(egui_cursor))
-}
-
-fn cursor_line_bounds(content: &str, line: usize) -> (usize, usize) {
+pub(super) fn cursor_line_bounds(content: &str, line: usize) -> (usize, usize) {
     line_utils::line_bounds(content, line)
         .map(|b| (b.start, b.end))
         .unwrap_or((0, 0))
