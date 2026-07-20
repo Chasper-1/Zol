@@ -173,105 +173,83 @@ fn parse_hex(s: &str) -> Result<Rgba, String> {
     let hex = &s[1..]; // убираем #
     let len = hex.len();
 
-    let (r, g, b, a) = match len {
-        3 => {
-            // #RGB → #RRGGBB
-            let r = u8::from_str_radix(&hex[0..1].repeat(2), 16).map_err(|_| "неверный hex")?;
-            let g = u8::from_str_radix(&hex[1..2].repeat(2), 16).map_err(|_| "неверный hex")?;
-            let b = u8::from_str_radix(&hex[2..3].repeat(2), 16).map_err(|_| "неверный hex")?;
-            (r, g, b, 255)
-        }
-        4 => {
-            // #RGBA → #RRGGBBAA
-            let r = u8::from_str_radix(&hex[0..1].repeat(2), 16).map_err(|_| "неверный hex")?;
-            let g = u8::from_str_radix(&hex[1..2].repeat(2), 16).map_err(|_| "неверный hex")?;
-            let b = u8::from_str_radix(&hex[2..3].repeat(2), 16).map_err(|_| "неверный hex")?;
-            let a = u8::from_str_radix(&hex[3..4].repeat(2), 16).map_err(|_| "неверный hex")?;
-            (r, g, b, a)
-        }
-        6 => {
-            let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| "неверный hex")?;
-            let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| "неверный hex")?;
-            let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| "неверный hex")?;
-            (r, g, b, 255)
-        }
-        8 => {
-            let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| "неверный hex")?;
-            let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| "неверный hex")?;
-            let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| "неверный hex")?;
-            let a = u8::from_str_radix(&hex[6..8], 16).map_err(|_| "неверный hex")?;
-            (r, g, b, a)
-        }
-        _ => {
-            return Err(format!(
-                "неверная длина hex-цвета: #{} ({} символов)",
-                hex, len
-            ));
-        }
+    // Расширяем короткую форму (#RGB → #RRGGBB, #RGBA → #RRGGBBAA)
+    let expanded: String = match len {
+        3 => hex.chars().flat_map(|c| [c, c]).collect(),
+        4 => hex.chars().flat_map(|c| [c, c]).collect(),
+        _ => hex.to_string(),
     };
+
+    let expanded_len = expanded.len();
+    if expanded_len != 6 && expanded_len != 8 {
+        return Err(format!(
+            "неверная длина hex-цвета: #{} ({} символов)",
+            hex, len
+        ));
+    }
+
+    let ch = |start: usize| -> Result<u8, String> {
+        u8::from_str_radix(&expanded[start..start + 2], 16)
+            .map_err(|_| format!("неверный hex: #{}", hex))
+    };
+
+    let r = ch(0)?;
+    let g = ch(2)?;
+    let b = ch(4)?;
+    let a = if expanded_len == 8 { ch(6)? } else { 255 };
 
     Ok(Rgba::from_rgba8(r, g, b, a))
 }
 
-fn parse_rgb(s: &str) -> Result<Rgba, String> {
+/// Разобрать строку вида `func(a, b, c)` или `func(a, b, c, alpha)`.
+/// Возвращает части без скобок, проверяя что их 3 или 4.
+fn split_func_args<'a>(s: &'a str, name: &str) -> Result<Vec<&'a str>, String> {
     let inner = s
-        .trim_start_matches("rgba(")
-        .trim_start_matches("rgb(")
+        .trim_start_matches(|c: char| c.is_alphabetic() || c == '_')
+        .trim_start_matches('(')
         .trim_end_matches(')')
         .trim();
 
-    let parts: Vec<&str> = inner.split(',').map(|p| p.trim()).collect();
+    let parts: Vec<&str> = inner.split(',').map(|p| p.trim()).filter(|p| !p.is_empty()).collect();
     if parts.len() < 3 || parts.len() > 4 {
         return Err(format!(
-            "rgb/rgba: нужно 3 или 4 аргумента, получено {}",
+            "{}: нужно 3 или 4 аргумента, получено {}",
+            name,
             parts.len()
         ));
     }
+    Ok(parts)
+}
 
+/// Парсит опциональный альфа-канал из 4-го аргумента.
+fn parse_alpha(parts: &[&str], name: &str) -> Result<f32, String> {
+    if parts.len() == 4 {
+        let a: f32 = parts[3]
+            .parse()
+            .map_err(|e| format!("{}: альфа не число: {}", name, e))?;
+        Ok(a.clamp(0.0, 1.0))
+    } else {
+        Ok(1.0)
+    }
+}
+
+fn parse_rgb(s: &str) -> Result<Rgba, String> {
+    let parts = split_func_args(s, "rgb/rgba")?;
     let r = parse_0_255(parts[0])?;
     let g = parse_0_255(parts[1])?;
     let b = parse_0_255(parts[2])?;
-    let a = if parts.len() == 4 {
-        parts[3]
-            .parse::<f32>()
-            .map_err(|e| format!("rgb/rgba: альфа не число: {}", e))?
-            .clamp(0.0, 1.0)
-    } else {
-        1.0
-    };
-
+    let a = parse_alpha(&parts, "rgb/rgba")?;
     Ok(Rgba::from_rgb8_a(r, g, b, a))
 }
 
 fn parse_hsl(s: &str) -> Result<Rgba, String> {
-    let inner = s
-        .trim_start_matches("hsla(")
-        .trim_start_matches("hsl(")
-        .trim_end_matches(')')
-        .trim();
-
-    let parts: Vec<&str> = inner.split(',').map(|p| p.trim()).collect();
-    if parts.len() < 3 || parts.len() > 4 {
-        return Err(format!(
-            "hsl/hsla: нужно 3 или 4 аргумента, получено {}",
-            parts.len()
-        ));
-    }
-
+    let parts = split_func_args(s, "hsl/hsla")?;
     let h = parts[0]
         .parse::<f32>()
         .map_err(|e| format!("hsl: оттенок не число: {}", e))?;
     let s = parse_0_100(parts[1])?;
     let l = parse_0_100(parts[2])?;
-    let a = if parts.len() == 4 {
-        parts[3]
-            .parse::<f32>()
-            .map_err(|e| format!("hsla: альфа не число: {}", e))?
-            .clamp(0.0, 1.0)
-    } else {
-        1.0
-    };
-
+    let a = parse_alpha(&parts, "hsl/hsla")?;
     Ok(hsl_to_rgb(h, s, l).with_alpha(a))
 }
 
@@ -442,57 +420,90 @@ mod tests {
         };
     }
 
+    // —————— хелперы ——————
+
+    fn check_parse(input: &str, expected: Rgba) {
+        let c = parse_color(input).unwrap();
+        assert_rgba!(c, expected);
+    }
+
+    fn check_err(input: &str) {
+        assert!(parse_color(input).is_err());
+    }
+
+    fn check_detect(input: &str, expected: Option<ColorFormat>) {
+        assert_eq!(detect_format(input), expected);
+    }
+
+    // —————— hex ——————
+
     #[test]
-    fn hex_3() {
-        let c = parse_color("#F00").unwrap();
-        assert_rgba!(c, Rgba::new(1.0, 0.0, 0.0));
+    fn parse_hex() {
+        check_parse("#F00", Rgba::new(1.0, 0.0, 0.0));
+        check_parse("#F00F", Rgba::new(1.0, 0.0, 0.0));
+        check_parse("#FF0000", Rgba::new(1.0, 0.0, 0.0));
+        check_parse("#FF000080", Rgba::new(1.0, 0.0, 0.0).with_alpha(0.502));
     }
 
     #[test]
-    fn hex_4() {
-        let c = parse_color("#F00F").unwrap();
-        assert_rgba!(c, Rgba::new(1.0, 0.0, 0.0));
+    fn parse_hex_invalid_length() {
+        check_err("#FF");
+    }
+
+    // —————— rgb / rgba ——————
+
+    #[test]
+    fn parse_rgb() {
+        check_parse("rgb(255, 0, 0)", Rgba::new(1.0, 0.0, 0.0));
     }
 
     #[test]
-    fn hex_6() {
-        let c = parse_color("#FF0000").unwrap();
-        assert_rgba!(c, Rgba::new(1.0, 0.0, 0.0));
+    fn parse_rgba() {
+        check_parse("rgba(255, 0, 0, 0.5)", Rgba::new(1.0, 0.0, 0.0).with_alpha(0.5));
+    }
+
+    // —————— hsl / hsla ——————
+
+    #[test]
+    fn parse_hsl() {
+        check_parse("hsl(0, 100%, 50%)", Rgba::new(1.0, 0.0, 0.0));
     }
 
     #[test]
-    fn hex_8() {
-        let c = parse_color("#FF000080").unwrap();
-        assert_rgba!(c, Rgba::new(1.0, 0.0, 0.0).with_alpha(0.502));
+    fn parse_hsla() {
+        check_parse("hsla(0, 100%, 50%, 0.5)", Rgba::new(1.0, 0.0, 0.0).with_alpha(0.5));
+    }
+
+    // —————— именованные ——————
+
+    #[test]
+    fn parse_named() {
+        check_parse("red", Rgba::new(1.0, 0.0, 0.0));
+        check_parse("white", Rgba::new(1.0, 1.0, 1.0));
+        check_parse("transparent", Rgba::new(0.0, 0.0, 0.0).with_alpha(0.0));
     }
 
     #[test]
-    fn hex_invalid_length() {
-        assert!(parse_color("#FF").is_err());
+    fn parse_named_case_insensitive() {
+        check_parse("RED", Rgba::new(1.0, 0.0, 0.0));
+        check_parse("Transparent", Rgba::new(0.0, 0.0, 0.0).with_alpha(0.0));
     }
 
     #[test]
-    fn rgb() {
-        let c = parse_color("rgb(255, 0, 0)").unwrap();
-        assert_rgba!(c, Rgba::new(1.0, 0.0, 0.0));
+    fn parse_named_unknown() {
+        check_err("ultramarine");
     }
 
-    #[test]
-    fn rgba() {
-        let c = parse_color("rgba(255, 0, 0, 0.5)").unwrap();
-        assert_rgba!(c, Rgba::new(1.0, 0.0, 0.0).with_alpha(0.5));
-    }
+    // —————— detect ——————
 
     #[test]
-    fn hsl() {
-        let c = parse_color("hsl(0, 100%, 50%)").unwrap();
-        assert_rgba!(c, Rgba::new(1.0, 0.0, 0.0));
-    }
-
-    #[test]
-    fn hsla() {
-        let c = parse_color("hsla(0, 100%, 50%, 0.5)").unwrap();
-        assert_rgba!(c, Rgba::new(1.0, 0.0, 0.0).with_alpha(0.5));
+    fn detect_formats() {
+        check_detect("#FF0000", Some(ColorFormat::Hex));
+        check_detect("rgb(255,0,0)", Some(ColorFormat::Rgb));
+        check_detect("hsl(0,100%,50%)", Some(ColorFormat::Hsl));
+        check_detect("oklch(50% 0.1 30)", Some(ColorFormat::Oklch));
+        check_detect("red", Some(ColorFormat::Named));
+        check_detect("not-a-color", None);
     }
 
     #[test]
@@ -503,60 +514,6 @@ mod tests {
         assert!(c.r >= 0.0 && c.r <= 1.0);
         assert!(c.g >= 0.0 && c.g <= 1.0);
         assert!(c.b >= 0.0 && c.b <= 1.0);
-    }
-
-    #[test]
-    fn named_colors() {
-        assert_rgba!(parse_color("red").unwrap(), Rgba::new(1.0, 0.0, 0.0));
-        assert_rgba!(
-            parse_color("transparent").unwrap(),
-            Rgba::new(0.0, 0.0, 0.0).with_alpha(0.0)
-        );
-        assert_rgba!(parse_color("white").unwrap(), Rgba::new(1.0, 1.0, 1.0));
-    }
-
-    #[test]
-    fn named_case_insensitive() {
-        assert_rgba!(parse_color("RED").unwrap(), Rgba::new(1.0, 0.0, 0.0));
-        assert_rgba!(
-            parse_color("Transparent").unwrap(),
-            Rgba::new(0.0, 0.0, 0.0).with_alpha(0.0)
-        );
-    }
-
-    #[test]
-    fn unknown_named() {
-        assert!(parse_color("ultramarine").is_err());
-    }
-
-    #[test]
-    fn detect_hex() {
-        assert_eq!(detect_format("#FF0000"), Some(ColorFormat::Hex));
-    }
-
-    #[test]
-    fn detect_rgb() {
-        assert_eq!(detect_format("rgb(255,0,0)"), Some(ColorFormat::Rgb));
-    }
-
-    #[test]
-    fn detect_hsl() {
-        assert_eq!(detect_format("hsl(0,100%,50%)"), Some(ColorFormat::Hsl));
-    }
-
-    #[test]
-    fn detect_oklch() {
-        assert_eq!(detect_format("oklch(50% 0.1 30)"), Some(ColorFormat::Oklch));
-    }
-
-    #[test]
-    fn detect_named() {
-        assert_eq!(detect_format("red"), Some(ColorFormat::Named));
-    }
-
-    #[test]
-    fn detect_unknown() {
-        assert_eq!(detect_format("not-a-color"), None);
     }
 
     #[test]
