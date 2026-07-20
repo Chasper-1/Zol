@@ -67,9 +67,9 @@ pub fn handle_input(widget: &mut EditorWidget, mode: EditMode, ui: &egui::Ui) ->
     let mut dirty = false;
 
     if command && key_s {
-        match fs::write("notes.md", widget.content()) {
+        match fs::write("notes.zml", widget.content()) {
             Ok(_) => {
-                eprintln!("[Zol] Saved notes.md");
+                eprintln!("[Zol] Saved notes.zml");
             }
             Err(e) => {
                 eprintln!("[Zol] Ошибка сохранения: {}", e);

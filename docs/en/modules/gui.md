@@ -1,65 +1,19 @@
 # GUI Module
 
-`src/gui/` — graphical interface backends.
+`src/gui/` — Iced graphical interface.
 
 ```
 gui/
 ├── mod.rs
-├── app.rs          — egui application (ZolApp)
-├── run.rs          — egui entry point, Rhai theme loading
 ├── app_iced.rs     — Iced application
-└── iced_editor.rs  — Iced custom Widget
+└── iced_editor.rs  — Iced custom widget
 ```
 
-## egui Backend
+## IcedEditor
 
-### ZolApp
+`gui::iced_editor::IcedEditor<'a>` — custom `iced::advanced::Widget` rendering via `fill_quad()`.
 
-`gui::app::ZolApp` — implements `eframe::App` trait.
-
-```
-struct ZolApp {
-    state: EditorState,     // mode, theme, content
-    editor: EditorWidget,   // cursor, cache, shaped_doc
-}
-```
-
-Entry: `gui::run::run_app()` — creates eframe NativeOptions with title "Zol", loads theme from `theme.rhai`, creates `ZolApp`.
-
-### EditorWidget
-
-`editor::editor_widget::EditorWidget` — custom egui widget replacing `egui::TextEdit`.
-
-```
-struct EditorWidget {
-    content: String,
-    cursor: Cursor,
-    document_cache: DocumentCache,
-    shaped_doc: ShapedDocument,
-    dirty: bool,
-    last_active_line: usize,
-}
-```
-
-Frame lifecycle in `EditorWidget::ui()`:
-
-1. `handle_input()` — processes key events through `api::{text,cursor}`
-2. If input or dirty:
-   - `mdplus::parse_document()` → fresh cache
-   - `render::build()` → fresh ShapedDocument
-3. `render::paint()` — draws glyphs + cursor
-
-### Repaint Strategy
-
-- **Preview mode**: `request_repaint_after(Duration::from_secs(10))`
-- **Source / LivePreview**: `request_repaint_after(Duration::from_millis(530))` (cursor blink)
-- `parse_document` + `render::build` only run when content actually changed (dirty flag)
-
-## Iced Backend
-
-### IcedEditor (Widget)
-
-`gui::iced_editor::IcedEditor<'a>` — custom `iced::advanced::Widget` that draws directly via `fill_quad()`.
+### EditorInner
 
 ```rust
 pub struct EditorInner {
@@ -75,56 +29,32 @@ pub struct EditorInner {
 }
 ```
 
-Interior mutability is provided by `RefCell` fields. The widget holds `&EditorInner` (shared reference).
+Interior mutability via `RefCell` fields. The widget holds `&EditorInner`.
 
-### Event Handling
+### Event Handling (`update()`)
 
-**Keyboard** (in `update()`):
-- Arrow keys → cursor navigation
-- Home / End → start/end of line
-- Backspace / Delete → character deletion
-- Enter → new line
-- Printable chars → text insertion
-- Each mutation sets `dirty.set(true)`
+**Keyboard:** cursor navigation, Home/End, Backspace/Delete, Enter, text input. Each mutation sets `dirty.set(true)`.
 
-**Mouse**:
-- Click → `buffer.hit(local_x, local_y)` → convert cosmic-text Cursor → Zol cursor position
+**Mouse:** click → `buffer.hit()` → cursor repositioning.
 
-### Rendering (in `draw()`)
+### Rendering (`draw()`)
 
 Two-phase:
+1. If dirty: `render::build()` with viewport height (visible lines only)
+2. Draw: background quad → glyph quads → cursor bar (2px, blinking)
 
-1. **Rebuild phase** (if dirty):
-   - `render::build()` with `viewport_height = Some(bounds.height)`
-   - Only visible lines are shaped
+### Application
 
-2. **Draw phase**:
-   - Background quad
-   - Glyph quads from `buffer.layout_runs()`
-   - Cursor bar (2px wide, blinking)
+`app_iced.rs` — standard Iced boot/update/view, wraps IcedEditor in Scrollable + Container.
 
-### App
+## Implementation Status
 
-`gui::app_iced::` — standard Iced boot/update/view:
-
-```rust
-fn boot() → (AppState, Task<Message>)
-fn update(app_state: &mut AppState, message: Message)
-fn view(app_state: &AppState) → Element<'_, Message, Theme, iced::Renderer>
-```
-
-The view wraps `IcedEditor` in a `Scrollable` + `Container`.
-
-## Future
-
-The Iced backend is meant to replace egui entirely. Current status:
-
-| Feature | egui | Iced |
-|---------|------|------|
-| Text editing | ✅ | ✅ |
-| Cursor navigation | ✅ | ✅ (no up/down yet) |
-| md+ rendering | ✅ | ✅ |
-| Scroll | ✅ (egui native) | ❌ (TODO) |
-| Save | ✅ (Ctrl+S) | ❌ (stub) |
-| Theme | ✅ | ✅ |
-| move_up/move_down | ✅ | ❌ (stub) |
+| Feature | Status |
+|---------|--------|
+| Text editing | ✅ |
+| zml markup | ✅ |
+| Cursor navigation (left/right/home/end) | ✅ |
+| move_up / move_down | ❌ (TODO) |
+| Scroll | ❌ (TODO) |
+| Save (Ctrl+S) | ❌ (stub) |
+| Theme | ✅ |

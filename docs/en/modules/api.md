@@ -88,4 +88,4 @@ When Rhai plugins are connected:
 
 ## Note
 
-The `api::cursor` compound movements currently operate on `EditorWidget` (egui struct). For Iced, the widget directly calls `editor::cursor::Cursor` methods. In the future, the API module will be generic over any widget implementing a trait.
+The `api::cursor` compound movements operate on `EditorWidget`. For Iced, the widget directly calls `editor::cursor::Cursor` methods.

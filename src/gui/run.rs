@@ -48,10 +48,10 @@ pub fn run_app() -> eframe::Result {
                 }
             };
 
-            let text = match fs::read_to_string("notes.md") {
-                Ok(t) => t.trim_end_matches('\n').to_string(),
+            let text = match fs::read_to_string("notes.zml") {
+                Ok(t) => t,
                 Err(e) => {
-                    eprintln!("[Zol] notes.md не найден ({}), создаю пустой документ", e);
+                    eprintln!("[Zol] notes.zml не найден ({}), создаю пустой документ", e);
                     String::new()
                 }
             };

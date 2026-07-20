@@ -1,13 +1,13 @@
-# md+ — правила разметки
+# zml — правила разметки (устаревшее)
 
 > **⚠️ Этот файл устарел.**  
-> Актуальная документация по синтаксису md+: [`docs/ru/markup-syntax.md`](docs/ru/markup-syntax.md)
+> Актуальная документация по синтаксису zml: [`docs/ru/markup-syntax.md`](docs/ru/markup-syntax.md)
 >
 > English version: [`docs/en/markup-syntax.md`](docs/en/markup-syntax.md)
 
 Содержимое ниже оставлено для истории. Вся новая информация пишется в `docs/`.
 
-## md+ Symbols
+## zml Symbols (legacy)
 
 | Символ  | Назначение        | Пример               |
 | ------- | ----------------- | -------------------- |

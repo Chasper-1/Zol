@@ -1,4 +1,4 @@
-//! Стековый парсер mdplus.
+//! Стековый парсер zml.
 //!
 //! Преобразует поток токенов в AST (MarkupDoc).
 //! Использует стек вместо рекурсии — нет переполнения стека на глубокой вложенности.
@@ -93,7 +93,7 @@ fn marker_text_for_close(style: MarkupStyle) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mdplus::token::tokenize;
+    use crate::zml::token::tokenize;
 
     fn flatten_text(node: &MarkupNode) -> String {
         match node {

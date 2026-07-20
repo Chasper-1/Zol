@@ -88,4 +88,4 @@ pub fn get_mode(state: &EditorState) -> EditMode;
 
 ## Примечание
 
-Составные движения `api::cursor` сейчас работают с `EditorWidget` (egui-структура). В Iced виджет напрямую вызывает методы `editor::cursor::Cursor`. В будущем модуль API станет обобщённым над любым виджетом, реализующим соответствующий trait.
+Составные движения `api::cursor` работают с `EditorWidget`. В Iced виджет напрямую вызывает методы `editor::cursor::Cursor`.

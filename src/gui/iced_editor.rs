@@ -271,10 +271,36 @@ where
                             self.inner.cursor.borrow_mut().move_right(&c);
                         }
                         iced::keyboard::Key::Named(Named::ArrowUp) => {
-                            // TODO: move_up
+                            let mut cursor = self.inner.cursor.borrow_mut();
+                            let content = self.inner.content.borrow();
+                            let line = cursor.line();
+                            if line == 0 {
+                                return;
+                            }
+                            let (cur_start, _) = cursor_line_bounds(&content, line);
+                            let col = cursor.raw().saturating_sub(cur_start);
+                            let (t_start, t_end) =
+                                cursor_line_bounds(&content, line - 1);
+                            let new_raw = (t_start + col).min(t_end);
+                            cursor.set_raw(&content, new_raw);
+                            cursor.reset_col_visual();
                         }
                         iced::keyboard::Key::Named(Named::ArrowDown) => {
-                            // TODO: move_down
+                            let mut cursor = self.inner.cursor.borrow_mut();
+                            let content = self.inner.content.borrow();
+                            let line = cursor.line();
+                            let n_lines =
+                                content.bytes().filter(|&b| b == b'\n').count() + 1;
+                            if line + 1 >= n_lines {
+                                return;
+                            }
+                            let (cur_start, _) = cursor_line_bounds(&content, line);
+                            let col = cursor.raw().saturating_sub(cur_start);
+                            let (t_start, t_end) =
+                                cursor_line_bounds(&content, line + 1);
+                            let new_raw = (t_start + col).min(t_end);
+                            cursor.set_raw(&content, new_raw);
+                            cursor.reset_col_visual();
                         }
                         iced::keyboard::Key::Named(Named::Home) => {
                             let c = self.inner.content.borrow();

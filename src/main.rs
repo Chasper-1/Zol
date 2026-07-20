@@ -1,7 +1,7 @@
 mod api;
 mod editor;
 mod gui;
-mod mdplus;
+mod zml;
 
 fn main() {
     // Если передан аргумент --iced — запускаем Iced-версию

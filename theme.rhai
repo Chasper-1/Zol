@@ -1,3 +1,5 @@
+// Zol theme file
+// See docs/ru/theme-system.md for documentation
 #{
     editor: #{
         padding: 10.0,

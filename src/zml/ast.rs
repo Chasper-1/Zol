@@ -1,4 +1,4 @@
-//! AST (Abstract Syntax Tree) для mdplus-разметки.
+//! AST (Abstract Syntax Tree) для zml-разметки.
 //!
 //! Этот модуль не зависит от крейтов, только от `std`.
 //! Может быть вынесен в отдельный проект.
@@ -79,7 +79,7 @@ pub struct MarkerDef {
     pub track_depth: bool,
 }
 
-/// Все маркеры mdplus. Упорядочены от длинных к коротким для правильного приоритета.
+/// Все маркеры zml. Упорядочены от длинных к коротким для правильного приоритета.
 pub const MARKERS: &[MarkerDef] = &[
     MarkerDef {
         open: "%%",

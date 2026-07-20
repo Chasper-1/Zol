@@ -1,4 +1,4 @@
-//! Токенизатор mdplus.
+//! Токенизатор zml.
 //!
 //! Преобразует сырой текст в последовательность токенов.
 //! Один проход по тексту, без рекурсии.
@@ -183,7 +183,7 @@ fn flush_text(_tokens: &mut Vec<Token>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mdplus::ast::MarkupStyle;
+    use crate::zml::ast::MarkupStyle;
 
     fn text(s: &str) -> Token {
         Token::Text(s.to_string())

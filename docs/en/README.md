@@ -1,17 +1,16 @@
 # Zol
 
-**Zol** is a semantic text editor with custom markup (md+), dual rendering pipeline (egui + Iced), Rhai-based theming, and grapheme-aware cursor navigation.
+**Zol** is a semantic text editor with custom markup (zml — Zol Markup Language), Iced rendering, Rhai-based theming, and grapheme-aware cursor navigation.
 
 ## Quick Start
 
 ```bash
-cargo run              # egui backend (default)
-cargo run -- --iced    # Iced backend (experimental)
+cargo run
 ```
 
 ### Default file
 
-Zol opens `notes.md` in the project root. If the file doesn't exist, it is created empty.
+Zol opens `notes.zml` in the project root. If the file doesn't exist, it is created empty.
 
 ### Controls
 
@@ -22,82 +21,51 @@ Zol opens `notes.md` in the project root. If the file doesn't exist, it is creat
 | Ctrl+← / Ctrl+→ | Word left / right |
 | Backspace / Delete | Delete character |
 | Enter | New line |
-| Ctrl+S | Save to `notes.md` |
+| Ctrl+S | Save to `notes.zml` |
 
 ## Project Structure
 
 ```
 src/
 ├── api/             — Public API for Rhai plugins
-│   ├── cursor.rs    — Cursor movement primitives
-│   ├── text.rs      — Text editing operations
-│   └── editor.rs    — Mode switching, editor state
 ├── editor/          — Editor core (GUI-independent)
-│   ├── cursor.rs    — Grapheme-aware cursor (GraphemeCursor)
+│   ├── cursor.rs    — Grapheme-aware cursor
 │   ├── font/        — Font system (fontdb + cosmic-text)
-│   ├── layout/      — TextRun computation from md+ markup
-│   ├── render/      — Shaping (cosmic-text Buffer) + egui painting
-│   ├── markup/      — md+ parser integration → DocumentCache
+│   ├── layout/      — TextRun computation from zml markup
+│   ├── render/      — Shaping (cosmic-text) + rendering
+│   ├── markup/      — zml parser integration
 │   ├── cache/       — DocumentCache, MarkupCache, Segment
 │   ├── state.rs     — EditorState, EditMode
-│   ├── editor_widget.rs — egui editor widget
-│   ├── input.rs     — Keyboard input handling (egui)
 │   ├── theme/       — EditorTheme, Rhai theme parser
-│   └── utils/       — Line utilities, safe slicing
-├── gui/             — GUI backends
-│   ├── app.rs       — egui application (ZolApp)
-│   ├── run.rs       — egui entry point, Rhai theme loading
+│   └── utils/       — Line utilities
+├── gui/             — Iced backend
 │   ├── app_iced.rs  — Iced application
-│   └── iced_editor.rs — Iced custom widget (Widget trait)
-├── mdplus/          — md+ markup parser
-│   ├── token.rs     — Tokenizer (one pass, no recursion)
-│   ├── parser.rs    — Stack-based AST builder
-│   ├── ast.rs       — MarkupDoc, MarkupNode, MarkupStyle
-│   └── segmenter.rs — AST → DocumentCache conversion
-└── main.rs          — Entry point (--iced flag)
+│   └── iced_editor.rs — Iced custom widget
+├── zml/             — zml markup parser
+└── main.rs          — Entry point
 ```
 
 ## Architecture
 
 ```
-notes.md ──→ gui::run ──→ EditorWidget::ui()
-                              │
-                    ┌─────────┴──────────┐
-                    │                    │
-              handle_input()       render::paint()
-                    │                    │
-                    ▼                    ▼
-              api::text /           cosmic-text
-              api::cursor           Buffer → GPU
-                    │
-                    ▼
-              mdplus::parse_document()
-                    │
-                    ▼
-              DocumentCache
-                    │
-                    ▼
-              render::build()
-                    │
-                    ▼
-              ShapedDocument
-              (cosmic-text Buffer)
+Event → IcedEditor::update()
+  ├─ keyboard → modify content/cursor, dirty = true
+  └─ mouse → buffer.hit(), set cursor, request_redraw()
+
+Frame → IcedEditor::draw()
+  ├─ dirty? → render::build() with viewport height
+  └─ fill_quad() for each glyph + cursor
 ```
 
 ## Key Design Decisions
 
-1. **Grapheme cursor** — `Cursor` uses `GraphemeCursor` (unicode-segmentation) for all navigation. No byte arithmetic, no O(n) linear scans.
+1. **Grapheme cursor** — `GraphemeCursor` for all navigation.
+2. **zml markup** — single-pass tokenizer, stack-based AST, 15 style flags. File extension: `.zml`.
+3. **Font system** — `OnceLock<Mutex<FontSystem>>` singleton via fontdb.
+4. **Viewport shaping** — only visible lines are shaped via cosmic-text.
+5. **Iced** — sole GUI backend, custom Widget via `fill_quad()`.
+6. **Rhai theming** — `theme.rhai` loaded at startup.
 
-2. **Markup parser (md+)** — one-pass tokenizer, stack-based AST, 14 style flags. Multiline markers (`/* */`, `$$ $$`, `!!! !!!`) close across newlines.
-
-3. **Font system** — `OnceLock<Mutex<FontSystem>>` singleton initialized once from system fonts via fontdb.
-
-4. **Viewport shaping** — `render::build()` accepts `viewport_height`: if set, cosmic-text only shapes visible lines (`buffer.set_size(None, height)`).
-
-5. **Dual GUI** — egui (`EditorWidget`) is the stable backend; Iced (`IcedEditor`) is in development. `--iced` flag controls which runs.
-
-6. **Rhai theming** — `theme.rhai` is loaded at startup. Editor parses a subset of Rhai values (float, rgba, string) into `EditorTheme`.
-
-## Licensing
+## License
 
 GNU General Public License v3.0.
