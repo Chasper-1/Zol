@@ -4,11 +4,7 @@ use crate::editor::state::EditMode;
 use eframe::egui;
 use std::fs;
 
-pub fn handle_input(
-    widget: &mut EditorWidget,
-    mode: EditMode,
-    ui: &egui::Ui,
-) -> bool {
+pub fn handle_input(widget: &mut EditorWidget, mode: EditMode, ui: &egui::Ui) -> bool {
     if mode == EditMode::Preview {
         return false;
     }
@@ -35,20 +31,53 @@ pub fn handle_input(
 
         let command = i.modifiers.command;
 
-        (command, text_events, paste, pressed(egui::Key::S), pressed(egui::Key::Backspace),
-         pressed(egui::Key::Delete), pressed(egui::Key::Enter),
-         pressed(egui::Key::ArrowLeft), pressed(egui::Key::ArrowRight),
-         pressed(egui::Key::ArrowUp), pressed(egui::Key::ArrowDown),
-         pressed(egui::Key::Home), pressed(egui::Key::End))
+        (
+            command,
+            text_events,
+            paste,
+            pressed(egui::Key::S),
+            pressed(egui::Key::Backspace),
+            pressed(egui::Key::Delete),
+            pressed(egui::Key::Enter),
+            pressed(egui::Key::ArrowLeft),
+            pressed(egui::Key::ArrowRight),
+            pressed(egui::Key::ArrowUp),
+            pressed(egui::Key::ArrowDown),
+            pressed(egui::Key::Home),
+            pressed(egui::Key::End),
+        )
     });
 
-    let (command, text_events, paste, key_s, key_backspace, key_delete, key_enter,
-         key_left, key_right, key_up, key_down, key_home, key_end) = input;
+    let (
+        command,
+        text_events,
+        paste,
+        key_s,
+        key_backspace,
+        key_delete,
+        key_enter,
+        key_left,
+        key_right,
+        key_up,
+        key_down,
+        key_home,
+        key_end,
+    ) = input;
 
     let mut dirty = false;
 
     if command && key_s {
-        let _ = fs::write("notes.md", widget.content());
+        match fs::write("notes.md", widget.content()) {
+            Ok(_) => {
+                eprintln!("[Flint] Saved notes.md");
+            }
+            Err(e) => {
+                eprintln!("[Flint] Ошибка сохранения: {}", e);
+                // Визуальный сигнал: показываем ошибку через контекст egui
+                // Запрашиваем перерисовку
+                ui.ctx().request_repaint();
+            }
+        }
         return false;
     }
 

@@ -28,14 +28,33 @@ pub fn run_app() -> eframe::Result {
                 format!("rgba({}, {}, {}, {})", r, g, b, a)
             });
 
-            let ast = engine.compile(&src).expect("Rhai compile error");
-            let rhai_map: rhai::Map = engine.eval_ast(&ast).expect("Rhai runtime error");
-            let theme = theme::parse_theme(rhai_map);
+            let theme = match engine.compile(&src) {
+                Ok(ast) => match engine.eval_ast::<rhai::Map>(&ast) {
+                    Ok(rhai_map) => theme::parse_theme(rhai_map),
+                    Err(e) => {
+                        eprintln!(
+                            "[Flint] Ошибка выполнения темы Rhai: {}. Использую тему по умолчанию",
+                            e
+                        );
+                        theme::EditorTheme::default()
+                    }
+                },
+                Err(e) => {
+                    eprintln!(
+                        "[Flint] Ошибка компиляции темы Rhai: {}. Использую тему по умолчанию",
+                        e
+                    );
+                    theme::EditorTheme::default()
+                }
+            };
 
-            let text = fs::read_to_string("notes.md")
-                .unwrap_or_default()
-                .trim_end_matches('\n') // убираем последний \n
-                .to_string();
+            let text = match fs::read_to_string("notes.md") {
+                Ok(t) => t.trim_end_matches('\n').to_string(),
+                Err(e) => {
+                    eprintln!("[Flint] notes.md не найден ({}), создаю пустой документ", e);
+                    String::new()
+                }
+            };
             let state = EditorState::new(theme, text);
 
             Ok(Box::new(FlintApp::new(cc, state)))

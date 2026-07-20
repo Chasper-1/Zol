@@ -1,6 +1,5 @@
-#![allow(dead_code)]
-
 use crate::editor::editor_widget::EditorWidget;
+use crate::editor::line_utils;
 
 pub fn move_left(widget: &mut EditorWidget) {
     widget.cursor.move_left(&widget.content);
@@ -20,14 +19,14 @@ pub fn move_up(widget: &mut EditorWidget) {
     let col_x = widget.cursor.col_visual();
     let prev_line = line - 1;
 
-    let prev_text = line_text(&widget.content, prev_line);
+    let prev_text = line_utils::line_text(&widget.content, prev_line).unwrap_or("");
     let target_pos = if col_x.is_infinite() {
         prev_text.len()
     } else {
         x_to_char_pos(prev_text, col_x)
     };
 
-    let start = line_start_byte(&widget.content, prev_line);
+    let start = line_utils::line_start_byte(&widget.content, prev_line);
     widget.cursor.raw = start + target_pos;
     widget.cursor.line = prev_line;
     widget.cursor.set_col_visual(col_x);
@@ -35,7 +34,7 @@ pub fn move_up(widget: &mut EditorWidget) {
 
 pub fn move_down(widget: &mut EditorWidget) {
     let line = widget.cursor.line;
-    let total = line_count(&widget.content);
+    let total = line_utils::count_lines(&widget.content);
 
     if line + 1 >= total {
         widget.cursor.move_end(&widget.content);
@@ -45,14 +44,14 @@ pub fn move_down(widget: &mut EditorWidget) {
     let col_x = widget.cursor.col_visual();
     let next_line = line + 1;
 
-    let next_text = line_text(&widget.content, next_line);
+    let next_text = line_utils::line_text(&widget.content, next_line).unwrap_or("");
     let target_pos = if col_x.is_infinite() {
         next_text.len()
     } else {
         x_to_char_pos(next_text, col_x)
     };
 
-    let start = line_start_byte(&widget.content, next_line);
+    let start = line_utils::line_start_byte(&widget.content, next_line);
     widget.cursor.raw = start + target_pos;
     widget.cursor.line = next_line;
     widget.cursor.set_col_visual(col_x);
@@ -80,27 +79,6 @@ pub fn move_word_right(widget: &mut EditorWidget) {
     widget.cursor.raw = pos;
     widget.cursor.update_line(&widget.content);
     widget.cursor.reset_col_visual();
-}
-
-pub fn prev_char(content: &str, from: usize) -> usize {
-    if from == 0 || content.is_empty() {
-        return 0;
-    }
-    let from = from.min(content.len());
-    content[..from].char_indices().last().map(|(i, _)| i).unwrap_or(0)
-}
-
-pub fn next_char(content: &str, from: usize) -> usize {
-    let len = content.len();
-    let from = from.min(len);
-    if from >= len {
-        return len;
-    }
-    if let Some((n, _)) = content[from..].char_indices().nth(1) {
-        from + n
-    } else {
-        len
-    }
 }
 
 pub fn prev_word_start(content: &str, from: usize) -> usize {
@@ -172,82 +150,145 @@ pub fn next_word_start(content: &str, from: usize) -> usize {
     pos
 }
 
-pub fn next_word_end(content: &str, from: usize) -> usize {
-    let len = content.len();
-    if from >= len {
-        return len;
-    }
-
-    let bytes = content.as_bytes();
-    let mut pos = next_word_start(content, from);
-
-    // Skip to end of the word we landed at
-    while pos < len && !is_space_or_newline(bytes[pos]) {
-        pos += 1;
-    }
-
-    pos
-}
-
-pub fn cursor_pos(widget: &EditorWidget) -> usize {
-    widget.cursor.raw
-}
-
-pub fn cursor_line(widget: &EditorWidget) -> usize {
-    widget.cursor.line
-}
-
-fn line_count(content: &str) -> usize {
-    if content.is_empty() {
-        return 1;
-    }
-    content.chars().filter(|&c| c == '\n').count() + 1
-}
-
 fn is_space_or_newline(b: u8) -> bool {
     b == b' ' || b == b'\n'
-}
-
-fn line_text<'a>(content: &'a str, line: usize) -> &'a str {
-    let mut current = 0usize;
-    let mut start = 0usize;
-    for (i, c) in content.char_indices() {
-        if current == line {
-            if c == '\n' {
-                return &content[start..i];
-            }
-        }
-        if c == '\n' {
-            current += 1;
-            start = i + 1;
-        }
-    }
-    if current == line {
-        &content[start..]
-    } else {
-        ""
-    }
-}
-
-fn line_start_byte(content: &str, line: usize) -> usize {
-    let mut current = 0usize;
-    for (i, c) in content.char_indices() {
-        if current == line {
-            return i;
-        }
-        if c == '\n' {
-            current += 1;
-        }
-    }
-    if current == line && !content.is_empty() {
-        content.len()
-    } else {
-        0
-    }
 }
 
 fn x_to_char_pos(line: &str, x: f32) -> usize {
     let char_count = line.chars().count();
     let approx = (x / 10.0).round() as usize;
     approx.min(char_count)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::editor::editor_widget::EditorWidget;
+
+    fn make_widget(text: &str) -> EditorWidget {
+        EditorWidget::new(text)
+    }
+
+    #[test]
+    fn move_left_basic() {
+        let mut w = make_widget("abc");
+        w.cursor.raw = 2;
+        move_left(&mut w);
+        assert_eq!(w.cursor.raw, 1);
+        assert_eq!(w.cursor.line, 0);
+    }
+
+    #[test]
+    fn move_left_at_start() {
+        let mut w = make_widget("abc");
+        move_left(&mut w);
+        assert_eq!(w.cursor.raw, 0);
+    }
+
+    #[test]
+    fn move_right_basic() {
+        let mut w = make_widget("abc");
+        move_right(&mut w);
+        assert_eq!(w.cursor.raw, 1);
+    }
+
+    #[test]
+    fn move_right_at_end() {
+        let mut w = make_widget("abc");
+        w.cursor.raw = 3;
+        move_right(&mut w);
+        assert_eq!(w.cursor.raw, 3);
+    }
+
+    #[test]
+    fn move_up_simple() {
+        let mut w = make_widget("first\nsecond");
+        w.cursor.raw = 10; // somewhere in "second"
+        w.cursor.update_line(&w.content);
+        move_up(&mut w);
+        assert_eq!(w.cursor.line, 0);
+    }
+
+    #[test]
+    fn move_up_at_first_line_goes_home() {
+        let mut w = make_widget("only one line");
+        w.cursor.raw = 5;
+        move_up(&mut w);
+        assert_eq!(w.cursor.raw, 0); // goes to home
+    }
+
+    #[test]
+    fn move_down_simple() {
+        let mut w = make_widget("first\nsecond");
+        move_down(&mut w);
+        assert_eq!(w.cursor.line, 1);
+    }
+
+    #[test]
+    fn move_down_at_last_line_goes_to_end() {
+        let mut w = make_widget("first\nsecond");
+        w.cursor.raw = 6; // start of "second"
+        w.cursor.line = 1; // already on last line
+        let len_before = w.content.len();
+        move_down(&mut w);
+        assert_eq!(w.cursor.raw, len_before); // goes to end of content
+    }
+
+    #[test]
+    fn move_home_goes_to_start() {
+        let mut w = make_widget("hello world");
+        w.cursor.raw = 5;
+        move_home(&mut w);
+        assert_eq!(w.cursor.raw, 0);
+    }
+
+    #[test]
+    fn move_end_goes_to_end() {
+        let mut w = make_widget("hello world");
+        move_end(&mut w);
+        assert_eq!(w.cursor.raw, 11);
+    }
+
+    #[test]
+    fn move_word_left_works() {
+        let mut w = make_widget("hello world foo");
+        w.cursor.raw = 16; // after "foo"
+        w.cursor.update_line(&w.content);
+        move_word_left(&mut w);
+        assert_eq!(w.cursor.raw, 12); // start of "foo"
+    }
+
+    #[test]
+    fn move_word_right_works() {
+        let mut w = make_widget("hello world");
+        move_word_right(&mut w);
+        assert_eq!(w.cursor.raw, 6); // start of "world"
+    }
+
+    #[test]
+    fn prev_word_start_works() {
+        let content = "abc def ghi";
+        assert_eq!(prev_word_start(content, 11), 8); // start of "ghi"
+        assert_eq!(prev_word_start(content, 7), 4); // start of "def"
+        assert_eq!(prev_word_start(content, 3), 0); // start of "abc"
+        assert_eq!(prev_word_start(content, 0), 0); // already at start
+    }
+
+    #[test]
+    fn next_word_start_works() {
+        let content = "abc def ghi";
+        assert_eq!(next_word_start(content, 0), 4); // start of "def"
+        assert_eq!(next_word_start(content, 4), 8); // start of "ghi"
+        assert_eq!(next_word_start(content, 11), 11); // at/after end
+    }
+
+    #[test]
+    fn unicode_move_left_right() {
+        let mut w = make_widget("Привет");
+        w.cursor.raw = 12; // end of string
+        move_left(&mut w);
+        assert_eq!(w.cursor.raw, 10); // before "т"
+        move_right(&mut w);
+        assert_eq!(w.cursor.raw, 12); // back to end
+    }
 }

@@ -1,3 +1,3 @@
 pub mod cursor;
-pub mod text;
 pub mod editor;
+pub mod text;

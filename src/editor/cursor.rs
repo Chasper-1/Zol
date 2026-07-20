@@ -1,3 +1,4 @@
+use crate::editor::line_utils;
 use std::time::{Duration, Instant};
 
 pub struct Cursor {
@@ -82,61 +83,14 @@ impl Cursor {
     }
 
     pub fn update_line(&mut self, content: &str) {
-        if content.is_empty() {
-            self.line = 0;
-            return;
-        }
-        let mut line = 0;
-        let raw = self.raw.min(content.len());
-        for (i, c) in content.char_indices() {
-            if i == 0 && raw == 0 {
-                break;
-            }
-            if c == '\n' && i < raw {
-                line += 1;
-            }
-        }
-        self.line = line;
+        self.line = line_utils::line_of_byte(content, self.raw);
     }
 
     pub fn line_start_byte(&self, content: &str) -> usize {
-        if content.is_empty() {
-            return 0;
-        }
-        let line = self.line;
-        let mut current_line = 0usize;
-        let mut pos = 0usize;
-        for (i, c) in content.char_indices() {
-            if current_line == line {
-                return i;
-            }
-            pos = i;
-            if c == '\n' {
-                current_line += 1;
-            }
-        }
-        if current_line == line {
-            pos
-        } else {
-            content.len()
-        }
+        line_utils::line_start_byte(content, self.line)
     }
 
     pub fn line_end_byte(&self, content: &str) -> usize {
-        if content.is_empty() {
-            return 0;
-        }
-        let line = self.line;
-        let mut current_line = 0usize;
-        for (i, c) in content.char_indices() {
-            if current_line == line && c == '\n' {
-                return i;
-            }
-            if c == '\n' {
-                current_line += 1;
-            }
-        }
-        content.len()
+        line_utils::line_end_byte(content, self.line)
     }
-
 }

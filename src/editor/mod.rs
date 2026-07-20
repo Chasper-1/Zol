@@ -1,9 +1,10 @@
-pub mod theme;
-pub mod state;
-pub mod layouter;
-pub mod markup;
 pub mod cache;
 pub mod cursor;
-pub mod input;
-pub mod render;
 pub mod editor_widget;
+pub mod input;
+pub mod layouter;
+pub mod line_utils;
+pub mod markup;
+pub mod render;
+pub mod state;
+pub mod theme;

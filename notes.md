@@ -10,5 +10,6 @@ __underline__
 --deletion--
 /*comment*\
 $formula$
+
 $$display formula$$
 !!!spoiler multiline!!!

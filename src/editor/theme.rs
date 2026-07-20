@@ -35,6 +35,31 @@ impl Rgba {
     }
 }
 
+impl Default for EditorTheme {
+    fn default() -> Self {
+        Self {
+            padding: 10.0,
+            radius: 16.0,
+            background: Rgba {
+                r: 39.0 / 255.0,
+                g: 46.0 / 255.0,
+                b: 51.0 / 255.0,
+                a: 0.9,
+            },
+            text: TextTheme {
+                size: 14.0,
+                color: Rgba {
+                    r: 205.0 / 255.0,
+                    g: 214.0 / 255.0,
+                    b: 244.0 / 255.0,
+                    a: 1.0,
+                },
+                font_family: None,
+            },
+        }
+    }
+}
+
 fn parse_rgba_string(s: &str) -> Rgba {
     let cleaned = s.replace("rgba(", "").replace(")", "");
     let parts: Vec<&str> = cleaned.split(',').map(|p| p.trim()).collect();

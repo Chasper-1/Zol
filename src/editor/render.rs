@@ -1,9 +1,10 @@
 use crate::editor::cache::DocumentCache;
 use crate::editor::cursor::Cursor;
+use crate::editor::line_utils;
 use crate::editor::markup::segment::{
     STYLE_BOLD, STYLE_CODE, STYLE_COMMENT, STYLE_DELETION, STYLE_DISPLAY_FORMULA, STYLE_FORMULA,
-    STYLE_HIGHLIGHT, STYLE_INSERTION, STYLE_ITALIC, STYLE_STRIKETHROUGH,
-    STYLE_SUBSCRIPT, STYLE_SUPERSCRIPT, STYLE_UNDERLINE,
+    STYLE_HIGHLIGHT, STYLE_INSERTION, STYLE_ITALIC, STYLE_STRIKETHROUGH, STYLE_SUBSCRIPT,
+    STYLE_SUPERSCRIPT, STYLE_UNDERLINE,
 };
 use crate::editor::state::EditMode;
 use crate::editor::theme::EditorTheme;
@@ -65,7 +66,16 @@ pub fn build(
             job.append("\u{200B}", 0.0, fmt);
             job
         } else {
-            source_layout(line, line_start, cache.lines.get(i), base_size, heading_size, &font_family, show_markers)
+            source_layout(
+                line,
+                line_start,
+                cache.lines.get(i),
+                base_size,
+                heading_size,
+                &font_family,
+                show_markers,
+                ui.available_width(),
+            )
         };
 
         let galley = ui.fonts_mut(|f| f.layout_job(job));
@@ -90,10 +100,11 @@ fn source_layout(
     heading_size: f32,
     font_family: &FontFamily,
     show_markers: bool,
+    available_width: f32,
 ) -> LayoutJob {
     let mut job = LayoutJob::default();
 
-    if line.starts_with("# ") {
+    if let Some(stripped) = line.strip_prefix("# ") {
         if show_markers {
             let hash_fmt = TextFormat::simple(
                 FontId::new(heading_size, font_family.clone()),
@@ -105,7 +116,7 @@ fn source_layout(
             FontId::new(heading_size, font_family.clone()),
             Color32::WHITE,
         );
-        job.append(&line[2..], 0.0, content_fmt);
+        job.append(stripped, 0.0, content_fmt);
         return job;
     }
 
@@ -165,16 +176,25 @@ fn source_layout(
         }
     }
 
-    if let Some(cache) = line_cache {
-        if cache.segments.iter().any(|s| s.style & STYLE_DISPLAY_FORMULA != 0) {
-            job.halign = Align::Center;
-        }
+    if let Some(cache) = line_cache
+        && cache
+            .segments
+            .iter()
+            .any(|s| s.style & STYLE_DISPLAY_FORMULA != 0)
+    {
+        job.wrap.max_width = available_width;
+        job.halign = Align::Center;
     }
 
     job
 }
 
-fn segment_format(style: u32, base_size: f32, _heading_size: f32, font_family: &FontFamily) -> TextFormat {
+fn segment_format(
+    style: u32,
+    base_size: f32,
+    _heading_size: f32,
+    font_family: &FontFamily,
+) -> TextFormat {
     let mut format = TextFormat::simple(
         FontId::new(base_size, font_family.clone()),
         Color32::from_rgb(220, 220, 220),
@@ -226,7 +246,7 @@ fn segment_format(style: u32, base_size: f32, _heading_size: f32, font_family: &
         format.color = Color32::from_rgb(80, 220, 120);
     }
     if style & STYLE_DISPLAY_FORMULA != 0 {
-        format.font_id = FontId::new(base_size, FontFamily::Monospace);
+        format.font_id = FontId::new(base_size * 1.3, FontFamily::Monospace);
         format.color = Color32::from_rgb(80, 220, 120);
     }
     format
@@ -250,20 +270,21 @@ pub fn paint(
 
             painter.galley(pos, galley.clone(), text_color);
 
-            if mode != EditMode::Preview && i == cursor.line {
-                if let Some(cursor_rect) = cursor_rect(content, cursor, galley) {
-                    let cursor_x = origin.x + cursor_rect.min.x;
-                    let cursor_y = y_offset + cursor_rect.min.y;
-                    let line_h = cursor_rect.height().max(galley_size.y * 0.8);
+            if mode != EditMode::Preview
+                && i == cursor.line
+                && let Some(cursor_rect) = cursor_rect(content, cursor, galley)
+            {
+                let cursor_x = origin.x + cursor_rect.min.x;
+                let cursor_y = y_offset + cursor_rect.min.y;
+                let line_h = cursor_rect.height().max(galley_size.y * 0.8);
 
-                    painter.line_segment(
-                        [
-                            Pos2::new(cursor_x, cursor_y),
-                            Pos2::new(cursor_x, cursor_y + line_h),
-                        ],
-                        Stroke::new(2.0, text_color),
-                    );
-                }
+                painter.line_segment(
+                    [
+                        Pos2::new(cursor_x, cursor_y),
+                        Pos2::new(cursor_x, cursor_y + line_h),
+                    ],
+                    Stroke::new(2.0, text_color),
+                );
             }
 
             y_offset += galley_size.y;
@@ -274,27 +295,27 @@ pub fn paint(
 fn cursor_rect(content: &str, cursor: &Cursor, galley: &Galley) -> Option<eframe::egui::Rect> {
     let (line_start, line_end) = cursor_line_bounds(content, cursor.line);
     let byte_in_line = cursor.raw.saturating_sub(line_start);
-    let line_text = &content[line_start..line_end];
-    let char_idx = line_text[..byte_in_line.min(line_text.len())].chars().count();
+    // Безопасный срез: используем line_utils::safe_slice, который корректирует границы UTF-8
+    let line_text = crate::editor::line_utils::safe_slice(content, line_start, line_end);
+    let byte_in_line = byte_in_line.min(line_text.len());
+    // Приводим byte_in_line к границе char для безопасного chars().count()
+    let safe_byte = if line_text.is_char_boundary(byte_in_line) {
+        byte_in_line
+    } else {
+        // Ищем предыдущую границу
+        let mut b = byte_in_line;
+        while b > 0 && !line_text.is_char_boundary(b) {
+            b -= 1;
+        }
+        b
+    };
+    let char_idx = line_text[..safe_byte].chars().count();
     let egui_cursor = CCursor::new(char_idx);
     Some(galley.pos_from_cursor(egui_cursor))
 }
 
 fn cursor_line_bounds(content: &str, line: usize) -> (usize, usize) {
-    let mut current = 0usize;
-    let mut start = 0usize;
-    for (i, c) in content.char_indices() {
-        if current == line && c == '\n' {
-            return (start, i);
-        }
-        if c == '\n' {
-            current += 1;
-            start = i + 1;
-        }
-    }
-    if current == line {
-        (start, content.len())
-    } else {
-        (0, 0)
-    }
+    line_utils::line_bounds(content, line)
+        .map(|b| (b.start, b.end))
+        .unwrap_or((0, 0))
 }

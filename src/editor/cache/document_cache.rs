@@ -1,4 +1,4 @@
-use super::cache::MarkupCache;
+use super::markup_cache::MarkupCache;
 
 #[derive(Default, Clone, Debug)]
 pub struct DocumentCache {

@@ -42,8 +42,7 @@ pub fn render_line(
         return;
     }
 
-    if line.starts_with("# ") {
-        let content = &line[2..];
+    if let Some(content) = line.strip_prefix("# ") {
         let format = TextFormat::simple(FontId::new(heading_size, font_family), Color32::WHITE);
         job.append(content, 0.0, format);
         return;
@@ -89,6 +88,12 @@ pub fn render_line(
             format.color = Color32::from_rgb(200, 200, 200);
         }
 
-        append_compensated(job, seg.left_marker_len, &seg.text, seg.right_marker_len, format);
+        append_compensated(
+            job,
+            seg.left_marker_len,
+            &seg.text,
+            seg.right_marker_len,
+            format,
+        );
     }
 }

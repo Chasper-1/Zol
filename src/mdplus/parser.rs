@@ -1,6 +1,6 @@
 use crate::editor::cache::DocumentCache;
-use crate::editor::markup::segment::{Segment, StyleFlags, STYLE_PLAIN};
-use crate::mdplus::marker::{MarkerDef, MARKERS};
+use crate::editor::markup::segment::{STYLE_PLAIN, Segment, StyleFlags};
+use crate::mdplus::marker::{MARKERS, MarkerDef};
 
 pub fn parse_document(text: &str) -> DocumentCache {
     let line_starts: Vec<usize> = std::iter::once(0)
@@ -29,7 +29,11 @@ pub fn parse_document(text: &str) -> DocumentCache {
                     text: part.to_string(),
                     style: seg.style,
                     left_marker_len: if pi == 0 { seg.left_marker_len } else { 0 },
-                    right_marker_len: if pi == n_parts - 1 { seg.right_marker_len } else { 0 },
+                    right_marker_len: if pi == n_parts - 1 {
+                        seg.right_marker_len
+                    } else {
+                        0
+                    },
                     raw_start: raw_offset,
                     raw_end: raw_offset + part.len(),
                 });
@@ -58,21 +62,21 @@ fn parse_region(text: &str, start: usize, end: usize, parent_style: StyleFlags) 
     while pos < end {
         let tail = &text[pos..end];
 
-        if tail.starts_with('\\') {
-            if let Some(ch) = tail[1..].chars().next() {
-                pos += 1;
-                let ch_len = ch.len_utf8();
-                segments.push(Segment {
-                    text: text[pos..pos + ch_len].to_string(),
-                    style: parent_style,
-                    left_marker_len: 0,
-                    right_marker_len: 0,
-                    raw_start: pos - 1,
-                    raw_end: pos + ch_len,
-                });
-                pos += ch_len;
-                continue;
-            }
+        if tail.starts_with('\\')
+            && let Some(ch) = tail[1..].chars().next()
+        {
+            pos += 1;
+            let ch_len = ch.len_utf8();
+            segments.push(Segment {
+                text: text[pos..pos + ch_len].to_string(),
+                style: parent_style,
+                left_marker_len: 0,
+                right_marker_len: 0,
+                raw_start: pos - 1,
+                raw_end: pos + ch_len,
+            });
+            pos += ch_len;
+            continue;
         }
 
         if let Some(m_idx) = find_marker(text, pos, end) {
@@ -163,7 +167,7 @@ fn is_valid_open(text: &str, open_end: usize) -> bool {
     text[open_end..]
         .chars()
         .next()
-        .map_or(false, |c| !c.is_ascii_whitespace())
+        .is_some_and(|c| !c.is_ascii_whitespace())
 }
 
 fn is_valid_close(text: &str, close_start: usize) -> bool {
@@ -173,7 +177,7 @@ fn is_valid_close(text: &str, close_start: usize) -> bool {
     text[..close_start]
         .chars()
         .next_back()
-        .map_or(false, |c| !c.is_ascii_whitespace())
+        .is_some_and(|c| !c.is_ascii_whitespace())
 }
 
 #[cfg(test)]
@@ -181,14 +185,18 @@ mod tests {
     use super::*;
     use crate::editor::markup::segment::{
         STYLE_BOLD, STYLE_COMMENT, STYLE_DELETION, STYLE_DISPLAY_FORMULA, STYLE_FORMULA,
-        STYLE_HIGHLIGHT, STYLE_INSERTION, STYLE_ITALIC, STYLE_PLAIN,
-        STYLE_STRIKETHROUGH, STYLE_SUBSCRIPT, STYLE_SUPERSCRIPT, STYLE_UNDERLINE,
+        STYLE_HIGHLIGHT, STYLE_INSERTION, STYLE_ITALIC, STYLE_PLAIN, STYLE_STRIKETHROUGH,
+        STYLE_SUBSCRIPT, STYLE_SUPERSCRIPT, STYLE_UNDERLINE,
     };
 
     fn check_segments(text: &str, expected: &[(&str, StyleFlags, usize, usize)]) {
         let doc = parse_document(text);
         let segs: Vec<_> = doc.lines.iter().flat_map(|l| &l.segments).collect();
-        assert_eq!(segs.len(), expected.len(), "segment count mismatch for: {text}");
+        assert_eq!(
+            segs.len(),
+            expected.len(),
+            "segment count mismatch for: {text}"
+        );
         for (i, (seg, (exp_text, exp_style, exp_left, exp_right))) in
             segs.iter().zip(expected.iter()).enumerate()
         {
@@ -399,7 +407,7 @@ fn find_close_nested(
             let after = pos + marker.open.len();
             if after <= end {
                 let next = text[after..].chars().next();
-                if next.map_or(false, |c| !c.is_ascii_whitespace()) {
+                if next.is_some_and(|c| !c.is_ascii_whitespace()) {
                     depth += 1;
                     pos += marker.open.len();
                     continue;
@@ -407,17 +415,15 @@ fn find_close_nested(
             }
         }
 
-        if tail.starts_with(marker.close) {
-            if pos > search_range.start {
-                let prev = text[..pos].chars().next_back();
-                if prev.map_or(false, |c| !c.is_ascii_whitespace()) {
-                    depth -= 1;
-                    if depth == 0 {
-                        return Some(pos);
-                    }
-                    pos += marker.close.len();
-                    continue;
+        if tail.starts_with(marker.close) && pos > search_range.start {
+            let prev = text[..pos].chars().next_back();
+            if prev.is_some_and(|c| !c.is_ascii_whitespace()) {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(pos);
                 }
+                pos += marker.close.len();
+                continue;
             }
         }
 

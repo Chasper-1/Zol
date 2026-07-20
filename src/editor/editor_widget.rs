@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use crate::editor::cache::DocumentCache;
 use crate::editor::cursor::Cursor;
+use crate::editor::line_utils;
 use crate::editor::render::{self, Galleys};
 use crate::editor::state::EditMode;
 use crate::editor::state::EditorState;
@@ -74,11 +75,11 @@ impl EditorWidget {
             eframe::egui::Sense::click(),
         );
 
-        if response.clicked() {
-            if let Some(pos) = response.interact_pointer_pos() {
-                let local_pos = pos - response.rect.min;
-                self.handle_click(local_pos);
-            }
+        if response.clicked()
+            && let Some(pos) = response.interact_pointer_pos()
+        {
+            let local_pos = pos - response.rect.min;
+            self.handle_click(local_pos);
         }
 
         if needs_rebuild {
@@ -144,32 +145,17 @@ impl EditorWidget {
     }
 
     fn line_bounds(&self, line: usize) -> (usize, usize) {
-        let mut current = 0usize;
-        let mut start = 0usize;
-        for (i, c) in self.content.char_indices() {
-            if current == line && c == '\n' {
-                return (start, i);
-            }
-            if c == '\n' {
-                current += 1;
-                start = i + 1;
-            }
-        }
-        if current == line {
-            (start, self.content.len())
-        } else {
-            (0, 0)
-        }
+        line_utils::line_bounds(&self.content, line)
+            .map(|b| (b.start, b.end))
+            .unwrap_or((0, 0))
     }
 }
 
 fn char_count_to_byte(text: &str, char_count: usize) -> usize {
-    let mut chars_seen = 0;
-    for (byte_idx, _) in text.char_indices() {
+    for (chars_seen, (byte_idx, _)) in text.char_indices().enumerate() {
         if chars_seen >= char_count {
             return byte_idx;
         }
-        chars_seen += 1;
     }
     text.len()
 }
