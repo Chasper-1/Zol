@@ -1,7 +1,6 @@
 use crate::editor::utils::line_utils;
 use std::time::{Duration, Instant};
 use unicode_segmentation::GraphemeCursor;
-use unicode_segmentation::UnicodeSegmentation;
 
 /// Позиция курсора в тексте.
 ///
@@ -131,26 +130,6 @@ impl Cursor {
         self.line = line_utils::line_of_byte(content, self.raw);
         self.reset_col_visual();
         self.force_blink();
-    }
-
-    /// Предыдущая grapheme-граница (для delete_before_cursor).
-    /// Возвращает байтовый оффсет начала кластера.
-    pub fn prev_grapheme_boundary(&self, content: &str) -> Option<usize> {
-        if self.raw == 0 {
-            return None;
-        }
-        let mut gc = GraphemeCursor::new(self.raw, content.len(), true);
-        gc.prev_boundary(content, 0).ok()?
-    }
-
-    /// Следующая grapheme-граница (для delete_after_cursor).
-    /// Возвращает байтовый оффсет конца кластера.
-    pub fn next_grapheme_boundary(&self, content: &str) -> Option<usize> {
-        if self.raw >= content.len() {
-            return None;
-        }
-        let mut gc = GraphemeCursor::new(self.raw, content.len(), true);
-        gc.next_boundary(content, 0).ok()?
     }
 
     // ── Мигание ─────────────────────────────────────────────

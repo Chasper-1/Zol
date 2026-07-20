@@ -1,4 +1,4 @@
-use crate::editor::cursor::{self, Cursor};
+use crate::editor::cursor;
 use crate::editor::editor_widget::EditorWidget;
 use crate::editor::utils::line_utils;
 

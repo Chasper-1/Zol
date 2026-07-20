@@ -220,6 +220,21 @@ mod tests {
     // ── unicode ───────────────────────────────────────────────
 
     #[test]
+    fn word_navigation_unicode_whitespace() {
+        // Неразрывный пробел (\u{A0}) — тоже пробел для word nav
+        let mut w = make_widget("hello\u{A0}world");
+        move_word_right(&mut w);
+        assert_eq!(w.cursor.raw(), 7); // начало "world"
+    }
+
+    #[test]
+    fn word_navigation_tab() {
+        let mut w = make_widget("a\tb");
+        move_word_right(&mut w);
+        assert_eq!(w.cursor.raw(), 2); // начало "b" после таба
+    }
+
+    #[test]
     fn unicode_move_left_right() {
         let mut w = make_widget("Привет");
         w.cursor.set_raw(&w.content, 12);
