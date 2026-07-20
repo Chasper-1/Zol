@@ -1,66 +1,46 @@
+use crate::editor::cursor::{self, Cursor};
 use crate::editor::editor_widget::EditorWidget;
 use crate::editor::utils::line_utils;
 
 pub fn insert_at_cursor(widget: &mut EditorWidget, text: &str) {
-    let raw = widget.cursor.raw;
-    if raw > widget.content.len() {
-        return;
-    }
+    let raw = widget.cursor.raw();
     widget.content.insert_str(raw, text);
-    widget.cursor.raw = raw + text.len();
-    widget.cursor.update_line(&widget.content);
-    widget.cursor.force_blink_on();
+    widget.cursor.set_raw(&widget.content, raw + text.len());
     widget.dirty = true;
 }
 
+/// Удалить **grapheme-кластер** перед курсором.
 pub fn delete_before_cursor(widget: &mut EditorWidget) {
-    let raw = widget.cursor.raw;
+    let raw = widget.cursor.raw();
     if raw == 0 || widget.content.is_empty() {
         return;
     }
-    let prev = if let Some((idx, _)) = widget.content[..raw].char_indices().last() {
-        idx
-    } else {
-        0
-    };
+    let prev = cursor::prev_grapheme_boundary(&widget.content, raw).unwrap_or(0);
     widget.content.drain(prev..raw);
-    widget.cursor.raw = prev;
-    widget.cursor.update_line(&widget.content);
-    widget.cursor.force_blink_on();
+    widget.cursor.set_raw(&widget.content, prev);
     widget.dirty = true;
 }
 
+/// Удалить **grapheme-кластер** после курсора.
 pub fn delete_after_cursor(widget: &mut EditorWidget) {
-    let raw = widget.cursor.raw;
+    let raw = widget.cursor.raw();
     if raw >= widget.content.len() || widget.content.is_empty() {
         return;
     }
-    let next = raw
-        + if let Some((n, _)) = widget.content[raw..].char_indices().nth(1) {
-            n
-        } else {
-            widget.content.len() - raw
-        };
+    let next = cursor::next_grapheme_boundary(&widget.content, raw).unwrap_or(widget.content.len());
     widget.content.drain(raw..next);
-    widget.cursor.update_line(&widget.content);
-    widget.cursor.force_blink_on();
+    widget.cursor.set_raw(&widget.content, raw);
     widget.dirty = true;
 }
 
 pub fn newline(widget: &mut EditorWidget) {
-    let raw = widget.cursor.raw;
-    if raw > widget.content.len() {
-        return;
-    }
+    let raw = widget.cursor.raw();
     widget.content.insert(raw, '\n');
-    widget.cursor.raw = raw + 1;
-    widget.cursor.update_line(&widget.content);
+    widget.cursor.set_raw(&widget.content, raw + 1);
     widget.cursor.reset_col_visual();
-    widget.cursor.force_blink_on();
     widget.dirty = true;
 }
 
-// Публичный API для будущих плагинов и интеграций
 #[allow(dead_code)]
 pub fn get_text(widget: &EditorWidget) -> &str {
     &widget.content
@@ -93,42 +73,34 @@ mod tests {
     #[test]
     fn insert_at_cursor_adds_text() {
         let mut w = make_widget("hello");
-        w.cursor.raw = 5; // move to end first
+        w.cursor.set_raw(&w.content, 5);
         insert_at_cursor(&mut w, " world");
         assert_eq!(w.content, "hello world");
-        assert_eq!(w.cursor.raw, "hello world".len());
+        assert_eq!(w.cursor.raw(), "hello world".len());
     }
 
     #[test]
     fn insert_at_cursor_mid_text() {
         let mut w = make_widget("helo");
-        w.cursor.raw = 3;
+        w.cursor.set_raw(&w.content, 3);
         insert_at_cursor(&mut w, "l");
         assert_eq!(w.content, "hello");
     }
 
     #[test]
-    fn insert_at_cursor_out_of_bounds() {
-        let mut w = make_widget("hi");
-        w.cursor.raw = 100;
-        insert_at_cursor(&mut w, "!");
-        assert_eq!(w.content, "hi"); // no change
-    }
-
-    #[test]
     fn delete_before_cursor_removes_char() {
         let mut w = make_widget("hello");
-        w.cursor.raw = 5;
+        w.cursor.set_raw(&w.content, 5);
         delete_before_cursor(&mut w);
         assert_eq!(w.content, "hell");
-        assert_eq!(w.cursor.raw, 4);
+        assert_eq!(w.cursor.raw(), 4);
     }
 
     #[test]
     fn delete_before_cursor_at_start() {
         let mut w = make_widget("hello");
         delete_before_cursor(&mut w);
-        assert_eq!(w.content, "hello"); // no change
+        assert_eq!(w.content, "hello");
     }
 
     #[test]
@@ -148,18 +120,18 @@ mod tests {
     #[test]
     fn delete_after_cursor_at_end() {
         let mut w = make_widget("hello");
-        w.cursor.raw = 5;
+        w.cursor.set_raw(&w.content, 5);
         delete_after_cursor(&mut w);
-        assert_eq!(w.content, "hello"); // no change
+        assert_eq!(w.content, "hello");
     }
 
     #[test]
     fn newline_inserts_newline() {
         let mut w = make_widget("ab");
-        w.cursor.raw = 1;
+        w.cursor.set_raw(&w.content, 1);
         newline(&mut w);
         assert_eq!(w.content, "a\nb");
-        assert_eq!(w.cursor.raw, 2);
+        assert_eq!(w.cursor.raw(), 2);
     }
 
     #[test]
@@ -191,19 +163,35 @@ mod tests {
 
     #[test]
     fn unicode_insert() {
-        let mut w = make_widget("Приве"); // 5 chars, 10 bytes
-        w.cursor.raw = 10; // end of string
+        let mut w = make_widget("Приве");
+        w.cursor.set_raw(&w.content, 10);
         insert_at_cursor(&mut w, "т");
         assert_eq!(w.content, "Привет");
-        assert_eq!(w.cursor.raw, 12);
+        assert_eq!(w.cursor.raw(), 12);
     }
 
     #[test]
     fn unicode_delete_before() {
         let mut w = make_widget("Привет");
-        w.cursor.raw = 12; // past "Приве" (10 bytes) + "т" (2 bytes)
+        w.cursor.set_raw(&w.content, 12);
         delete_before_cursor(&mut w);
-        assert_eq!(w.content, "Приве"); // last char "т" removed
-        assert_eq!(w.cursor.raw, 10);
+        assert_eq!(w.content, "Приве");
+        assert_eq!(w.cursor.raw(), 10);
+    }
+
+    #[test]
+    fn grapheme_delete_before() {
+        let mut w = make_widget("e\u{0301}x");
+        w.cursor.set_raw(&w.content, 4);
+        delete_before_cursor(&mut w);
+        assert_eq!(w.content, "e\u{0301}");
+    }
+
+    #[test]
+    fn grapheme_delete_after() {
+        let mut w = make_widget("e\u{0301}x");
+        w.cursor.set_raw(&w.content, 0);
+        delete_after_cursor(&mut w);
+        assert_eq!(w.content, "x");
     }
 }

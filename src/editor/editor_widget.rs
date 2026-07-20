@@ -21,7 +21,6 @@ impl EditorWidget {
         let content = text.to_string();
         let cursor = Cursor::new();
         let document_cache = crate::editor::markup::parse_document(&content);
-        // Создаём пустой ShapedDocument (будет пересоздан при первом build)
         let metrics = cosmic_text::Metrics::new(14.0, 19.6);
         let empty_buffer = cosmic_text::Buffer::new_empty(metrics);
         let shaped_doc = ShapedDocument::new(empty_buffer);
@@ -51,17 +50,17 @@ impl EditorWidget {
     pub fn ui(&mut self, ui: &mut eframe::egui::Ui, state: &mut EditorState) {
         let mode = state.mode;
 
-        let old_raw = self.cursor.raw;
+        let old_raw = self.cursor.raw();
         let had_input = crate::editor::input::handle_input(self, mode, ui);
 
-        if had_input || self.cursor.raw != old_raw {
+        if had_input || self.cursor.raw() != old_raw {
             ui.ctx().request_repaint();
         }
 
-        if self.cursor.line != self.last_active_line && mode == EditMode::LivePreview {
+        if self.cursor.line() != self.last_active_line && mode == EditMode::LivePreview {
             self.dirty = true;
         }
-        self.last_active_line = self.cursor.line;
+        self.last_active_line = self.cursor.line();
 
         let needs_rebuild = had_input || self.dirty;
 
@@ -100,7 +99,7 @@ impl EditorWidget {
                 &self.content,
                 &self.document_cache,
                 mode,
-                self.cursor.line,
+                self.cursor.line(),
                 theme,
                 base_size,
                 heading_size,
@@ -108,7 +107,9 @@ impl EditorWidget {
             self.dirty = false;
         }
 
-        self.cursor.blink();
+        if self.cursor.should_blink() {
+            ui.ctx().request_repaint();
+        }
 
         render::paint(
             &self.shaped_doc,
@@ -128,10 +129,10 @@ impl EditorWidget {
             render::click_position(&self.shaped_doc, eframe::egui::pos2(local_pos.x, local_pos.y))
         {
             let (line_start, _) = self.line_bounds(line);
-            self.cursor.raw = (line_start + byte_offset).min(self.content.len());
-            self.cursor.line = line;
+            let new_raw = (line_start + byte_offset).min(self.content.len());
+            self.cursor.set_raw(&self.content, new_raw);
+            self.cursor.set_line(line);
             self.cursor.reset_col_visual();
-            self.cursor.force_blink_on();
         }
     }
 

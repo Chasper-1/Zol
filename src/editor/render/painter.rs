@@ -55,15 +55,15 @@ fn draw_cursor(
     text_color: Color32,
     content: &str,
 ) {
-    let (line_start, _) = cursor_line_bounds(content, cursor.line);
-    let byte_in_line = cursor.raw.saturating_sub(line_start);
+    let (line_start, _) = cursor_line_bounds(content, cursor.line());
+    let byte_in_line = cursor.raw().saturating_sub(line_start);
 
     let mut cursor_x = 0.0;
     let mut cursor_y = 0.0;
     let mut line_h = 12.0;
 
     for run in doc.buffer.layout_runs() {
-        if run.line_i != cursor.line {
+        if run.line_i != cursor.line() {
             continue;
         }
         cursor_y = run.line_top;
