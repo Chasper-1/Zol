@@ -3,16 +3,15 @@ use std::time::Duration;
 use crate::editor::cache::DocumentCache;
 use crate::editor::cursor::Cursor;
 use crate::editor::utils::line_utils;
-use crate::editor::render::{self, Galleys};
+use crate::editor::render::{self, ShapedDocument};
 use crate::editor::state::EditMode;
 use crate::editor::state::EditorState;
-use eframe::egui::text::CCursor;
 
 pub struct EditorWidget {
     pub(crate) content: String,
     pub(crate) cursor: Cursor,
     pub(crate) document_cache: DocumentCache,
-    pub(crate) galleys: Galleys,
+    pub(crate) shaped_doc: ShapedDocument,
     pub(crate) dirty: bool,
     last_active_line: usize,
 }
@@ -22,13 +21,16 @@ impl EditorWidget {
         let content = text.to_string();
         let cursor = Cursor::new();
         let document_cache = crate::editor::markup::parse_document(&content);
-        let galleys = Galleys::new();
+        // Создаём пустой ShapedDocument (будет пересоздан при первом build)
+        let metrics = cosmic_text::Metrics::new(14.0, 19.6);
+        let empty_buffer = cosmic_text::Buffer::new_empty(metrics);
+        let shaped_doc = ShapedDocument::new(empty_buffer);
 
         Self {
             content,
             cursor,
             document_cache,
-            galleys,
+            shaped_doc,
             dirty: true,
             last_active_line: 0,
         }
@@ -77,7 +79,7 @@ impl EditorWidget {
             )
         };
 
-        let height = self.galleys.total_height.max(ui.available_height());
+        let height = self.shaped_doc.total_height().max(ui.available_height());
 
         let (response, painter) = ui.allocate_painter(
             eframe::egui::vec2(ui.available_width(), height),
@@ -94,12 +96,11 @@ impl EditorWidget {
         if needs_rebuild {
             self.document_cache = crate::editor::markup::parse_document(&self.content);
             render::build(
-                &mut self.galleys,
+                &mut self.shaped_doc,
                 &self.content,
                 &self.document_cache,
                 mode,
                 self.cursor.line,
-                ui,
                 theme,
                 base_size,
                 heading_size,
@@ -110,38 +111,27 @@ impl EditorWidget {
         self.cursor.blink();
 
         render::paint(
-            &self.galleys,
+            &self.shaped_doc,
             &self.cursor,
             &painter,
             response.rect.min,
             text_color,
-            &self.content,
             mode,
+            &self.content,
         );
 
         self.repaint_control(ui.ctx(), mode);
     }
 
     fn handle_click(&mut self, local_pos: eframe::egui::Vec2) {
-        let mut y_acc = 0.0f32;
-        for (i, galley_opt) in self.galleys.galleys.iter().enumerate() {
-            if let Some(galley) = galley_opt {
-                let h = galley.size().y;
-                if local_pos.y >= y_acc && local_pos.y < y_acc + h {
-                    let click_in_row = eframe::egui::pos2(local_pos.x, local_pos.y - y_acc);
-                    let egui_cursor: CCursor =
-                        galley.cursor_from_pos(eframe::egui::vec2(click_in_row.x, click_in_row.y));
-                    let (line_start, line_end) = self.line_bounds(i);
-                    let line_text = &self.content[line_start..line_end];
-                    let byte_offset = char_count_to_byte(line_text, egui_cursor.index.into());
-                    self.cursor.raw = (line_start + byte_offset).min(self.content.len());
-                    self.cursor.line = i;
-                    self.cursor.reset_col_visual();
-                    self.cursor.force_blink_on();
-                    return;
-                }
-                y_acc += h;
-            }
+        if let Some((line, byte_offset)) =
+            render::click_position(&self.shaped_doc, eframe::egui::pos2(local_pos.x, local_pos.y))
+        {
+            let (line_start, _) = self.line_bounds(line);
+            self.cursor.raw = (line_start + byte_offset).min(self.content.len());
+            self.cursor.line = line;
+            self.cursor.reset_col_visual();
+            self.cursor.force_blink_on();
         }
     }
 
@@ -158,13 +148,4 @@ impl EditorWidget {
             .map(|b| (b.start, b.end))
             .unwrap_or((0, 0))
     }
-}
-
-fn char_count_to_byte(text: &str, char_count: usize) -> usize {
-    for (chars_seen, (byte_idx, _)) in text.char_indices().enumerate() {
-        if chars_seen >= char_count {
-            return byte_idx;
-        }
-    }
-    text.len()
 }
