@@ -44,20 +44,18 @@ impl EditorInner {
         let mut shaped_doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics));
 
         crate::editor::font::init();
-        crate::editor::font::with_font_system(|fs| {
-            render::build(
-                &mut shaped_doc,
-                &content,
-                &cache,
-                EditMode::LivePreview,
-                0,
-                &theme,
-                base_size,
-                heading_size,
-                0.0,
-                None,
-            );
-        });
+        render::build(
+            &mut shaped_doc,
+            &content,
+            &cache,
+            EditMode::LivePreview,
+            0,
+            &theme,
+            base_size,
+            heading_size,
+            0.0,
+            None,
+        );
 
         Self {
             content: RefCell::new(content),
