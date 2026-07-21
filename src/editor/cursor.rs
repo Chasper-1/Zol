@@ -126,9 +126,15 @@ impl Cursor {
 
     // ── Мигание ─────────────────────────────────────────────
 
-    /// Пора ли мигнуть (>530 мс прошло)?
+    /// Видим ли курсор сейчас (фазовая мигалка).
+    ///
+    /// 530ms видим, 530ms скрыт, повтор. `force_blink()` сбрасывает в начало
+    /// видимой фазы.
     pub fn should_blink(&self) -> bool {
-        Instant::now().duration_since(self.last_blink) > Duration::from_millis(530)
+        let elapsed = Instant::now().duration_since(self.last_blink);
+        let period = 1060; // полный цикл в ms
+        let phase = elapsed.as_millis() % period;
+        phase < 530
     }
 
     /// Сбросить таймер мигания (курсор видим после действий).
@@ -514,23 +520,23 @@ mod tests {
     }
 
     // ------------------------------------------------------------------
-    // blink
+    // blink (фазовая: 530ms visible, 530ms hidden, repeat)
     // ------------------------------------------------------------------
 
     #[test]
-    fn should_blink_initially_false() {
+    fn should_blink_initially_visible() {
         let c = Cursor::new();
-        // last_blink = Instant::now(), так что разница < 530ms → false
-        assert!(!c.should_blink());
+        // last_blink = Instant::now(), фаза 0 → visible
+        assert!(c.should_blink(), "cursor should be visible right after creation");
     }
 
     #[test]
-    fn force_blink_resets_timer() {
+    fn force_blink_resets_to_visible() {
         let mut c = Cursor::new();
-        assert!(!c.should_blink());
-        // принудительно сбрасываем
+        // после паузы курсор должен быть visible (phase 0)
+        assert!(c.should_blink());
         c.force_blink();
-        assert!(!c.should_blink());
+        assert!(c.should_blink(), "force_blink should reset to visible phase");
     }
 
     // ------------------------------------------------------------------

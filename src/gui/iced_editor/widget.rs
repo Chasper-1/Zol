@@ -20,6 +20,7 @@ use iced::advanced::text::{self};
 use iced::{
     alignment, Color, Element, Event, Length, Pixels, Point, Rectangle, Size,
 };
+use iced::mouse::ScrollDelta;
 
 use crate::editor::cursor;
 use crate::editor::layout::cursor_line_bounds;
@@ -202,6 +203,7 @@ where
                 Color::WHITE,
             );
         }
+
     }
 
     fn update(
@@ -364,8 +366,8 @@ where
                     shell.request_redraw();
                 }
             }
-            Event::Mouse(mouse_event) => {
-                if let iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left) = mouse_event {
+            Event::Mouse(mouse_event) => match mouse_event {
+                iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left) => {
                     if let Some(pos) = cursor_state.position_in(bounds) {
                         let local_x = pos.x - origin.x;
                         let local_y = pos.y - origin.y;
@@ -405,6 +407,23 @@ where
                         shell.request_redraw();
                     }
                 }
+                iced::mouse::Event::WheelScrolled { delta } => {
+                    let amount = match delta {
+                        ScrollDelta::Lines { y, .. } => -y * 40.0,
+                        ScrollDelta::Pixels { y, .. } => -y,
+                    };
+                    if amount.abs() > 0.0 {
+                        let max_scroll =
+                            (self.inner.shaped_doc.borrow().total_height() - bounds.height)
+                                .max(0.0);
+                        let new_scroll =
+                            (self.inner.scroll_y.get() + amount).clamp(0.0, max_scroll);
+                        self.inner.scroll_y.set(new_scroll);
+                        self.inner.dirty.set(true);
+                        shell.request_redraw();
+                    }
+                }
+                _ => {}
             }
             _ => {}
         }
