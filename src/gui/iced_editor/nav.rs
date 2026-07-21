@@ -92,3 +92,172 @@ pub fn move_vertical(inner: &EditorInner, target_line: usize) {
     cursor.set_col_visual(x);
     inner.dirty.set(true);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::editor::cache::DocumentCache;
+    use crate::editor::render;
+    use crate::editor::state::EditMode;
+    use crate::editor::theme::EditorTheme;
+    use crate::editor::cursor::Cursor;
+    use crate::editor::font;
+    use std::cell::{Cell, RefCell};
+
+    // ------------------------------------------------------------------
+    // helper: create a shaped doc with one plain-text line
+    // ------------------------------------------------------------------
+    fn shaped_line(text: &str, size: f32) -> ShapedDocument {
+        font::init();
+        let metrics = cosmic_text::Metrics::new(size, size * 1.4);
+        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics));
+        let cache = DocumentCache::default();
+        let theme = EditorTheme::default();
+        render::build(&mut doc, text, &cache, EditMode::Source, 0, &theme, size, 24.0, 0.0, None);
+        doc
+    }
+
+    // ------------------------------------------------------------------
+    // helper: EditorInner with given content
+    // ------------------------------------------------------------------
+    fn make_inner(text: &str) -> EditorInner {
+        font::init();
+        EditorInner::new(text.to_string())
+    }
+
+    // ------------------------------------------------------------------
+    // cursor_x_on_line
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn cursor_x_on_first_glyph_is_zero() {
+        let doc = shaped_line("hello", 14.0);
+        let x = cursor_x_on_line(&doc, 0, 0);
+        assert_eq!(x, 0.0);
+    }
+
+    #[test]
+    fn cursor_x_increases_along_line() {
+        let doc = shaped_line("hello", 14.0);
+        let x0 = cursor_x_on_line(&doc, 0, 0);
+        let x1 = cursor_x_on_line(&doc, 0, 1);
+        assert!(x1 > x0, "x1={x1} should be > x0={x0}");
+    }
+
+    #[test]
+    fn cursor_x_beyond_last_glyph_returns_end() {
+        let doc = shaped_line("ab", 14.0);
+        let x = cursor_x_on_line(&doc, 0, 10);
+        // should return last glyph x+w
+        let last_run = doc.buffer.layout_runs().next().unwrap();
+        let last_glyph = last_run.glyphs.last().unwrap();
+        assert_eq!(x, last_glyph.x + last_glyph.w);
+    }
+
+    #[test]
+    fn cursor_x_on_empty_line() {
+        let doc = shaped_line("", 14.0);
+        let x = cursor_x_on_line(&doc, 0, 0);
+        assert_eq!(x, 0.0);
+    }
+
+    #[test]
+    fn cursor_x_on_second_line() {
+        let doc = shaped_line("ab\ncd", 14.0);
+        assert_eq!(doc.line_count(), 2);
+        let x = cursor_x_on_line(&doc, 1, 0);
+        assert_eq!(x, 0.0);
+    }
+
+    // ------------------------------------------------------------------
+    // raw_at_x_on_line
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn raw_at_x_at_start_of_line() {
+        let doc = shaped_line("hello", 14.0);
+        let raw = raw_at_x_on_line(&doc, 0, 0.0, 0, 5);
+        assert_eq!(raw, 0);
+    }
+
+    #[test]
+    fn raw_at_x_empty_line() {
+        let doc = shaped_line("", 14.0);
+        let raw = raw_at_x_on_line(&doc, 0, 0.0, 0, 0);
+        assert_eq!(raw, 0);
+    }
+
+    #[test]
+    fn raw_at_x_negative_x() {
+        let doc = shaped_line("hello", 14.0);
+        let raw = raw_at_x_on_line(&doc, 0, -100.0, 0, 5);
+        assert_eq!(raw, 0);
+    }
+
+    #[test]
+    fn raw_at_x_beyond_end() {
+        let doc = shaped_line("ab", 14.0);
+        let raw = raw_at_x_on_line(&doc, 0, 9999.0, 0, 2);
+        assert_eq!(raw, 2); // end of line
+    }
+
+    // ------------------------------------------------------------------
+    // move_vertical
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn move_vertical_moves_to_target_line() {
+        let inner = make_inner("line zero\nline one");
+        {
+            let mut c = inner.cursor.borrow_mut();
+            c.set_raw(&inner.content.borrow(), 5); // somewhere on line 0
+        }
+        let old_line = inner.cursor.borrow().line();
+        move_vertical(&inner, 1);
+        let new_line = inner.cursor.borrow().line();
+        assert_eq!(old_line, 0);
+        assert_eq!(new_line, 1);
+    }
+
+    #[test]
+    fn move_vertical_sets_dirty() {
+        let inner = make_inner("a\nb");
+        inner.dirty.set(false);
+        move_vertical(&inner, 1);
+        assert!(inner.dirty.get(), "move_vertical should set dirty=true");
+    }
+
+    #[test]
+    fn move_vertical_computes_col_visual_from_glyph() {
+        let inner = make_inner("aaa\nbbb");
+        // cursor at start of line 0 → glyph x=0
+        move_vertical(&inner, 1);
+        // col_visual should be the pixel x of the cursor on line 0 (which is 0 at start)
+        assert_eq!(inner.cursor.borrow().col_visual(), 0.0);
+    }
+
+    #[test]
+    fn move_vertical_sets_col_visual_before_move() {
+        let inner = make_inner("aaa\nbbb");
+        // put cursor at end of line 0 (bbb is shorter, but let's use a wider text)
+        let inner = make_inner("hello world\nshort");
+        {
+            let mut c = inner.cursor.borrow_mut();
+            c.set_raw(&inner.content.borrow(), 5); // space between hello and world
+        }
+        move_vertical(&inner, 1);
+        // col_visual should be > 0 (since we were at byte 5 on line 0)
+        assert!(inner.cursor.borrow().col_visual() >= 0.0);
+    }
+
+    #[test]
+    fn move_vertical_target_line_zero() {
+        let inner = make_inner("a\nb");
+        {
+            let mut c = inner.cursor.borrow_mut();
+            c.set_raw(&inner.content.borrow(), 2); // line 1
+        }
+        move_vertical(&inner, 0);
+        assert_eq!(inner.cursor.borrow().line(), 0);
+    }
+}

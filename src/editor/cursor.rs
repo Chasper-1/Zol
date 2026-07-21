@@ -141,16 +141,22 @@ impl Cursor {
 
 /// Нормализовать позицию до char-границы (не режет multi-byte).
 fn clamp_to_char_boundary(content: &str, pos: usize) -> usize {
+    if content.is_empty() {
+        return 0;
+    }
     let pos = pos.min(content.len());
     if content.is_char_boundary(pos) {
-        pos
-    } else {
-        content[..pos]
-            .char_indices()
-            .last()
-            .map(|(i, _)| i)
-            .unwrap_or(0)
+        return pos;
     }
+    // Ищем предыдущую char boundary без slicing (pos может быть внутри multi-byte)
+    let mut prev = 0;
+    for (i, _) in content.char_indices() {
+        if i > pos {
+            break;
+        }
+        prev = i;
+    }
+    prev
 }
 
 /// Начало предыдущего слова (char-safe, is_whitespace).
@@ -268,4 +274,361 @@ pub fn next_grapheme_boundary(content: &str, raw: usize) -> Option<usize> {
     }
     let mut gc = GraphemeCursor::new(raw, content.len(), true);
     gc.next_boundary(content, 0).ok()?
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ------------------------------------------------------------------
+    // helpers
+    // ------------------------------------------------------------------
+
+    fn cursor_at(raw: usize, line: usize, col_visual: f32) -> Cursor {
+        Cursor {
+            raw,
+            line,
+            col_visual,
+            last_blink: Instant::now(),
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // new
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn new_initializes_at_zero() {
+        let c = Cursor::new();
+        assert_eq!(c.raw(), 0);
+        assert_eq!(c.line(), 0);
+        assert_eq!(c.col_visual(), 0.0);
+    }
+
+    // ------------------------------------------------------------------
+    // set_raw
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn set_raw_moves_to_valid_byte() {
+        let mut c = Cursor::new();
+        c.set_raw("hello\nworld", 6);
+        assert_eq!(c.raw(), 6);
+        assert_eq!(c.line(), 1);
+    }
+
+    #[test]
+    fn set_raw_clamps_to_content_len() {
+        let mut c = Cursor::new();
+        c.set_raw("abc", 100);
+        assert_eq!(c.raw(), 3);
+    }
+
+    #[test]
+    fn set_raw_clamps_to_char_boundary() {
+        // "привет" — кириллица 2 байта на символ
+        let mut c = Cursor::new();
+        c.set_raw("привет", 3); // байт 3 = внутри 'р' (байты 2-3)
+        assert_eq!(c.raw(), 2); // должен откатиться к началу 'р'
+    }
+
+    #[test]
+    fn set_raw_line_updates() {
+        let mut c = Cursor::new();
+        c.set_raw("a\nb\nc", 2);
+        assert_eq!(c.line(), 1); // b
+        c.set_raw("a\nb\nc", 4);
+        assert_eq!(c.line(), 2); // c
+    }
+
+    // ------------------------------------------------------------------
+    // move_left / move_right
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn move_left_at_start_stays() {
+        let mut c = Cursor::new();
+        c.move_left("");
+        assert_eq!(c.raw(), 0);
+        c.move_left("abc");
+        assert_eq!(c.raw(), 0);
+    }
+
+    #[test]
+    fn move_right_at_end_stays() {
+        let mut c = cursor_at(3, 0, 0.0);
+        c.move_right("abc");
+        assert_eq!(c.raw(), 3);
+    }
+
+    #[test]
+    fn move_left_right_ascii() {
+        let mut c = cursor_at(2, 0, 0.0);
+        c.move_left("abcd");
+        assert_eq!(c.raw(), 1);
+        c.move_right("abcd");
+        assert_eq!(c.raw(), 2);
+    }
+
+    #[test]
+    fn move_right_updates_line() {
+        let mut c = cursor_at(3, 0, 0.0);
+        c.move_right("abc\ndef");
+        assert_eq!(c.raw(), 4); // \n
+        assert_eq!(c.line(), 1);
+        c.move_right("abc\ndef");
+        assert_eq!(c.raw(), 5); // d
+        assert_eq!(c.line(), 1);
+    }
+
+    #[test]
+    fn move_left_multibyte() {
+        // "a👨‍👩‍👧‍👦b" — сложный emoji ZWJ sequence (11 байт)
+        let text = "a👨‍👩‍👧‍👦b";
+        let mut c = cursor_at(text.len(), 0, 0.0);
+        c.move_left(text);
+        // должно перескочить через весь кластер
+        assert!(c.raw() < text.len());
+        assert_eq!(&text[c.raw()..], "b"); // должен быть перед 'b'
+    }
+
+    #[test]
+    fn move_left_line_updates() {
+        // "ab\ncd" → a=0,b=1,\n=2,c=3,d=4
+        let mut c = cursor_at(4, 1, 0.0); // 'd'
+        c.move_left("ab\ncd"); // → 'c'
+        assert_eq!(c.raw(), 3);
+        assert_eq!(c.line(), 1); // 'c' still on line 1
+        c.move_left("ab\ncd"); // → '\n'
+        assert_eq!(c.raw(), 2);
+        assert_eq!(c.line(), 0); // '\n' on line 0
+    }
+
+    // ------------------------------------------------------------------
+    // move_home / move_end
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn move_home_to_line_start() {
+        let mut c = cursor_at(6, 1, 42.0);
+        c.move_home("abc\ndef");
+        assert_eq!(c.raw(), 4);
+        assert_eq!(c.col_visual(), 0.0);
+    }
+
+    #[test]
+    fn move_end_to_line_end() {
+        let mut c = cursor_at(0, 0, 0.0);
+        c.move_end("abc\ndef");
+        assert_eq!(c.raw(), 3);
+        assert_eq!(c.col_visual(), f32::MAX);
+    }
+
+    #[test]
+    fn move_home_on_first_line() {
+        let mut c = cursor_at(2, 0, 10.0);
+        c.move_home("hello");
+        assert_eq!(c.raw(), 0);
+    }
+
+    #[test]
+    fn move_end_last_line() {
+        let mut c = cursor_at(0, 0, 0.0);
+        c.move_end("hello");
+        assert_eq!(c.raw(), 5);
+    }
+
+    // ------------------------------------------------------------------
+    // move_word_left / move_word_right
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn move_word_left_from_middle() {
+        let mut c = cursor_at(6, 0, 0.0);
+        c.move_word_left("abc def ghi");
+        assert_eq!(c.raw(), 4); // начало def
+    }
+
+    #[test]
+    fn move_word_left_from_start() {
+        let mut c = Cursor::new();
+        c.move_word_left("abc");
+        assert_eq!(c.raw(), 0);
+    }
+
+    #[test]
+    fn move_word_right_from_middle() {
+        let mut c = cursor_at(0, 0, 0.0);
+        c.move_word_right("abc def ghi");
+        assert_eq!(c.raw(), 4); // начало def
+    }
+
+    #[test]
+    fn move_word_right_from_end() {
+        let mut c = cursor_at(11, 0, 0.0);
+        c.move_word_right("abc def ghi");
+        assert_eq!(c.raw(), 11);
+    }
+
+    #[test]
+    fn move_word_left_skips_whitespace() {
+        // "abc   def" → a=0,b=1,c=2,' '=3,' '=4,' '=5,d=6,e=7,f=8
+        let mut c = cursor_at(8, 0, 0.0);
+        c.move_word_left("abc   def");
+        assert_eq!(c.raw(), 6); // начало 'def'
+    }
+
+    #[test]
+    fn move_word_right_skips_whitespace() {
+        // "abc   def" → a=0,b=1,c=2,' '=3,' '=4,' '=5,d=6,e=7,f=8
+        let mut c = cursor_at(3, 0, 0.0);
+        c.move_word_right("abc   def");
+        assert_eq!(c.raw(), 6); // начало 'def'
+    }
+
+    #[test]
+    fn move_word_left_empty_content() {
+        let mut c = Cursor::new();
+        c.move_word_left("");
+        assert_eq!(c.raw(), 0);
+    }
+
+    #[test]
+    fn move_word_right_empty_content() {
+        let mut c = Cursor::new();
+        c.move_word_right("");
+        assert_eq!(c.raw(), 0);
+    }
+
+    // ------------------------------------------------------------------
+    // col_visual
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn col_visual_set_reset() {
+        let mut c = Cursor::new();
+        c.set_col_visual(123.0);
+        assert_eq!(c.col_visual(), 123.0);
+        c.reset_col_visual();
+        assert_eq!(c.col_visual(), 0.0);
+    }
+
+    // ------------------------------------------------------------------
+    // blink
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn should_blink_initially_false() {
+        let c = Cursor::new();
+        // last_blink = Instant::now(), так что разница < 530ms → false
+        assert!(!c.should_blink());
+    }
+
+    #[test]
+    fn force_blink_resets_timer() {
+        let mut c = Cursor::new();
+        assert!(!c.should_blink());
+        // принудительно сбрасываем
+        c.force_blink();
+        assert!(!c.should_blink());
+    }
+
+    // ------------------------------------------------------------------
+    // set_line
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn set_line_works() {
+        let mut c = Cursor::new();
+        c.set_line(5);
+        assert_eq!(c.line(), 5);
+    }
+
+    // ------------------------------------------------------------------
+    // edge cases
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn move_on_empty_content_does_nothing() {
+        let mut c = Cursor::new();
+        c.move_left("");
+        c.move_right("");
+        c.move_home("");
+        c.move_end("");
+        c.move_word_left("");
+        c.move_word_right("");
+        // не паникует, raw = 0
+        assert_eq!(c.raw(), 0);
+    }
+
+    #[test]
+    fn set_raw_on_empty_string() {
+        let mut c = Cursor::new();
+        c.set_raw("", 0);
+        assert_eq!(c.raw(), 0);
+        assert_eq!(c.line(), 0);
+    }
+
+    #[test]
+    fn move_left_then_right_roundtrip() {
+        let text = "abcdef";
+        let mut c = cursor_at(3, 0, 0.0);
+        let original = c.raw();
+        c.move_left(text);
+        c.move_left(text);
+        c.move_right(text);
+        c.move_right(text);
+        assert_eq!(c.raw(), original);
+    }
+
+    // ------------------------------------------------------------------
+    // grapheme boundary helpers
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn prev_grapheme_boundary_at_start() {
+        assert_eq!(prev_grapheme_boundary("abc", 0), None);
+    }
+
+    #[test]
+    fn prev_grapheme_boundary_ascii() {
+        assert_eq!(prev_grapheme_boundary("abc", 2), Some(1));
+    }
+
+    #[test]
+    fn next_grapheme_boundary_at_end() {
+        assert_eq!(next_grapheme_boundary("abc", 3), None);
+    }
+
+    #[test]
+    fn next_grapheme_boundary_ascii() {
+        assert_eq!(next_grapheme_boundary("abc", 1), Some(2));
+    }
+
+    #[test]
+    fn clamp_to_char_boundary_already_valid() {
+        assert_eq!(clamp_to_char_boundary("hello", 3), 3);
+    }
+
+    #[test]
+    fn clamp_to_char_boundary_mid_multi_byte() {
+        assert_eq!(clamp_to_char_boundary("héllo", 1), 1); // é is 2 bytes, pos 1 is inside it
+    }
+
+    #[test]
+    fn clamp_to_char_boundary_past_end() {
+        assert_eq!(clamp_to_char_boundary("hi", 100), 2);
+    }
+
+    #[test]
+    fn clamp_to_char_boundary_empty() {
+        assert_eq!(clamp_to_char_boundary("", 0), 0);
+    }
+
+    #[test]
+    fn set_raw_clamps_past_end() {
+        let mut c = Cursor::new();
+        c.set_raw("abc", 10);
+        assert_eq!(c.raw(), 3);
+    }
 }

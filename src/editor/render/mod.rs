@@ -63,7 +63,7 @@ pub fn build(
         }
     }
 
-    crate::editor::font::with_font_system(|fs| {
+        crate::editor::font::with_font_system(|fs| {
         *doc = shape::shape_document(
             &all_runs,
             fs,
@@ -73,4 +73,108 @@ pub fn build(
             viewport_height,
         );
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::editor::cache::DocumentCache;
+    use crate::editor::font;
+    use crate::editor::state::EditMode;
+    use crate::editor::theme::EditorTheme;
+
+    /// Regression: прямой вызов `build()` не должен deadlock'ать.
+    #[test]
+    fn build_does_not_deadlock() {
+        font::init();
+        let metrics = cosmic_text::Metrics::new(14.0, 19.6);
+        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics));
+        let cache = DocumentCache::default();
+        let theme = EditorTheme::default();
+        // прямой вызов — без внешнего with_font_system
+        build(
+            &mut doc,
+            "hello",
+            &cache,
+            EditMode::LivePreview,
+            0,
+            &theme,
+            14.0,
+            24.0,
+            0.0,
+            None,
+        );
+        assert!(
+            doc.line_count() > 0,
+            "doc should be shaped after build"
+        );
+    }
+
+    #[test]
+    fn build_multiline() {
+        font::init();
+        let metrics = cosmic_text::Metrics::new(14.0, 19.6);
+        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics));
+        let cache = DocumentCache::default();
+        let theme = EditorTheme::default();
+        build(
+            &mut doc,
+            "line 1\nline 2\nline 3",
+            &cache,
+            EditMode::Source,
+            0,
+            &theme,
+            14.0,
+            24.0,
+            0.0,
+            None,
+        );
+        assert_eq!(doc.line_count(), 3);
+    }
+
+    #[test]
+    fn build_empty_content() {
+        font::init();
+        let metrics = cosmic_text::Metrics::new(14.0, 19.6);
+        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics));
+        let cache = DocumentCache::default();
+        let theme = EditorTheme::default();
+        build(
+            &mut doc,
+            "",
+            &cache,
+            EditMode::LivePreview,
+            0,
+            &theme,
+            14.0,
+            24.0,
+            0.0,
+            None,
+        );
+        assert_eq!(doc.line_count(), 1); // one empty line
+    }
+
+    #[test]
+    fn build_with_scroll() {
+        font::init();
+        let metrics = cosmic_text::Metrics::new(14.0, 19.6);
+        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics));
+        let cache = DocumentCache::default();
+        let theme = EditorTheme::default();
+        build(
+            &mut doc,
+            "hello\nworld",
+            &cache,
+            EditMode::Source,
+            0,
+            &theme,
+            14.0,
+            24.0,
+            100.0,
+            Some(200.0),
+        );
+        // with scroll, cosmic-text only shapes what's visible
+        // but total_height should still work
+        assert!(doc.total_height() >= 0.0);
+    }
 }

@@ -37,3 +37,64 @@ impl EditorWidget {
         self.document_cache = crate::editor::markup::parse_document(&self.doc.content);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_creates_with_text() {
+        let ew = EditorWidget::new("hello");
+        assert_eq!(ew.content(), "hello");
+    }
+
+    #[test]
+    fn new_empty() {
+        let ew = EditorWidget::new("");
+        assert_eq!(ew.content(), "");
+    }
+
+    #[test]
+    fn new_doc_is_dirty() {
+        let ew = EditorWidget::new("x");
+        assert!(ew.doc.dirty);
+    }
+
+    #[test]
+    fn content_after_set_content() {
+        let mut ew = EditorWidget::new("old");
+        ew.set_content("new content");
+        assert_eq!(ew.content(), "new content");
+    }
+
+    #[test]
+    fn set_content_clears_and_sets_dirty() {
+        let mut ew = EditorWidget::new("old");
+        ew.doc.dirty = false;
+        ew.set_content("new");
+        assert!(ew.doc.dirty);
+    }
+
+    #[test]
+    fn set_content_updates_cache() {
+        let mut ew = EditorWidget::new("**bold**");
+        ew.set_content("plain");
+        assert_eq!(ew.content(), "plain");
+        // cache should be rebuilt (non-empty, since "plain" is still valid ZML)
+        let doc_cache = &ew.document_cache;
+        assert_eq!(doc_cache.lines.len(), 1);
+    }
+
+    #[test]
+    fn multiline_editor_widget() {
+        let ew = EditorWidget::new("a\nb\nc");
+        assert_eq!(ew.content(), "a\nb\nc");
+    }
+
+    #[test]
+    fn shaped_doc_created() {
+        let ew = EditorWidget::new("hello");
+        // shaped_doc exists after construction (not shaped, but buffer exists)
+        assert!(ew.shaped_doc.total_height() >= 0.0);
+    }
+}
