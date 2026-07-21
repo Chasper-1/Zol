@@ -2,7 +2,7 @@ mod api;
 mod document;
 mod editor;
 mod gui;
-mod zml;
+mod zoll;
 
 fn main() {
     match gui::app_iced::run() {

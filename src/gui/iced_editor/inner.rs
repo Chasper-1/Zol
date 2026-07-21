@@ -9,7 +9,7 @@ use crate::editor::state::EditMode;
 use crate::editor::theme::EditorTheme;
 
 /// Имя файла по умолчанию для загрузки/сохранения.
-const DEFAULT_FILE: &str = "notes.zml";
+const DEFAULT_FILE: &str = "notes.zoll";
 
 /// Состояние редактора.
 ///
@@ -129,7 +129,7 @@ mod tests {
         let inner = EditorInner::new("x".to_string());
         assert_eq!(inner.base_size, 14.0);
         assert_eq!(inner.heading_size, 24.0);
-        assert_eq!(inner.file_path, "notes.zml");
+        assert_eq!(inner.file_path, "notes.zoll");
         assert_eq!(inner.mode, EditMode::LivePreview);
         assert_eq!(inner.scroll_y.get(), 0.0);
     }

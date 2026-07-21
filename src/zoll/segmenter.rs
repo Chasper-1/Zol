@@ -1,6 +1,6 @@
 //! Преобразование AST в DocumentCache для редактора.
 //!
-//! Это единственный модуль zml, который зависит от editor::cache и editor::markup::segment.
+//! Это единственный модуль zoll, который зависит от editor::cache и editor::markup::segment.
 //! Всё остальное — чистый Rust без внешних зависимостей.
 
 use super::ast::{MarkupDoc, MarkupNode, MarkupStyle};
@@ -157,7 +157,7 @@ fn find_line_by_offset(offset: usize, doc: &DocumentCache) -> usize {
 mod tests {
     use super::*;
     use crate::editor::markup::segment::STYLE_PLAIN;
-    use crate::zml::ast::{MarkupDoc, MarkupNode};
+    use crate::zoll::ast::{MarkupDoc, MarkupNode};
 
     #[test]
     fn plain_text_segments() {

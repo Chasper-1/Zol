@@ -20,7 +20,7 @@ struct AppState {
 
 fn boot() -> (AppState, Task<Message>) {
     // Загружаем содержимое заметки (или пусто, если файла нет).
-    let content = std::fs::read_to_string("notes.zml").unwrap_or_default();
+    let content = std::fs::read_to_string("notes.zoll").unwrap_or_default();
 
     let app = AppState {
         inner: EditorInner::new(content),
