@@ -1,4 +1,5 @@
 mod api;
+mod app;
 mod document;
 mod editor;
 mod gui;
