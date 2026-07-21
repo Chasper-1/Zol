@@ -15,7 +15,6 @@
 
 pub mod inner;
 pub mod nav;
-pub mod raster;
 pub mod scroll;
 pub mod widget;
 

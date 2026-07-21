@@ -16,7 +16,7 @@ const DEFAULT_FILE: &str = "notes.zml";
 /// Поля-`RefCell` обеспечивают interior mutability — виджет держит
 /// `&EditorInner`, а мутации происходят через `.borrow_mut()` отдельных
 /// полей. `dirty` сигнализирует `draw()`, что `shaped_doc` нужно
-/// перестроить. `raster` кэширует отрастеризованное изображение текста.
+/// перестроить.
 pub struct EditorInner {
     pub content: RefCell<String>,
     pub cursor: RefCell<Cursor>,
@@ -31,8 +31,6 @@ pub struct EditorInner {
     pub scroll_y: Cell<f32>,
     /// Путь к файлу (для загрузки/сохранения).
     pub file_path: String,
-    /// Кэш отрастеризованного изображения: (handle, ширина, высота).
-    pub raster: RefCell<Option<(iced::advanced::image::Handle, u32, u32)>>,
 }
 
 impl EditorInner {
@@ -73,7 +71,6 @@ impl EditorInner {
             theme,
             scroll_y: Cell::new(0.0),
             file_path: DEFAULT_FILE.to_string(),
-            raster: RefCell::new(None),
         }
     }
 }

@@ -1,21 +1,24 @@
 //! Iced-виджет редактора.
 //!
 //! Содержит [`IcedEditor`] — виджет, реализующий `Widget<Message, Theme, Renderer>`.
-//! Рисует глифы через `fill_quad`, курсор — вертикальной полоской.
-//! Для растеризации через реальные пиксели (с альфа-блендингом) см. [`super::raster`].
+//! Рисует текст через GPU (`renderer.fill_text`), курсор — вертикальной полоской.
+//! Позиционирование глифов и hit-testing — через cosmic-text.
 //!
 //! TODO:
-//!   - Использовать `ensure_raster()` + `draw_image` после стабилизации Arc<Buffer>
 //!   - Выделение (selection) через fill_quad с фоном
+//!   - Цветная разметка (bold, italic, code…)
+//!   - Автоскролл курсора
+//!   - Мигание курсора по таймеру
 
 use std::cell::Cell;
 
 use iced::advanced::layout::{self, Layout};
-use iced::advanced::renderer::{self, Renderer as _};
+use iced::advanced::renderer;
 use iced::advanced::widget::{self, Widget};
 use iced::advanced::{mouse, Clipboard, Shell};
+use iced::advanced::text::{self};
 use iced::{
-    Background, Color, Element, Event, Length, Point, Rectangle, Size,
+    alignment, Color, Element, Event, Length, Pixels, Point, Rectangle, Size,
 };
 
 use crate::editor::cursor;
@@ -24,7 +27,6 @@ use crate::editor::render;
 use crate::editor::state::EditMode;
 
 use super::inner::EditorInner;
-use super::raster;
 
 // ---------------------------------------------------------------------------
 // Виджет (держит &EditorInner — interior mutability через RefCell-поля)
@@ -48,7 +50,7 @@ impl<'a> IcedEditor<'a> {
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for IcedEditor<'a>
 where
-    Renderer: iced::advanced::Renderer,
+    Renderer: text::Renderer,
 {
     fn size(&self) -> Size<Length> {
         Size::new(Length::Fill, Length::Fill)
@@ -70,7 +72,7 @@ where
         _theme: &Theme,
         _style: &renderer::Style,
         layout: Layout<'_>,
-        mouse_cursor: mouse::Cursor,
+        _mouse_cursor: mouse::Cursor,
         _viewport: &Rectangle,
     ) {
         let bounds = layout.bounds();
@@ -98,16 +100,10 @@ where
                 Some(bounds.height),
             );
             drop(shaped);
-
-            // Растр тоже перестраиваем
-            raster::ensure_raster(self.inner, bounds, true);
             self.inner.dirty.set(false);
         }
 
-        // ── Фаза 2: отрисовка через растр ────────────────────────────
-        // Пока используем fill_quad для совместимости (без image::Renderer).
-        // TODO: заменить на renderer.draw_image(...) через ensure_raster().
-
+        // ── Фаза 2: отрисовка текста GPU (fill_text) ─────────────────
         // --- Фон ---
         let bg = &self.inner.theme.background;
         renderer.fill_quad(
@@ -115,7 +111,7 @@ where
                 bounds,
                 ..renderer::Quad::default()
             },
-            Background::Color(Color::from_rgba8(
+            iced::Background::Color(Color::from_rgba8(
                 (bg.r * 255.0) as u8,
                 (bg.g * 255.0) as u8,
                 (bg.b * 255.0) as u8,
@@ -123,31 +119,39 @@ where
             )),
         );
 
-        // --- Глифы (через shaped buffer layout_runs, fill_quad) ---
-        // TODO: заменить на draw_image из ensure_raster() когда перейдём
-        //       на image::Renderer.
+        // --- Текст (по layout_run'ам) ---
         let shaped = self.inner.shaped_doc.borrow();
         let scroll_y = self.inner.scroll_y.get();
+        let text_color = self.inner.theme.text.color;
+        let iced_color = Color::from_rgba8(
+            (text_color.r * 255.0) as u8,
+            (text_color.g * 255.0) as u8,
+            (text_color.b * 255.0) as u8,
+            text_color.a as f32,
+        );
         for run in shaped.buffer.layout_runs() {
             let line_top = run.line_top - scroll_y;
-            for glyph in run.glyphs.iter() {
-                let x = origin.x + glyph.x;
-                let y = origin.y + line_top + glyph.y;
-                let w = glyph.w;
-                let h = glyph.font_size;
-
-                let color: Color = glyph.color_opt.map_or(Color::WHITE, |c| {
-                    Color::from_rgba8(c.r(), c.g(), c.b(), c.a() as f32 / 255.0)
-                });
-
-                renderer.fill_quad(
-                    renderer::Quad {
-                        bounds: Rectangle::new(Point::new(x, y), Size::new(w, h)),
-                        ..renderer::Quad::default()
-                    },
-                    color,
-                );
+            // Пропускаем строки, содержащие только zero-width space (пустые строки)
+            if run.text == "\u{200B}" {
+                continue;
             }
+
+            renderer.fill_text(
+                text::Text {
+                    content: run.text.to_string(),
+                    bounds: Size::new(f32::INFINITY, run.line_height),
+                    size: Pixels(self.inner.base_size),
+                    line_height: text::LineHeight::Absolute(Pixels(run.line_height)),
+                    font: renderer.default_font(),
+                    align_x: text::Alignment::Left,
+                    align_y: alignment::Vertical::Top,
+                    shaping: text::Shaping::Advanced,
+                    wrapping: text::Wrapping::None,
+                },
+                Point::new(origin.x, origin.y + line_top),
+                iced_color,
+                Rectangle::new(origin, bounds.size()),
+            );
         }
 
         // --- Курсор ---
