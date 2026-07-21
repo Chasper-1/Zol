@@ -68,29 +68,36 @@ pub fn raw_at_x_on_line(
 }
 
 /// Переместить курсор на строку `target_line`, сохраняя пиксельную X.
+///
+/// Мутирует только позицию курсора, контент не меняется.
 pub fn move_vertical(inner: &EditorInner, target_line: usize) {
+    // 1. Вычисляем текущую X-позицию курсора на исходной строке
     let x = {
-        let content = inner.content.borrow();
+        let doc = inner.doc.borrow();
         let shaped = inner.shaped_doc.borrow();
-        let cursor = inner.cursor.borrow();
-        let cl = cursor.line();
-        let (ls, _) = cursor_line_bounds(&content, cl);
-        let byte_in_line = cursor.raw().saturating_sub(ls);
+        let cl = doc.cursor.line();
+        let (ls, _) = cursor_line_bounds(&doc.content, cl);
+        let byte_in_line = doc.cursor.raw().saturating_sub(ls);
         cursor_x_on_line(&shaped, cl, byte_in_line)
     };
 
+    // 2. Вычисляем новый byte-offset на целевой строке
     let new_raw = {
-        let content = inner.content.borrow();
+        let doc = inner.doc.borrow();
         let shaped = inner.shaped_doc.borrow();
-        let (t_start, t_end) = cursor_line_bounds(&content, target_line);
+        let (t_start, t_end) = cursor_line_bounds(&doc.content, target_line);
         raw_at_x_on_line(&shaped, target_line, x, t_start, t_end)
     };
 
-    let c = inner.content.borrow();
-    let mut cursor = inner.cursor.borrow_mut();
-    cursor.set_raw(&c, new_raw);
-    cursor.set_col_visual(x);
-    inner.dirty.set(true);
+    // 3. Мутируем курсор (content не меняется — кеш не трогаем).
+    //    Клонируем content заранее — RefMut не позволяет split borrows.
+    let content = inner.doc.borrow().content.clone();
+    {
+        let mut doc = inner.doc.borrow_mut();
+        doc.cursor.set_raw(&content, new_raw);
+        doc.cursor.set_col_visual(x);
+        doc.dirty = true;
+    }
 }
 
 #[cfg(test)]
@@ -100,9 +107,8 @@ mod tests {
     use crate::editor::render;
     use crate::editor::state::EditMode;
     use crate::editor::theme::EditorTheme;
-    use crate::editor::cursor::Cursor;
     use crate::editor::font;
-    use std::cell::{Cell, RefCell};
+    use std::cell::RefCell;
 
     // ------------------------------------------------------------------
     // helper: create a shaped doc with one plain-text line
@@ -148,7 +154,6 @@ mod tests {
     fn cursor_x_beyond_last_glyph_returns_end() {
         let doc = shaped_line("ab", 14.0);
         let x = cursor_x_on_line(&doc, 0, 10);
-        // should return last glyph x+w
         let last_run = doc.buffer.layout_runs().next().unwrap();
         let last_glyph = last_run.glyphs.last().unwrap();
         assert_eq!(x, last_glyph.x + last_glyph.w);
@@ -198,23 +203,27 @@ mod tests {
     fn raw_at_x_beyond_end() {
         let doc = shaped_line("ab", 14.0);
         let raw = raw_at_x_on_line(&doc, 0, 9999.0, 0, 2);
-        assert_eq!(raw, 2); // end of line
+        assert_eq!(raw, 2);
     }
 
     // ------------------------------------------------------------------
     // move_vertical
     // ------------------------------------------------------------------
 
+    /// Helper: установить курсор на конкретный байт (для тестов).
+    fn set_cursor_raw(inner: &EditorInner, raw: usize) {
+        let content = inner.doc.borrow().content.clone();
+        let mut doc = inner.doc.borrow_mut();
+        doc.cursor.set_raw(&content, raw);
+    }
+
     #[test]
     fn move_vertical_moves_to_target_line() {
         let inner = make_inner("line zero\nline one");
-        {
-            let mut c = inner.cursor.borrow_mut();
-            c.set_raw(&inner.content.borrow(), 5); // somewhere on line 0
-        }
-        let old_line = inner.cursor.borrow().line();
+        set_cursor_raw(&inner, 5);
+        let old_line = inner.doc.borrow().cursor.line();
         move_vertical(&inner, 1);
-        let new_line = inner.cursor.borrow().line();
+        let new_line = inner.doc.borrow().cursor.line();
         assert_eq!(old_line, 0);
         assert_eq!(new_line, 1);
     }
@@ -222,42 +231,31 @@ mod tests {
     #[test]
     fn move_vertical_sets_dirty() {
         let inner = make_inner("a\nb");
-        inner.dirty.set(false);
+        inner.doc.borrow_mut().dirty = false;
         move_vertical(&inner, 1);
-        assert!(inner.dirty.get(), "move_vertical should set dirty=true");
+        assert!(inner.doc.borrow().dirty, "move_vertical should set dirty=true");
     }
 
     #[test]
     fn move_vertical_computes_col_visual_from_glyph() {
         let inner = make_inner("aaa\nbbb");
-        // cursor at start of line 0 → glyph x=0
         move_vertical(&inner, 1);
-        // col_visual should be the pixel x of the cursor on line 0 (which is 0 at start)
-        assert_eq!(inner.cursor.borrow().col_visual(), 0.0);
+        assert_eq!(inner.doc.borrow().cursor.col_visual(), 0.0);
     }
 
     #[test]
     fn move_vertical_sets_col_visual_before_move() {
-        let inner = make_inner("aaa\nbbb");
-        // put cursor at end of line 0 (bbb is shorter, but let's use a wider text)
         let inner = make_inner("hello world\nshort");
-        {
-            let mut c = inner.cursor.borrow_mut();
-            c.set_raw(&inner.content.borrow(), 5); // space between hello and world
-        }
+        set_cursor_raw(&inner, 5);
         move_vertical(&inner, 1);
-        // col_visual should be > 0 (since we were at byte 5 on line 0)
-        assert!(inner.cursor.borrow().col_visual() >= 0.0);
+        assert!(inner.doc.borrow().cursor.col_visual() >= 0.0);
     }
 
     #[test]
     fn move_vertical_target_line_zero() {
         let inner = make_inner("a\nb");
-        {
-            let mut c = inner.cursor.borrow_mut();
-            c.set_raw(&inner.content.borrow(), 2); // line 1
-        }
+        set_cursor_raw(&inner, 2);
         move_vertical(&inner, 0);
-        assert_eq!(inner.cursor.borrow().line(), 0);
+        assert_eq!(inner.doc.borrow().cursor.line(), 0);
     }
 }
