@@ -53,41 +53,6 @@ fn move_right_grapheme() {
     assert_eq!(d.cursor.raw(), 3);
 }
 
-// ── move_up / move_down ──────────────────────────────────────────────
-
-#[test]
-fn move_up_simple() {
-    let mut d = make_doc("first\nsecond");
-    d.cursor.set_raw(&d.content, 10);
-    move_up(&mut d);
-    assert_eq!(d.cursor.line(), 0);
-}
-
-#[test]
-fn move_up_at_first_line_goes_home() {
-    let mut d = make_doc("only one line");
-    d.cursor.set_raw(&d.content, 5);
-    move_up(&mut d);
-    assert_eq!(d.cursor.raw(), 0);
-}
-
-#[test]
-fn move_down_simple() {
-    let mut d = make_doc("first\nsecond");
-    move_down(&mut d);
-    assert_eq!(d.cursor.line(), 1);
-}
-
-#[test]
-fn move_down_at_last_line_goes_end() {
-    let mut d = make_doc("first\nsecond");
-    d.cursor.set_raw(&d.content, 6);
-    d.cursor.set_line(1);
-    let len = d.content.len();
-    move_down(&mut d);
-    assert_eq!(d.cursor.raw(), len);
-}
-
 // ── move_home / move_end ─────────────────────────────────────────────
 
 #[test]
@@ -103,6 +68,23 @@ fn move_end_works() {
     let mut d = make_doc("hello world");
     move_end(&mut d);
     assert_eq!(d.cursor.raw(), 11);
+}
+
+// ── move_up / move_down ──────────────────────────────────────────────
+
+#[test]
+fn move_up_to_prev_line() {
+    let mut d = make_doc("first\nsecond");
+    d.cursor.set_raw(&d.content, 8);
+    move_up(&mut d);
+    assert_eq!(d.cursor.line(), 0);
+}
+
+#[test]
+fn move_down_to_next_line() {
+    let mut d = make_doc("first\nsecond");
+    move_down(&mut d);
+    assert_eq!(d.cursor.line(), 1);
 }
 
 // ── move_word_left / move_word_right ─────────────────────────────────

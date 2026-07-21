@@ -9,7 +9,7 @@ use crate::editor::cursor::Cursor;
 ///
 /// Содержит только то, что нужно API-операциям (move, insert, delete).
 /// Всё, что связано с рендерингом (ShapedDocument, DocumentCache) —
-/// в `editor::editor_widget::EditorWidget`.
+/// в `gui::iced_editor::EditorInner`.
 pub struct Document {
     pub content: String,
     pub cursor: Cursor,

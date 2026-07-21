@@ -25,6 +25,8 @@ use iced::{
 };
 use iced::mouse::ScrollDelta;
 
+use crate::api::cursor as api_cursor;
+use crate::api::file as api_file;
 use crate::api::text as api_text;
 use crate::editor::layout::cursor_line_bounds;
 use crate::editor::render;
@@ -252,14 +254,14 @@ where
                 {
                     let cmd = modifiers.command();
 
-                    // Ctrl+S — сохранить файл
+                    // Ctrl+S — сохранить файл через API-ручку
                     if cmd
                         && key
                             .to_latin(*physical_key)
                             .is_some_and(|c| c == 's')
                     {
-                        let content = self.inner.doc.borrow().content.clone();
-                        if let Err(e) = std::fs::write(&self.inner.file_path, content.as_bytes()) {
+                        let doc = self.inner.doc.borrow();
+                        if let Err(e) = api_file::file_save(&doc, &self.inner.file_path) {
                             eprintln!("[Zol] Ошибка сохранения {}: {}", self.inner.file_path, e);
                         } else {
                             eprintln!("[Zol] Сохранено в {}", self.inner.file_path);
@@ -272,53 +274,28 @@ where
                     match key.as_ref() {
                         // ── Навигация (курсор без изменения контента) ──
                         iced::keyboard::Key::Named(Named::ArrowLeft) => {
-                            let content = self.inner.doc.borrow().content.clone();
                             let mut doc = self.inner.doc.borrow_mut();
-                            doc.cursor.move_left(&content);
+                            api_cursor::move_left(&mut *doc);
                         }
                         iced::keyboard::Key::Named(Named::ArrowRight) => {
-                            let content = self.inner.doc.borrow().content.clone();
                             let mut doc = self.inner.doc.borrow_mut();
-                            doc.cursor.move_right(&content);
+                            api_cursor::move_right(&mut *doc);
                         }
                         iced::keyboard::Key::Named(Named::ArrowUp) => {
-                            let target = {
-                                let doc = self.inner.doc.borrow();
-                                let n = doc.content.bytes().filter(|&b| b == b'\n').count() + 1;
-                                if doc.cursor.line() > 0 {
-                                    Some(doc.cursor.line() - 1).filter(|&t| t < n)
-                                } else {
-                                    None
-                                }
-                            };
-                            if let Some(t) = target {
-                                super::nav::move_vertical(self.inner, t);
-                            }
+                            let mut doc = self.inner.doc.borrow_mut();
+                            api_cursor::move_up(&mut *doc);
                         }
                         iced::keyboard::Key::Named(Named::ArrowDown) => {
-                            let target = {
-                                let doc = self.inner.doc.borrow();
-                                let n = doc.content.bytes().filter(|&b| b == b'\n').count() + 1;
-                                let cl = doc.cursor.line();
-                                if cl + 1 < n {
-                                    Some(cl + 1)
-                                } else {
-                                    None
-                                }
-                            };
-                            if let Some(t) = target {
-                                super::nav::move_vertical(self.inner, t);
-                            }
+                            let mut doc = self.inner.doc.borrow_mut();
+                            api_cursor::move_down(&mut *doc);
                         }
                         iced::keyboard::Key::Named(Named::Home) => {
-                            let content = self.inner.doc.borrow().content.clone();
                             let mut doc = self.inner.doc.borrow_mut();
-                            doc.cursor.move_home(&content);
+                            api_cursor::move_home(&mut *doc);
                         }
                         iced::keyboard::Key::Named(Named::End) => {
-                            let content = self.inner.doc.borrow().content.clone();
                             let mut doc = self.inner.doc.borrow_mut();
-                            doc.cursor.move_end(&content);
+                            api_cursor::move_end(&mut *doc);
                         }
 
                         // ── Редактирование (контент меняется) ──
@@ -340,16 +317,12 @@ where
                         _ => {
                             if let Some(text) = text {
                                 if !cmd && !modifiers.alt() {
-                                    self.inner.edit_doc(|doc| {
-                                        for ch in text.chars() {
-                                            if !ch.is_control() {
-                                                let raw = doc.cursor.raw();
-                                                doc.content.insert(raw, ch);
-                                                let new_raw = raw + ch.len_utf8();
-                                                doc.cursor.set_raw(&doc.content, new_raw);
-                                            }
-                                        }
-                                    });
+                                    let filtered: String = text.chars().filter(|c| !c.is_control()).collect();
+                                    if !filtered.is_empty() {
+                                        self.inner.edit_doc(|doc| {
+                                            api_text::insert_at_cursor(doc, &filtered);
+                                        });
+                                    }
                                 }
                             }
                         }
@@ -390,9 +363,9 @@ where
                                 (line_start + cosmic.index).min(content.len());
 
                             let mut doc = self.inner.doc.borrow_mut();
-                            doc.cursor.set_raw(&content, new_raw);
-                            doc.cursor.set_line(cosmic.line);
-                            doc.cursor.reset_col_visual();
+                            api_cursor::cursor_set_raw(&mut *doc, new_raw);
+                            api_cursor::cursor_set_line(&mut *doc, cosmic.line);
+                            api_cursor::cursor_reset_col(&mut *doc);
                         }
 
                         // Автоскролл после клика

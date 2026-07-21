@@ -124,6 +124,74 @@ impl Cursor {
         self.force_blink();
     }
 
+    /// На строку вверх, сохраняя пиксельную X-позицию (col_visual).
+    ///
+    /// Если курсор на первой строке — переходит в home.
+    /// Без доступа к shaped_doc использует приближение по средней ширине символа.
+    pub fn move_up(&mut self, content: &str) {
+        if self.line == 0 {
+            self.move_home(content);
+            return;
+        }
+        let col_x = self.col_visual;
+        let prev_line = self.line - 1;
+        let prev_text = line_utils::line_text(content, prev_line).unwrap_or("");
+        let target_char = if col_x.is_infinite() {
+            prev_text.chars().count()
+        } else {
+            // Приближение: пиксели → символы (без shaped_doc точнее нельзя)
+            let char_count = prev_text.chars().count();
+            let approx = (col_x / 10.0).round() as usize;
+            approx.min(char_count)
+        };
+
+        let byte_offset = prev_text
+            .char_indices()
+            .nth(target_char)
+            .map(|(b, _)| b)
+            .unwrap_or(prev_text.len());
+
+        let start = line_utils::line_start_byte(content, prev_line);
+        self.raw = (start + byte_offset).min(content.len());
+        self.line = prev_line;
+        self.col_visual = col_x;
+        self.force_blink();
+    }
+
+    /// На строку вниз, сохраняя пиксельную X-позицию (col_visual).
+    ///
+    /// Если курсор на последней строке — переходит в end.
+    pub fn move_down(&mut self, content: &str) {
+        let total = line_utils::count_lines(content);
+        let next_line = self.line + 1;
+        if next_line >= total {
+            self.move_end(content);
+            return;
+        }
+
+        let col_x = self.col_visual;
+        let next_text = line_utils::line_text(content, next_line).unwrap_or("");
+        let target_char = if col_x.is_infinite() {
+            next_text.chars().count()
+        } else {
+            let char_count = next_text.chars().count();
+            let approx = (col_x / 10.0).round() as usize;
+            approx.min(char_count)
+        };
+
+        let byte_offset = next_text
+            .char_indices()
+            .nth(target_char)
+            .map(|(b, _)| b)
+            .unwrap_or(next_text.len());
+
+        let start = line_utils::line_start_byte(content, next_line);
+        self.raw = (start + byte_offset).min(content.len());
+        self.line = next_line;
+        self.col_visual = col_x;
+        self.force_blink();
+    }
+
     // ── Мигание ─────────────────────────────────────────────
 
     /// Видим ли курсор сейчас (фазовая мигалка).
@@ -515,6 +583,53 @@ mod tests {
         let mut c = Cursor::new();
         c.move_word_right("");
         assert_eq!(c.raw(), 0);
+    }
+
+    // ------------------------------------------------------------------
+    // move_up / move_down
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn move_up_goes_to_prev_line() {
+        let mut c = cursor_at(5, 1, 0.0); // 'i' in "first\nsecond"
+        c.move_up("first\nsecond");
+        assert_eq!(c.line(), 0);
+    }
+
+    #[test]
+    fn move_up_at_first_line_goes_home() {
+        let mut c = cursor_at(3, 0, 10.0);
+        c.move_up("first\nsecond");
+        assert_eq!(c.raw(), 0);
+        assert_eq!(c.col_visual(), 0.0);
+    }
+
+    #[test]
+    fn move_up_preserves_col_visual() {
+        let mut c = cursor_at(8, 1, 15.0); // cursor_x = 15px
+        c.move_up("first\nsecond");
+        assert_eq!(c.col_visual(), 15.0);
+    }
+
+    #[test]
+    fn move_down_goes_to_next_line() {
+        let mut c = cursor_at(0, 0, 0.0);
+        c.move_down("first\nsecond");
+        assert_eq!(c.line(), 1);
+    }
+
+    #[test]
+    fn move_down_at_last_line_goes_end() {
+        let mut c = cursor_at(0, 0, 0.0);
+        c.move_down("only one line");
+        assert_eq!(c.raw(), 13); // длина строки
+    }
+
+    #[test]
+    fn move_down_infinite_col_visual() {
+        let mut c = cursor_at(0, 0, f32::MAX);
+        c.move_down("ab\ncdef");
+        assert_eq!(c.raw(), 7); // конец второй строки
     }
 
     // ------------------------------------------------------------------
