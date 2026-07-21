@@ -1,24 +1,24 @@
-use crate::editor::editor_widget::EditorWidget;
+use crate::document::Document;
 use crate::editor::utils::line_utils;
 
-pub fn move_left(widget: &mut EditorWidget) {
-    widget.cursor.move_left(&widget.content);
+pub fn move_left(doc: &mut Document) {
+    doc.cursor.move_left(&doc.content);
 }
 
-pub fn move_right(widget: &mut EditorWidget) {
-    widget.cursor.move_right(&widget.content);
+pub fn move_right(doc: &mut Document) {
+    doc.cursor.move_right(&doc.content);
 }
 
-pub fn move_up(widget: &mut EditorWidget) {
-    let line = widget.cursor.line();
+pub fn move_up(doc: &mut Document) {
+    let line = doc.cursor.line();
     if line == 0 {
-        widget.cursor.move_home(&widget.content);
+        doc.cursor.move_home(&doc.content);
         return;
     }
 
-    let col_x = widget.cursor.col_visual();
+    let col_x = doc.cursor.col_visual();
     let prev_line = line - 1;
-    let prev_text = line_utils::line_text(&widget.content, prev_line).unwrap_or("");
+    let prev_text = line_utils::line_text(&doc.content, prev_line).unwrap_or("");
     let target_char = if col_x.is_infinite() {
         prev_text.chars().count()
     } else {
@@ -33,24 +33,24 @@ pub fn move_up(widget: &mut EditorWidget) {
         .map(|(b, _)| b)
         .unwrap_or(prev_text.len());
 
-    let start = line_utils::line_start_byte(&widget.content, prev_line);
-    widget.cursor.set_raw(&widget.content, start + byte_offset);
-    widget.cursor.set_line(prev_line);
-    widget.cursor.set_col_visual(col_x);
+    let start = line_utils::line_start_byte(&doc.content, prev_line);
+    doc.cursor.set_raw(&doc.content, start + byte_offset);
+    doc.cursor.set_line(prev_line);
+    doc.cursor.set_col_visual(col_x);
 }
 
-pub fn move_down(widget: &mut EditorWidget) {
-    let line = widget.cursor.line();
-    let total = line_utils::count_lines(&widget.content);
+pub fn move_down(doc: &mut Document) {
+    let line = doc.cursor.line();
+    let total = line_utils::count_lines(&doc.content);
 
     if line + 1 >= total {
-        widget.cursor.move_end(&widget.content);
+        doc.cursor.move_end(&doc.content);
         return;
     }
 
-    let col_x = widget.cursor.col_visual();
+    let col_x = doc.cursor.col_visual();
     let next_line = line + 1;
-    let next_text = line_utils::line_text(&widget.content, next_line).unwrap_or("");
+    let next_text = line_utils::line_text(&doc.content, next_line).unwrap_or("");
     let target_char = if col_x.is_infinite() {
         next_text.chars().count()
     } else {
@@ -63,26 +63,26 @@ pub fn move_down(widget: &mut EditorWidget) {
         .map(|(b, _)| b)
         .unwrap_or(next_text.len());
 
-    let start = line_utils::line_start_byte(&widget.content, next_line);
-    widget.cursor.set_raw(&widget.content, start + byte_offset);
-    widget.cursor.set_line(next_line);
-    widget.cursor.set_col_visual(col_x);
+    let start = line_utils::line_start_byte(&doc.content, next_line);
+    doc.cursor.set_raw(&doc.content, start + byte_offset);
+    doc.cursor.set_line(next_line);
+    doc.cursor.set_col_visual(col_x);
 }
 
-pub fn move_home(widget: &mut EditorWidget) {
-    widget.cursor.move_home(&widget.content);
+pub fn move_home(doc: &mut Document) {
+    doc.cursor.move_home(&doc.content);
 }
 
-pub fn move_end(widget: &mut EditorWidget) {
-    widget.cursor.move_end(&widget.content);
+pub fn move_end(doc: &mut Document) {
+    doc.cursor.move_end(&doc.content);
 }
 
-pub fn move_word_left(widget: &mut EditorWidget) {
-    widget.cursor.move_word_left(&widget.content);
+pub fn move_word_left(doc: &mut Document) {
+    doc.cursor.move_word_left(&doc.content);
 }
 
-pub fn move_word_right(widget: &mut EditorWidget) {
-    widget.cursor.move_word_right(&widget.content);
+pub fn move_word_right(doc: &mut Document) {
+    doc.cursor.move_word_right(&doc.content);
 }
 
 fn x_to_char_pos(line: &str, x: f32) -> usize {
@@ -94,17 +94,17 @@ fn x_to_char_pos(line: &str, x: f32) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::editor::editor_widget::EditorWidget;
+use crate::document::Document;
 
-    fn make_widget(text: &str) -> EditorWidget {
-        EditorWidget::new(text)
+    fn make_doc(text: &str) -> Document {
+        Document::new(text)
     }
 
     // ── move_left/move_right ──────────────────────────────────
 
     #[test]
     fn move_left_basic() {
-        let mut w = make_widget("abc");
+        let mut w = make_doc("abc");
         w.cursor.set_raw(&w.content, 2);
         move_left(&mut w);
         assert_eq!(w.cursor.raw(), 1);
@@ -113,21 +113,21 @@ mod tests {
 
     #[test]
     fn move_left_at_start() {
-        let mut w = make_widget("abc");
+        let mut w = make_doc("abc");
         move_left(&mut w);
         assert_eq!(w.cursor.raw(), 0);
     }
 
     #[test]
     fn move_right_basic() {
-        let mut w = make_widget("abc");
+        let mut w = make_doc("abc");
         move_right(&mut w);
         assert_eq!(w.cursor.raw(), 1);
     }
 
     #[test]
     fn move_right_at_end() {
-        let mut w = make_widget("abc");
+        let mut w = make_doc("abc");
         w.cursor.set_raw(&w.content, 3);
         move_right(&mut w);
         assert_eq!(w.cursor.raw(), 3);
@@ -137,7 +137,7 @@ mod tests {
 
     #[test]
     fn grapheme_move_left_from_mid() {
-        let mut w = make_widget("e\u{0301}x");
+        let mut w = make_doc("e\u{0301}x");
         w.cursor.set_raw(&w.content, 3);
         move_left(&mut w);
         assert_eq!(w.cursor.raw(), 0);
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn grapheme_move_left_from_end() {
-        let mut w = make_widget("e\u{0301}x");
+        let mut w = make_doc("e\u{0301}x");
         w.cursor.set_raw(&w.content, 4);
         move_left(&mut w);
         assert_eq!(w.cursor.raw(), 3);
@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     fn grapheme_move_right() {
-        let mut w = make_widget("e\u{0301}x");
+        let mut w = make_doc("e\u{0301}x");
         move_right(&mut w);
         assert_eq!(w.cursor.raw(), 3);
         move_right(&mut w);
@@ -166,7 +166,7 @@ mod tests {
 
     #[test]
     fn move_up_simple() {
-        let mut w = make_widget("first\nsecond");
+        let mut w = make_doc("first\nsecond");
         w.cursor.set_raw(&w.content, 10);
         move_up(&mut w);
         assert_eq!(w.cursor.line(), 0);
@@ -174,7 +174,7 @@ mod tests {
 
     #[test]
     fn move_up_at_first_line_goes_home() {
-        let mut w = make_widget("only one line");
+        let mut w = make_doc("only one line");
         w.cursor.set_raw(&w.content, 5);
         move_up(&mut w);
         assert_eq!(w.cursor.raw(), 0);
@@ -182,14 +182,14 @@ mod tests {
 
     #[test]
     fn move_down_simple() {
-        let mut w = make_widget("first\nsecond");
+        let mut w = make_doc("first\nsecond");
         move_down(&mut w);
         assert_eq!(w.cursor.line(), 1);
     }
 
     #[test]
     fn move_down_at_last_line_goes_to_end() {
-        let mut w = make_widget("first\nsecond");
+        let mut w = make_doc("first\nsecond");
         w.cursor.set_raw(&w.content, 6);
         w.cursor.set_line(1);
         let len_before = w.content.len();
@@ -201,7 +201,7 @@ mod tests {
 
     #[test]
     fn move_home_goes_to_start() {
-        let mut w = make_widget("hello world");
+        let mut w = make_doc("hello world");
         w.cursor.set_raw(&w.content, 5);
         move_home(&mut w);
         assert_eq!(w.cursor.raw(), 0);
@@ -209,7 +209,7 @@ mod tests {
 
     #[test]
     fn move_end_goes_to_end() {
-        let mut w = make_widget("hello world");
+        let mut w = make_doc("hello world");
         move_end(&mut w);
         assert_eq!(w.cursor.raw(), 11);
     }
@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn move_word_left_works() {
-        let mut w = make_widget("hello world foo");
+        let mut w = make_doc("hello world foo");
         w.cursor.set_raw(&w.content, 16);
         move_word_left(&mut w);
         assert_eq!(w.cursor.raw(), 12);
@@ -226,7 +226,7 @@ mod tests {
 
     #[test]
     fn move_word_right_works() {
-        let mut w = make_widget("hello world");
+        let mut w = make_doc("hello world");
         move_word_right(&mut w);
         assert_eq!(w.cursor.raw(), 6);
     }
@@ -236,21 +236,21 @@ mod tests {
     #[test]
     fn word_navigation_unicode_whitespace() {
         // Неразрывный пробел (\u{A0}) — тоже пробел для word nav
-        let mut w = make_widget("hello\u{A0}world");
+        let mut w = make_doc("hello\u{A0}world");
         move_word_right(&mut w);
         assert_eq!(w.cursor.raw(), 7); // начало "world"
     }
 
     #[test]
     fn word_navigation_tab() {
-        let mut w = make_widget("a\tb");
+        let mut w = make_doc("a\tb");
         move_word_right(&mut w);
         assert_eq!(w.cursor.raw(), 2); // начало "b" после таба
     }
 
     #[test]
     fn unicode_move_left_right() {
-        let mut w = make_widget("Привет");
+        let mut w = make_doc("Привет");
         w.cursor.set_raw(&w.content, 12);
         move_left(&mut w);
         assert_eq!(w.cursor.raw(), 10);
