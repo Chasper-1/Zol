@@ -1,78 +1,78 @@
+use crate::document::Document;
 use crate::editor::cursor;
-use crate::editor::editor_widget::EditorWidget;
 use crate::editor::utils::line_utils;
 
-pub fn insert_at_cursor(widget: &mut EditorWidget, text: &str) {
-    let raw = widget.cursor.raw();
-    widget.content.insert_str(raw, text);
-    widget.cursor.set_raw(&widget.content, raw + text.len());
-    widget.dirty = true;
+pub fn insert_at_cursor(doc: &mut Document, text: &str) {
+    let raw = doc.cursor.raw();
+    doc.content.insert_str(raw, text);
+    doc.cursor.set_raw(&doc.content, raw + text.len());
+    doc.dirty = true;
 }
 
 /// Удалить **grapheme-кластер** перед курсором.
-pub fn delete_before_cursor(widget: &mut EditorWidget) {
-    let raw = widget.cursor.raw();
-    if raw == 0 || widget.content.is_empty() {
+pub fn delete_before_cursor(doc: &mut Document) {
+    let raw = doc.cursor.raw();
+    if raw == 0 || doc.content.is_empty() {
         return;
     }
-    let prev = cursor::prev_grapheme_boundary(&widget.content, raw).unwrap_or(0);
-    widget.content.drain(prev..raw);
-    widget.cursor.set_raw(&widget.content, prev);
-    widget.dirty = true;
+    let prev = cursor::prev_grapheme_boundary(&doc.content, raw).unwrap_or(0);
+    doc.content.drain(prev..raw);
+    doc.cursor.set_raw(&doc.content, prev);
+    doc.dirty = true;
 }
 
 /// Удалить **grapheme-кластер** после курсора.
-pub fn delete_after_cursor(widget: &mut EditorWidget) {
-    let raw = widget.cursor.raw();
-    if raw >= widget.content.len() || widget.content.is_empty() {
+pub fn delete_after_cursor(doc: &mut Document) {
+    let raw = doc.cursor.raw();
+    if raw >= doc.content.len() || doc.content.is_empty() {
         return;
     }
-    let next = cursor::next_grapheme_boundary(&widget.content, raw).unwrap_or(widget.content.len());
-    widget.content.drain(raw..next);
-    widget.cursor.set_raw(&widget.content, raw);
-    widget.dirty = true;
+    let next = cursor::next_grapheme_boundary(&doc.content, raw).unwrap_or(doc.content.len());
+    doc.content.drain(raw..next);
+    doc.cursor.set_raw(&doc.content, raw);
+    doc.dirty = true;
 }
 
-pub fn newline(widget: &mut EditorWidget) {
-    let raw = widget.cursor.raw();
-    widget.content.insert(raw, '\n');
-    widget.cursor.set_raw(&widget.content, raw + 1);
-    widget.cursor.reset_col_visual();
-    widget.dirty = true;
-}
-
-#[allow(dead_code)]
-pub fn get_text(widget: &EditorWidget) -> &str {
-    &widget.content
+pub fn newline(doc: &mut Document) {
+    let raw = doc.cursor.raw();
+    doc.content.insert(raw, '\n');
+    doc.cursor.set_raw(&doc.content, raw + 1);
+    doc.cursor.reset_col_visual();
+    doc.dirty = true;
 }
 
 #[allow(dead_code)]
-pub fn get_line(widget: &EditorWidget, idx: usize) -> Option<&str> {
-    line_utils::line_text(&widget.content, idx)
+pub fn get_text(doc: &Document) -> &str {
+    &doc.content
 }
 
 #[allow(dead_code)]
-pub fn get_line_count(widget: &EditorWidget) -> usize {
-    line_utils::count_lines(&widget.content)
+pub fn get_line(doc: &Document, idx: usize) -> Option<&str> {
+    line_utils::line_text(&doc.content, idx)
 }
 
 #[allow(dead_code)]
-pub fn text_len(widget: &EditorWidget) -> usize {
-    widget.content.len()
+pub fn get_line_count(doc: &Document) -> usize {
+    line_utils::count_lines(&doc.content)
+}
+
+#[allow(dead_code)]
+pub fn text_len(doc: &Document) -> usize {
+    doc.content.len()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::editor::editor_widget::EditorWidget;
+    use crate::document::Document;
 
-    fn make_widget(text: &str) -> EditorWidget {
-        EditorWidget::new(text)
+    fn make_doc(text: &str) -> Document {
+        Document::new(text)
     }
 
     #[test]
     fn insert_at_cursor_adds_text() {
-        let mut w = make_widget("hello");
+        let mut w = make_doc("hello");
         w.cursor.set_raw(&w.content, 5);
         insert_at_cursor(&mut w, " world");
         assert_eq!(w.content, "hello world");
@@ -81,7 +81,7 @@ mod tests {
 
     #[test]
     fn insert_at_cursor_mid_text() {
-        let mut w = make_widget("helo");
+        let mut w = make_doc("helo");
         w.cursor.set_raw(&w.content, 3);
         insert_at_cursor(&mut w, "l");
         assert_eq!(w.content, "hello");
@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn delete_before_cursor_removes_char() {
-        let mut w = make_widget("hello");
+        let mut w = make_doc("hello");
         w.cursor.set_raw(&w.content, 5);
         delete_before_cursor(&mut w);
         assert_eq!(w.content, "hell");
@@ -98,28 +98,28 @@ mod tests {
 
     #[test]
     fn delete_before_cursor_at_start() {
-        let mut w = make_widget("hello");
+        let mut w = make_doc("hello");
         delete_before_cursor(&mut w);
         assert_eq!(w.content, "hello");
     }
 
     #[test]
     fn delete_before_cursor_empty() {
-        let mut w = make_widget("");
+        let mut w = make_doc("");
         delete_before_cursor(&mut w);
         assert_eq!(w.content, "");
     }
 
     #[test]
     fn delete_after_cursor_removes_char() {
-        let mut w = make_widget("hello");
+        let mut w = make_doc("hello");
         delete_after_cursor(&mut w);
         assert_eq!(w.content, "ello");
     }
 
     #[test]
     fn delete_after_cursor_at_end() {
-        let mut w = make_widget("hello");
+        let mut w = make_doc("hello");
         w.cursor.set_raw(&w.content, 5);
         delete_after_cursor(&mut w);
         assert_eq!(w.content, "hello");
@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn newline_inserts_newline() {
-        let mut w = make_widget("ab");
+        let mut w = make_doc("ab");
         w.cursor.set_raw(&w.content, 1);
         newline(&mut w);
         assert_eq!(w.content, "a\nb");
@@ -136,19 +136,19 @@ mod tests {
 
     #[test]
     fn get_text_returns_content() {
-        let w = make_widget("hello");
+        let w = make_doc("hello");
         assert_eq!(get_text(&w), "hello");
     }
 
     #[test]
     fn get_line_count_works() {
-        let w = make_widget("a\nb\nc");
+        let w = make_doc("a\nb\nc");
         assert_eq!(get_line_count(&w), 3);
     }
 
     #[test]
     fn get_line_works() {
-        let w = make_widget("first\nsecond\nthird");
+        let w = make_doc("first\nsecond\nthird");
         assert_eq!(get_line(&w, 0), Some("first"));
         assert_eq!(get_line(&w, 1), Some("second"));
         assert_eq!(get_line(&w, 2), Some("third"));
@@ -157,13 +157,13 @@ mod tests {
 
     #[test]
     fn text_len_works() {
-        let w = make_widget("hello");
+        let w = make_doc("hello");
         assert_eq!(text_len(&w), 5);
     }
 
     #[test]
     fn unicode_insert() {
-        let mut w = make_widget("Приве");
+        let mut w = make_doc("Приве");
         w.cursor.set_raw(&w.content, 10);
         insert_at_cursor(&mut w, "т");
         assert_eq!(w.content, "Привет");
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn unicode_delete_before() {
-        let mut w = make_widget("Привет");
+        let mut w = make_doc("Привет");
         w.cursor.set_raw(&w.content, 12);
         delete_before_cursor(&mut w);
         assert_eq!(w.content, "Приве");
@@ -181,7 +181,7 @@ mod tests {
 
     #[test]
     fn grapheme_delete_before() {
-        let mut w = make_widget("e\u{0301}x");
+        let mut w = make_doc("e\u{0301}x");
         w.cursor.set_raw(&w.content, 4);
         delete_before_cursor(&mut w);
         assert_eq!(w.content, "e\u{0301}");
@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn grapheme_delete_after() {
-        let mut w = make_widget("e\u{0301}x");
+        let mut w = make_doc("e\u{0301}x");
         w.cursor.set_raw(&w.content, 0);
         delete_after_cursor(&mut w);
         assert_eq!(w.content, "x");
