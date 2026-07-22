@@ -1,7 +1,3 @@
-mod api;
-mod document;
-mod editor;
-mod gui;
 fn main() {
     match gui::app_iced::run() {
         Ok(_) => {}

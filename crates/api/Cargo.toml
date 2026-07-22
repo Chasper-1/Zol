@@ -1,0 +1,10 @@
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+editor = { path = "../editor" }
+zoll = { path = "../zoll" }
+rhai = "1.25.1"
+serde = { version = "1.0.229", features = ["derive"] }

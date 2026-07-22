@@ -1,0 +1,13 @@
+[package]
+name = "gui"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+editor = { path = "../editor" }
+api = { path = "../api" }
+iced = { version = "0.14.0", features = ["advanced", "image"] }
+cosmic-text = "0.19"
+unicode-segmentation = "1.13.3"
+iced_futures = { version = "0.14.0", features = ["tokio"] }
+serde = { version = "1.0.229", features = ["derive"] }

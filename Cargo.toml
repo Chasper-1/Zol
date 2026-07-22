@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/zoll"]
+members = ["crates/zoll", "crates/editor", "crates/api", "crates/gui"]
 
 [package]
 name = "Zol"
@@ -8,17 +8,7 @@ version = "0.3.5"
 edition = "2024"
 
 [dependencies]
-zoll = { path = "crates/zoll" }
-rhai = "1.25.1"
-iced = { version = "0.14.0", features = ["advanced", "image"] }
-cosmic-text = "0.19"
-unicode-segmentation = "1.13.3"
-iced_futures = { version = "0.14.0", features = ["tokio"] }
-ron = "0.12.2"
-serde = { version = "1.0.229", features = ["derive"] }
-directories = "6.0.0"
-notify = { version = "8.2.0", features = ["crossbeam-channel"] }
-crossbeam-channel = "0.5.16"
+gui = { path = "crates/gui" }
 
 [profile.release]
 opt-level = 3
