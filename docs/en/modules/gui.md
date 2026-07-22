@@ -2,7 +2,7 @@
 
 *Translation of the Russian original.*
 
-`src/gui/` — Iced graphical interface.
+`crates/gui/` — Iced graphical interface.
 
 ```
 gui/

@@ -1,21 +1,22 @@
 # Модуль Editor
 
-`src/editor/` — ядро редактора, независимое от GUI.
+`crates/editor/` — ядро редактора, независимое от GUI.
 
 ## Файлы
 
-| Файл | Назначение |
+| Путь | Назначение |
 |------|------------|
-| `mod.rs` | Реэкспорт всех подмодулей |
-| `cursor.rs` | Курсор с grapheme-навигацией и вертикальным движением |
-| `font/mod.rs` | Синглтон системы шрифтов (fontdb + cosmic-text) |
-| `layout/` | Вычисление TextRun из zoll-разметки |
-| `render/` | Шейпинг (cosmic-text Buffer) + отрисовка |
-| `state.rs` | EditorState, EditMode |
-| `theme/` | EditorTheme, парсер темы Rhai, парсер цветов |
-| `utils/` | Утилиты границ строк, безопасные слайсы |
-| `cache/` | DocumentCache, MarkupCache, Segment |
-| `markup/` | Интеграция zoll-парсера (делегирует в `zoll::parse_document`) |
+| `src/lib.rs` | Реэкспорт всех подмодулей |
+| `src/cursor/` | Курсор с grapheme-навигацией и вертикальным движением |
+| `src/font/` | Синглтон системы шрифтов (fontdb + cosmic-text) |
+| `src/layout/` | Вычисление TextRun из zoll-разметки |
+| `src/render/` | Шейпинг (cosmic-text Buffer) + отрисовка |
+| `src/state.rs` | EditorState, EditMode |
+| `src/theme/` | EditorTheme, парсер темы Rhai, парсер цветов |
+| `src/utils/` | Утилиты границ строк, безопасные слайсы |
+| `src/cache/` | DocumentCache, MarkupCache, Segment |
+| `src/markup/` | Интеграция zoll-парсера (делегирует в `zoll::parse_document`) |
+| `src/rhai/` | Rhai-движок (темы, плагины) |
 
 ## Курсор
 

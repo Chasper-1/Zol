@@ -2,7 +2,7 @@
 
 *Translation of the Russian original.*
 
-`src/editor/` — core editor logic, independent of any GUI framework.
+`crates/editor/` — core editor logic, independent of any GUI framework.
 
 ## Files
 

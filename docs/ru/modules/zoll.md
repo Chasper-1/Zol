@@ -1,6 +1,6 @@
 # Модуль парсера zoll
 
-`src/zoll/` — автономный парсер разметки языка **zoll** (Zol Markup Language).
+`crates/zoll/` — автономный парсер разметки языка **zoll** (Zol Markup Language).
 
 ```
 zoll/

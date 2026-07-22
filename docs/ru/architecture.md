@@ -3,48 +3,60 @@
 ## Диаграмма слоёв
 
 ```
-┌──────────────────────────────────────────────┐
-│              Бинарник Zol                    │
-│  main.rs                                     │
-├──────────────────────────────────────────────┤
-│              Слой GUI                        │
-│  gui/ (Iced::Application)                    │
-│  ┌──────────────────────────────┐            │
-│  │  Iced backend                │            │
-│  │  app_iced.rs, iced_editor/   │            │
-│  │  ├── inner.rs                │            │
-│  │  ├── widget.rs               │            │
-│  │  ├── nav.rs                  │            │
-│  │  └── scroll.rs               │            │
-│  └──────────────┬───────────────┘            │
-│                 │                            │
-├─────────────────┼────────────────────────────┤
-│                 ▼                            │
-│  ┌──────────────────────────────────────┐    │
-│  │          Ядро редактора              │    │
-│  │  editor/ (не зависит от GUI)         │    │
-│  │  ┌──────────┐  ┌──────────┐  ┌────┐  │    │
-│  │  │ Cursor   │  │ Layout   │  │Render│  │    │
-│  │  │ cursor.rs│  │ compute/ │  │shape/│  │    │
-│  │  └──────────┘  └──────────┘  └──┬──┘  │    │
-│  │  ┌──────────┐  ┌──────────┐     │     │    │
-│  │  │ zoll     │  │ Cache    │     │     │    │
-│  │  │ parser   │→│ Document │     │     │    │
-│  │  └──────────┘  └──────────┘     │     │    │
-│  │  ┌──────────────────────┐       │     │    │
-│  │  │ Font (font.rs)       │←──────│     │    │
-│  │  └──────────────────────┘            │    │
-│  └──────────────────────────────────────┘    │
-├──────────────────────────────────────────────┤
-│              Слой API                        │
-│  api/ (публичный интерфейс)                  │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
-│  │ cursor   │  │ text     │  │ editor   │    │
-│  └──────────┘  └──────────┘  └──────────┘    │
-├──────────────────────────────────────────────┤
-│              Слой Rhai                       │
-│  rhai/ (движок темы, плагины)                │
-└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│               Бинарник Zol                       │
+│  src/main.rs (5 строк, только точка входа)       │
+├──────────────────────────────────────────────────┤
+│   crates/gui    — Iced-бэкенд                   │
+│   ┌──────────────────────────────────────┐      │
+│   │  app_iced.rs  (Iced::Application)    │      │
+│   │  iced_editor/                        │      │
+│   │  ├── inner/    (EditorInner)         │      │
+│   │  ├── widget/   (IcedEditor, draw,    │      │
+│   │  │             input, widget)        │      │
+│   │  ├── nav/      (cursor_x, raw_at_x,  │      │
+│   │  │             move_vertical)        │      │
+│   │  └── scroll/   (ensure_visible,      │      │
+│   │                layout_y)             │      │
+│   └──────────────┬───────────────────────┘      │
+│                  │                              │
+├──────────────────┼──────────────────────────────┤
+│                  ▼                              │
+│   crates/api   — публичное API                  │
+│   ┌──────────────────────────────────────┐      │
+│   │  cursor, text, file, editor,         │      │
+│   │  zoll, theme, doc                    │      │
+│   └──────────────┬───────────────────────┘      │
+│                  │                              │
+├──────────────────┼──────────────────────────────┤
+│                  ▼                              │
+│   crates/editor — ядро редактора                │
+│   ┌──────────────────────────────────────┐      │
+│   │  cursor/    (grapheme, word,         │      │
+│   │             movement, types)         │      │
+│   │  font/      (FontSystem singleton)   │      │
+│   │  layout/    (TextRun, line_runs)     │      │
+│   │  render/    (shape, build,           │      │
+│   │             shaped_doc)              │      │
+│   │  markup/    (segmenter, parser)      │      │
+│   │  cache/     (DocumentCache)          │      │
+│   │  theme/     (EditorTheme, color,     │      │
+│   │             handle, registry)        │      │
+│   │  state.rs   (EditMode, Document)     │      │
+│   │  utils/     (line helpers)           │      │
+│   │  rhai/      (theme engine, plugins)  │      │
+│   └──────┬───────────────────────────────┘      │
+│          │                                      │
+├──────────┼──────────────────────────────────────┤
+│          ▼                                      │
+│   crates/zoll — парсер разметки                 │
+│   ┌──────────────────────────────────────┐      │
+│   │  token/   (Tokenizer)                │      │
+│   │  parser/  (stack-based AST)          │      │
+│   │  ast/     (nodes, markers, style)    │      │
+│   │  lib.rs   (parse_document)           │      │
+│   └──────────────────────────────────────┘      │
+└──────────────────────────────────────────────────┘
 ```
 
 ## Поток данных (цикл кадра)
@@ -62,28 +74,22 @@
   └─ render: fill_text() для фона, глифов, курсора
 ```
 
-## Зависимости модулей
+## Зависимости крейтов
 
 ```
 main.rs
-  ├── gui::app_iced         (Iced entry point)
-  │     └── gui::iced_editor::IcedEditor
-  │           └── editor::render::build
-  │                 ├── editor::font
-  │                 └── editor::layout::compute
-  ├── editor::cache
-  ├── editor::cursor
-  ├── editor::state
-  ├── editor::theme
-  ├── api::cursor
-  ├── api::text
-  ├── api::editor
-  └── zoll
-        ├── zoll::token
-        ├── zoll::parser
-        ├── zoll::ast
-        └── zoll::segmenter
+  └── gui
+        ├── api
+        │     └── editor
+        │           ├── zoll
+        │           ├── layout, render, markup, cache
+        │           ├── cursor, font, theme, utils, state
+        │           └── rhai
+        └── editor (через api)
+              └── zoll
 ```
+
+Все зависимости направлены **вниз**: gui → api → editor → zoll. Циклических зависимостей нет.
 
 ## Конкурентность
 

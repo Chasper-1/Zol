@@ -2,7 +2,7 @@
 
 *Translation of the Russian original.*
 
-`src/zoll/` — standalone parser for the **zoll** markup language (Zol Markup Language).
+`crates/zoll/` — standalone parser for the **zoll** markup language (Zol Markup Language).
 
 ```
 zoll/

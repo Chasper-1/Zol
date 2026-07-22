@@ -1,7 +1,7 @@
 //! Парсинг темы из Rhai Map.
 //!
 //! Читает `theme.rhai`, скомпилированный в `rhai::Map`, и преобразует в [`EditorTheme`].
-//! Использует новый парсер цветов [`parse_color`](super::color::parse_color)
+//! Использует новый парсер цветов [`parse_color`]
 //! вместо старого примитивного `parse_rgba_string`.
 
 use rhai::Map;

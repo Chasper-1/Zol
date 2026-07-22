@@ -1,4 +1,4 @@
-//! Реализация трейта `Widget` для [`IcedEditor`].
+//! Реализация трейта `Widget` для [`super::editor::IcedEditor`].
 //!
 //! Делегирует отрисовку в [`draw`], ввод в [`input`].
 //! `size`, `layout`, `mouse_interaction` — минимальны.

@@ -1,17 +1,29 @@
 # Модуль GUI
 
-`src/gui/` — графический интерфейс на Iced.
+`crates/gui/` — графический интерфейс на Iced.
 
 ```
 gui/
-├── mod.rs
-├── app_iced.rs     — Iced-приложение
-└── iced_editor/    — Пользовательский Iced-виджет
-    ├── mod.rs      — Реэкспорты модулей
-    ├── inner.rs    — Состояние редактора (EditorInner)
-    ├── widget.rs   — Виджет IcedEditor (Widget trait)
-    ├── nav.rs      — Вертикальная навигация (сохранение пиксельной X)
-    └── scroll.rs   — Автоскролл курсора в видимую зону
+├── src/
+│   ├── app_iced.rs        — Iced-приложение
+│   └── iced_editor/       — Пользовательский Iced-виджет
+│       ├── mod.rs         — Реэкспорты модулей
+│       ├── inner/         — Состояние редактора (EditorInner)
+│       │   ├── data.rs
+│       │   ├── edit_doc.rs
+│       │   └── mode.rs
+│       ├── widget/        — Виджет IcedEditor (Widget trait)
+│       │   ├── editor.rs
+│       │   ├── widget.rs
+│       │   ├── draw/      — Отрисовка (фон, текст, курсор)
+│       │   └── input/     — Обработка ввода (клавиатура, мышь)
+│       ├── nav/           — Вертикальная навигация
+│       │   ├── cursor_x.rs
+│       │   ├── raw_at_x.rs
+│       │   └── move_vertical.rs
+│       └── scroll/        — Автоскролл
+│           ├── layout_y.rs
+│           └── ensure_visible.rs
 ```
 
 ## IcedEditor

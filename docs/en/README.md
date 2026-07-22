@@ -28,41 +28,62 @@ Zol opens `notes.zoll` in the project root. If the file doesn't exist, it is cre
 ## Project Structure
 
 ```
-src/
-├── api/             — Public API for Rhai plugins
-│   ├── doc/         — Document creation, text reading
-│   ├── cursor/      — Cursor movement and accessors
-│   ├── text/        — Text editing operations
-│   ├── file/        — File save/load
-│   ├── editor/      — Editor mode switching
-│   ├── zoll/        — zoll markup parsing
-│   ├── theme/       — Theme management
-│   └── gui/         — GUI integration (iced)
-├── document.rs      — Document state (content + cursor + dirty flag)
-├── editor/          — Editor core (GUI-independent)
-│   ├── cursor.rs    — Grapheme-aware cursor
-│   ├── font/        — Font system (fontdb + cosmic-text)
-│   ├── layout/      — TextRun computation from zoll markup
-│   ├── render/      — Shaping (cosmic-text) + rendering
-│   ├── markup/      — zoll parser integration
-│   ├── cache/       — DocumentCache, MarkupCache, Segment types
-│   ├── state.rs     — EditorState, EditMode
-│   ├── theme/       — EditorTheme, Rhai theme parser
-│   └── utils/       — Line utilities
-├── gui/             — Iced backend
-│   ├── app_iced.rs  — Iced application
-│   └── iced_editor/ — Iced custom widget
-│       ├── inner.rs — Editor state (EditorInner)
-│       ├── widget.rs — IcedEditor widget
-│       ├── nav.rs   — Vertical navigation
-│       └── scroll.rs — Auto-scroll
-├── zoll/            — zoll markup parser
-│   ├── mod.rs       — Public API: parse_document()
-│   ├── ast.rs       — MarkupDoc, MarkupNode, MarkupStyle
-│   ├── token.rs     — Tokenizer
-│   ├── parser.rs    — Stack-based AST builder
-│   └── segmenter.rs — AST → DocumentCache conversion
-└── main.rs          — Entry point
+Zol/
+  Cargo.toml              ← workspace (5 crates)
+  crates/
+    zoll/                 ← zoll markup parser (standalone)
+      src/
+        token/            ← Tokenizer (single pass)
+        parser/           ← Stack-based AST builder
+        ast/              ← AST nodes, markers, styles
+        lib.rs            ← Public API: parse_document()
+
+    editor/               ← Editor core (GUI-independent)
+      src/
+        cursor/           ← Grapheme-aware cursor
+        font/             ← Font system (fontdb + cosmic-text)
+        layout/           ← TextRun computation from zoll markup
+        render/           ← Shaping (cosmic-text Buffer) + rendering
+        markup/           ← zoll parser integration
+        cache/            ← DocumentCache, MarkupCache, Segment
+        state.rs          ← EditorState, EditMode
+        theme/            ← EditorTheme, Rhai theme parser
+        utils/            ← Line utilities
+        rhai/             ← Rhai engine (themes, plugins)
+
+    api/                  ← Public API for Rhai plugins
+      src/
+        doc/              ← Document creation, text reading
+        cursor/           ← Cursor movement and accessors
+        text/             ← Text editing operations
+        file/             ← File save/load
+        editor/           ← Editor mode switching
+        zoll/             ← zoll markup parsing
+        theme/            ← Theme management
+
+    gui/                  ← Iced backend
+      src/
+        app_iced.rs       ← Iced application
+        iced_editor/      ← Iced custom widget
+          inner/          ← Editor state (EditorInner)
+            data.rs
+            edit_doc.rs
+            mode.rs
+          widget/         ← IcedEditor widget
+            editor.rs
+            widget.rs
+            draw/         ← Rendering (background, text, cursor)
+            input/        ← Input handling (keyboard, mouse)
+          nav/            ← Vertical navigation
+            cursor_x.rs
+            raw_at_x.rs
+            move_vertical.rs
+          scroll/         ← Auto-scroll
+            layout_y.rs
+            ensure_visible.rs
+
+  src/
+    main.rs               ← Entry point (5 lines)
 ```
 
 ## Architecture

@@ -2,7 +2,7 @@
 
 *Translation of the Russian original.*
 
-`src/api/` — public interface for Rhai plugins and external consumers. All communication with the editor from outside goes through this module.
+`crates/api/` — public interface for Rhai plugins and external consumers. All communication with the editor from outside goes through this crate.
 
 ```
 api/
@@ -109,16 +109,10 @@ pub fn theme_set_bg(theme: &mut EditorTheme, hex: &str) -> Result<(), String>;
 pub fn theme_set_text(theme: &mut EditorTheme, hex: &str) -> Result<(), String>;
 ```
 
-## GUI API (`api::gui`)
-
-```rust
-pub use crate::gui::iced_editor::{EditorInner, editor_element};
-```
-
 ## Rhai Integration (Planned)
 
 When Rhai plugins are connected:
 
-- `src/rhai/api.rs` will selectively expose functions from `src/api/`
+- `crates/editor/src/rhai/api.rs` will selectively expose functions from `crates/api/`
 - Plugins can move cursor, insert/delete text, switch modes
 - Safety: only explicitly registered functions are exposed

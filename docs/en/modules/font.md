@@ -2,7 +2,7 @@
 
 *Translation of the Russian original.*
 
-`src/editor/font/mod.rs` — global font system for Zol.
+`crates/editor/src/font/` — global font system for Zol.
 
 ## Singleton Architecture
 
