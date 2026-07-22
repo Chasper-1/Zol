@@ -128,13 +128,13 @@ fn consistency_fail() {
 #[test]
 fn hsl_known_colors() {
     // Красный: hsl(0, 100%, 50%) → rgb(255, 0, 0)
-    assert_rgba!(parsers::hsl_to_rgb(0.0, 1.0, 0.5), Rgba::new(1.0, 0.0, 0.0));
+    check_parse("hsl(0, 100%, 50%)", Rgba::new(1.0, 0.0, 0.0));
     // Зелёный: hsl(120, 100%, 50%) → rgb(0, 255, 0)
-    assert_rgba!(parsers::hsl_to_rgb(120.0, 1.0, 0.5), Rgba::new(0.0, 1.0, 0.0));
+    check_parse("hsl(120, 100%, 50%)", Rgba::new(0.0, 1.0, 0.0));
     // Синий: hsl(240, 100%, 50%) → rgb(0, 0, 255)
-    assert_rgba!(parsers::hsl_to_rgb(240.0, 1.0, 0.5), Rgba::new(0.0, 0.0, 1.0));
+    check_parse("hsl(240, 100%, 50%)", Rgba::new(0.0, 0.0, 1.0));
     // Белый: hsl(0, 0%, 100%)
-    assert_rgba!(parsers::hsl_to_rgb(0.0, 0.0, 1.0), Rgba::new(1.0, 1.0, 1.0));
+    check_parse("hsl(0, 0%, 100%)", Rgba::new(1.0, 1.0, 1.0));
     // Чёрный: hsl(0, 0%, 0%)
-    assert_rgba!(parsers::hsl_to_rgb(0.0, 0.0, 0.0), Rgba::new(0.0, 0.0, 0.0));
+    check_parse("hsl(0, 0%, 0%)", Rgba::new(0.0, 0.0, 0.0));
 }

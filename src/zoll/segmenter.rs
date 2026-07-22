@@ -9,24 +9,43 @@ use crate::editor::markup::segment::{Segment, StyleFlags};
 
 /// Преобразует AST-документ в DocumentCache для редактора.
 pub fn to_document_cache(doc: &MarkupDoc) -> DocumentCache {
-    // Сначала собираем все сегменты в плоский список с raw-позициями
+    // 1. Собираем все сегменты в плоский список с raw-позициями
     let mut segments = Vec::new();
     build_segments(&doc.children, MarkupStyle::PLAIN, &mut segments, 0);
 
-    // Теперь раскладываем по строкам
-    // Строки определяются динамически при раскладке
-
-    // Считаем количество строк
-    let mut num_lines = 1;
+    // 2. Вычисляем начало каждой строки (line_starts) из raw_start/text сегментов.
+    //    line_starts[i] — байтовый offset начала i-й строки в документе.
+    let mut line_starts = vec![0usize];
     for seg in &segments {
-        num_lines += seg.text.matches('\n').count();
+        let search_offset = seg.raw_start;
+        for (i, ch) in seg.text.char_indices() {
+            if ch == '\n' {
+                line_starts.push(search_offset + i + 1);
+            }
+        }
     }
 
+    let num_lines = line_starts.len();
     let mut doc_cache = DocumentCache {
         lines: vec![Default::default(); num_lines],
     };
 
-    // Раскладываем сегменты по строкам
+    // 3. Функция: номер строки по байтовому offset в документе.
+    //    Использует line_starts для бинарного поиска.
+    let line_for_offset = |offset: usize| -> usize {
+        match line_starts.binary_search(&offset) {
+            Ok(i) => i,
+            Err(i) => {
+                if i == 0 {
+                    0
+                } else {
+                    i - 1
+                }
+            }
+        }
+    };
+
+    // 4. Раскладываем сегменты по строкам
     for seg in segments {
         if seg.text.contains('\n') {
             let parts: Vec<&str> = seg.text.split('\n').collect();
@@ -34,7 +53,11 @@ pub fn to_document_cache(doc: &MarkupDoc) -> DocumentCache {
             let mut raw_offset = seg.raw_start;
 
             for (pi, part) in parts.iter().enumerate() {
-                let line_idx = find_line_by_offset(raw_offset, &doc_cache);
+                if part.is_empty() {
+                    raw_offset += 1; // +1 for \n
+                    continue;
+                }
+                let line_idx = line_for_offset(raw_offset);
                 if line_idx >= doc_cache.lines.len() {
                     break;
                 }
@@ -53,7 +76,7 @@ pub fn to_document_cache(doc: &MarkupDoc) -> DocumentCache {
                 raw_offset += part.len() + 1; // +1 for \n
             }
         } else {
-            let line_idx = find_line_by_offset(seg.raw_start, &doc_cache);
+            let line_idx = line_for_offset(seg.raw_start);
             if line_idx < doc_cache.lines.len() {
                 doc_cache.lines[line_idx].segments.push(seg);
             }
@@ -134,28 +157,6 @@ fn marker_open_len(style: MarkupStyle) -> usize {
     0
 }
 
-/// Находит номер строки по байтовому смещению.
-fn find_line_by_offset(offset: usize, doc: &DocumentCache) -> usize {
-    let _byte_count = 0;
-    for (i, line) in doc.lines.iter().enumerate() {
-        if !line.segments.is_empty() {
-            let first = &line.segments[0];
-            if first.raw_start <= offset && offset <= first.raw_end {
-                return i;
-            }
-        }
-    }
-    // Fallback: линейный поиск
-    for (i, line) in doc.lines.iter().enumerate() {
-        for seg in &line.segments {
-            if seg.raw_start <= offset && offset < seg.raw_end {
-                return i;
-            }
-        }
-    }
-    0
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,5 +173,59 @@ mod tests {
         assert_eq!(cache.lines[0].segments.len(), 1);
         assert_eq!(cache.lines[0].segments[0].text, "hello");
         assert_eq!(cache.lines[0].segments[0].style, STYLE_PLAIN);
+    }
+
+    #[test]
+    fn multiline_formatted_correct_line_assignment() {
+        // Текст: "a\n**bold**\nc"
+        use crate::zoll::ast::MarkupStyle;
+        let doc = MarkupDoc {
+            children: vec![
+                MarkupNode::Text("a\n".to_string()),
+                MarkupNode::Formatted {
+                    style: MarkupStyle::BOLD,
+                    children: vec![MarkupNode::Text("bold".to_string())],
+                },
+                MarkupNode::Text("\nc".to_string()),
+            ],
+        };
+        let cache = to_document_cache(&doc);
+        // Должно быть 3 строки: "a", "bold", "c"
+        assert_eq!(cache.lines.len(), 3, "должно быть 3 строки");
+        // Строка 0: "a"
+        assert_eq!(cache.lines[0].segments.len(), 1);
+        assert_eq!(cache.lines[0].segments[0].text, "a");
+        // Строка 1: "bold" (стиль BOLD)
+        assert_eq!(cache.lines[1].segments.len(), 1);
+        assert_eq!(cache.lines[1].segments[0].text, "bold");
+        assert_ne!(
+            cache.lines[1].segments[0].style & crate::editor::markup::segment::STYLE_BOLD,
+            0,
+            "строка 1 должна быть BOLD"
+        );
+        // Строка 2: "c"
+        assert_eq!(cache.lines[2].segments.len(), 1);
+        assert_eq!(cache.lines[2].segments[0].text, "c");
+    }
+
+    #[test]
+    fn bold_segment_raw_positions() {
+        // Только "**bold**" — один сегмент с маркерами
+        use crate::zoll::ast::MarkupStyle;
+        let doc = MarkupDoc {
+            children: vec![MarkupNode::Formatted {
+                style: MarkupStyle::BOLD,
+                children: vec![MarkupNode::Text("bold".to_string())],
+            }],
+        };
+        let cache = to_document_cache(&doc);
+        assert_eq!(cache.lines.len(), 1);
+        assert_eq!(cache.lines[0].segments.len(), 1);
+        let seg = &cache.lines[0].segments[0];
+        assert_eq!(seg.text, "bold");
+        // bold начинается с байта 2 (после "**")
+        assert_eq!(seg.raw_start, 2);
+        // bold заканчивается на байте 6 (2 + 4 байта)
+        assert_eq!(seg.raw_end, 6);
     }
 }
