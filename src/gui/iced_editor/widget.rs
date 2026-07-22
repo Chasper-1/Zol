@@ -298,6 +298,12 @@ where
                             api_cursor::move_end(&mut *doc);
                         }
 
+                        // ── Переключение режимов ──
+                        // Tab — циклическое переключение Preview → LivePreview → Source → Preview
+                        iced::keyboard::Key::Named(Named::Tab) => {
+                            self.inner.cycle_mode();
+                        }
+
                         // ── Редактирование (контент меняется) ──
                         iced::keyboard::Key::Named(Named::Backspace) => {
                             self.inner.edit_doc(|doc| {
