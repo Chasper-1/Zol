@@ -13,16 +13,19 @@ use crate::editor::theme::color::Rgba;
 
 /// Сформованный документ — обёртка над cosmic-text `Buffer`.
 ///
-/// Содержит все строки с глифами, позициями и метриками.
+/// Содержит все строки с глифами, позициями и метриками,
+/// а также оригинальные `TextRun`'ы для каждой строки (стили, цвета).
 /// Передаётся в `paint()` для отрисовки.
 #[derive(Debug)]
 pub struct ShapedDocument {
     pub buffer: Buffer,
+    /// Стилизованные ран-ы каждой строки (параллельны layout_runs).
+    pub line_runs: Vec<Vec<TextRun>>,
 }
 
 impl ShapedDocument {
-    pub fn new(buffer: Buffer) -> Self {
-        Self { buffer }
+    pub fn new(buffer: Buffer, line_runs: Vec<Vec<TextRun>>) -> Self {
+        Self { buffer, line_runs }
     }
 
     /// Общая высота документа в пикселях.
@@ -141,7 +144,7 @@ pub fn shape_document(
     buffer.set_rich_text(spans, &default_attrs, Shaping::Advanced, Some(Align::Left));
     buffer.set_scroll(Scroll::new(0, scroll_y, 0.0));
     buffer.shape_until_scroll(font_system, false);
-    ShapedDocument::new(buffer)
+    ShapedDocument::new(buffer, line_runs.to_vec())
 }
 
 /// Перевести [`Rgba`] редактора в цвет cosmic-text.

@@ -60,7 +60,7 @@ impl EditorInner {
         let doc = Document::new(&content);
         let cache = crate::editor::markup::parse_document(&content);
         let metrics = cosmic_text::Metrics::new(base_size, base_size * 1.4);
-        let mut shaped_doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics));
+        let mut shaped_doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
 
         crate::editor::font::init();
         render::build(

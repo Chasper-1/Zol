@@ -116,7 +116,7 @@ mod tests {
     fn shaped_line(text: &str, size: f32) -> ShapedDocument {
         font::init();
         let metrics = cosmic_text::Metrics::new(size, size * 1.4);
-        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics));
+        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
         let cache = DocumentCache::default();
         let theme = EditorTheme::default();
         render::build(&mut doc, text, &cache, EditMode::Source, 0, &theme, size, 24.0, 0.0, None);

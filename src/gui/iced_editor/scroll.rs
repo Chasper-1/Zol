@@ -68,7 +68,7 @@ mod tests {
     fn shaped_doc(text: &str, vp_height: f32) -> ShapedDocument {
         font::init();
         let metrics = cosmic_text::Metrics::new(14.0, 19.6);
-        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics));
+        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
         let cache = DocumentCache::default();
         let theme = EditorTheme::default();
         render::build(

@@ -88,7 +88,7 @@ mod tests {
     fn build_does_not_deadlock() {
         font::init();
         let metrics = cosmic_text::Metrics::new(14.0, 19.6);
-        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics));
+        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
         let cache = DocumentCache::default();
         let theme = EditorTheme::default();
         // прямой вызов — без внешнего with_font_system
@@ -114,7 +114,7 @@ mod tests {
     fn build_multiline() {
         font::init();
         let metrics = cosmic_text::Metrics::new(14.0, 19.6);
-        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics));
+        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
         let cache = DocumentCache::default();
         let theme = EditorTheme::default();
         build(
@@ -136,7 +136,7 @@ mod tests {
     fn build_empty_content() {
         font::init();
         let metrics = cosmic_text::Metrics::new(14.0, 19.6);
-        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics));
+        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
         let cache = DocumentCache::default();
         let theme = EditorTheme::default();
         build(
@@ -158,7 +158,7 @@ mod tests {
     fn build_with_scroll() {
         font::init();
         let metrics = cosmic_text::Metrics::new(14.0, 19.6);
-        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics));
+        let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
         let cache = DocumentCache::default();
         let theme = EditorTheme::default();
         build(
