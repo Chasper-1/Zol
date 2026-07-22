@@ -28,12 +28,11 @@ pub fn compute_line_runs(
     show_markers: bool,
     theme: &EditorTheme,
 ) -> Vec<TextRun> {
-    // Заголовок (#)
+    // Заголовок (#) — маркер всегда в buffer'е для hit-testing
     if let Some(stripped) = line.strip_prefix("# ") {
         let mut runs = Vec::new();
-        if show_markers {
-            runs.push(TextRun::new("# ", 0, shared::MARKER_GRAY, heading_size));
-        }
+        let color = if show_markers { shared::MARKER_GRAY } else { theme.background };
+        runs.push(TextRun::new("# ", 0, color, heading_size));
         runs.push(TextRun::new(stripped, 0, shared::TEXT_WHITE, heading_size));
         return runs;
     }
@@ -55,10 +54,13 @@ pub fn compute_line_runs(
         let seg_end = seg.raw_end.saturating_sub(line_start);
 
         // Маркер-текст между сегментами (например, "**")
-        if show_markers && seg_start > last_end && seg_start <= line.len() {
+        // Всегда в buffer'е для корректного hit-testing — в Preview/LivePreview
+        // красим цветом фона (невидимо), в Source — серым.
+        if seg_start > last_end && seg_start <= line.len() {
             let marker = &line[last_end..seg_start];
             if !marker.is_empty() {
-                runs.push(TextRun::new(marker, 0, shared::MARKER_GRAY, base_size));
+                let color = if show_markers { shared::MARKER_GRAY } else { theme.background };
+                runs.push(TextRun::new(marker, 0, color, base_size));
             }
         }
 
@@ -73,10 +75,11 @@ pub fn compute_line_runs(
     }
 
     // Остаток строки после последнего сегмента (маркеры)
-    if show_markers && last_end < line.len() {
+    if last_end < line.len() {
         let marker = &line[last_end..];
         if !marker.is_empty() {
-            runs.push(TextRun::new(marker, 0, shared::MARKER_GRAY, base_size));
+            let color = if show_markers { shared::MARKER_GRAY } else { theme.background };
+            runs.push(TextRun::new(marker, 0, color, base_size));
         }
     }
 

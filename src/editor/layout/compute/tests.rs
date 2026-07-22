@@ -47,26 +47,35 @@
 
     #[test]
     fn heading_no_markers() {
-        let runs = compute_line_runs("# hi", 0, None, 14.0, 22.0, false, &EditorTheme::default());
-        assert_eq!(runs.len(), 1);
-        assert_eq!(runs[0].text, "hi");
+        let theme = EditorTheme::default();
+        let runs = compute_line_runs("# hi", 0, None, 14.0, 22.0, false, &theme);
+        assert_eq!(runs.len(), 2);
+        // "# " — маркер, цвета фона (невидим)
+        assert_eq!(runs[0].text, "# ");
+        assert_eq!(runs[0].color, theme.background);
         assert_eq!(runs[0].size, 22.0);
+        assert_eq!(runs[1].text, "hi");
+        assert_eq!(runs[1].size, 22.0);
     }
 
     #[test]
     fn heading_with_markers() {
-        let runs = compute_line_runs("# hi", 0, None, 14.0, 22.0, true, &EditorTheme::default());
+        let theme = EditorTheme::default();
+        let runs = compute_line_runs("# hi", 0, None, 14.0, 22.0, true, &theme);
         assert_eq!(runs.len(), 2);
         assert_eq!(runs[0].text, "# ");
         assert_eq!(runs[0].size, 22.0);
+        assert_ne!(runs[0].color, theme.background);
         assert_eq!(runs[1].text, "hi");
     }
 
     #[test]
     fn heading_empty_after_prefix() {
-        let runs = compute_line_runs("# ", 0, None, 14.0, 22.0, false, &EditorTheme::default());
-        assert_eq!(runs.len(), 1);
-        assert_eq!(runs[0].text, "");
+        let theme = EditorTheme::default();
+        let runs = compute_line_runs("# ", 0, None, 14.0, 22.0, false, &theme);
+        assert_eq!(runs.len(), 2);
+        assert_eq!(runs[0].text, "# ");
+        assert_eq!(runs[0].color, theme.background);
     }
 
     #[test]
@@ -99,7 +108,9 @@
 
     #[test]
     fn bold_segment_no_markers() {
-        let seg = seg(STYLE_BOLD, 2, 8);
+        let theme = EditorTheme::default();
+        // "a **b** c": a=0, ' '=1, **=2-3, b=4, **=5-6, ' '=7, c=8
+        let seg = seg(STYLE_BOLD, 4, 5); // raw "b" = байт 4
         let runs = compute_line_runs(
             "a **b** c",
             0,
@@ -107,10 +118,17 @@
             14.0,
             22.0,
             false,
-            &EditorTheme::default(),
+            &theme,
         );
-        assert_eq!(runs.len(), 1);
-        assert_eq!(runs[0].text, "**b** "); // только сегмент, маркеры скрыты
+        // Маркеры и plain-текст между сегментами склеиваются в один run
+        // Ожидаем: "a **" (маркер+plain, цвет фона), "b" (BOLD), "** c" (маркер+plain, цв.фона)
+        assert_eq!(runs.len(), 3, "len={:?}", runs.iter().map(|r| &r.text).collect::<Vec<_>>());
+        assert_eq!(runs[0].text, "a **");
+        assert_eq!(runs[0].color, theme.background);
+        assert_eq!(runs[1].text, "b");
+        assert_ne!(runs[1].style_flags & STYLE_BOLD, 0);
+        assert_eq!(runs[2].text, "** c");
+        assert_eq!(runs[2].color, theme.background);
     }
 
     #[test]
@@ -277,4 +295,44 @@
         let (start, end) = cursor_line_bounds("abc", 0);
         assert_eq!(start, 0);
         assert_eq!(end, 3);
+    }
+
+    #[test]
+    fn markers_always_in_runs_even_when_hidden() {
+        // Сегмент: "bold" (STYLE_BOLD) на строке с маркерами "**bold**"
+        let s = seg(STYLE_BOLD, 2, 6); // raw_start=2 (после **), raw_end=6
+        let mark_cache = cache(vec![s]);
+        let theme = crate::editor::theme::EditorTheme::default();
+
+        // show_markers = false (Preview/LivePreview)
+        let runs = compute_line_runs("**bold**", 0, Some(&mark_cache), 14.0, 22.0, false, &theme);
+        // Должно быть 3 run: "**" (маркер, цвет фона), "bold" (BOLD), "**" (маркер, цвет фона)
+        assert_eq!(runs.len(), 3, "должно быть 3 run: ** bold **");
+        assert_eq!(runs[0].text, "**", "первый run — открывающий маркер");
+        assert_eq!(
+            runs[0].color, theme.background,
+            "маркер должен быть цвета фона при show_markers=false"
+        );
+        assert_eq!(runs[1].text, "bold");
+        assert_ne!(runs[1].style_flags & STYLE_BOLD, 0);
+        assert_eq!(runs[2].text, "**", "третий run — закрывающий маркер");
+        assert_eq!(
+            runs[2].color, theme.background,
+            "закрывающий маркер тоже цвета фона"
+        );
+    }
+
+    #[test]
+    fn markers_visible_in_source_mode() {
+        let s = seg(STYLE_BOLD, 2, 6);
+        let mark_cache = cache(vec![s]);
+        let theme = crate::editor::theme::EditorTheme::default();
+
+        let runs = compute_line_runs("**bold**", 0, Some(&mark_cache), 14.0, 22.0, true, &theme);
+        assert_eq!(runs.len(), 3);
+        assert_eq!(runs[0].text, "**");
+        // В Source маркеры серые
+        assert_ne!(runs[0].color, theme.background);
+        assert_eq!(runs[1].text, "bold");
+        assert_eq!(runs[2].text, "**");
     }

@@ -199,4 +199,77 @@ mod tests {
         assert_eq!(doc.line_count(), 1);
         assert!(doc.total_height() > 0.0);
     }
+
+    /// Диагностика: проверить glyph.start для строки с кириллицей и маркерами.
+    /// Выявить, может ли курсор оказаться посередине glyph-кластера.
+    #[test]
+    fn glyph_starts_for_mixed_text() {
+        font::init();
+        let doc = font::with_font_system(|fs| {
+            shape_document(&[make_runs("**текст**", 14.0)], fs, 14.0, "sans-serif", 0.0, None)
+        });
+        let run = doc.buffer.layout_runs().next().expect("должна быть одна строка");
+
+        // Собираем все глифы с их start и x
+        let glyphs: Vec<_> = run.glyphs.iter().map(|g| (g.start, g.x, g.w)).collect();
+        // Для "**текст**" (14 байт: **текст**):
+        //   '*' байт 0,1; 'т' байты 2-3; 'е' 4-5; 'к' 6-7; 'с' 8-9; 'т' 10-11; '*' 12,13
+        // Каждый кластер = 1 глиф с уникальным start (байтовый offset кластера)
+        // Кластеров должно быть 9: *, *, т, е, к, с, т, *, *
+        assert_eq!(glyphs.len(), 9, "9 glyph-кластеров: glyphs={:?}", glyphs);
+
+        // Проверим, что каждый glyph.start — байтовый offset начала кластера
+        assert_eq!(glyphs[0].0, 0, "* (первый)");
+        assert_eq!(glyphs[1].0, 1, "* (второй)");
+        assert_eq!(glyphs[2].0, 2, "т (байт 2)");
+        assert_eq!(glyphs[3].0, 4, "е (байт 4)");
+        assert_eq!(glyphs[4].0, 6, "к (байт 6)");
+        assert_eq!(glyphs[5].0, 8, "с (байт 8)");
+        assert_eq!(glyphs[6].0, 10, "т (байт 10)");
+        assert_eq!(glyphs[7].0, 12, "* (третий)");
+        assert_eq!(glyphs[8].0, 13, "* (четвёртый)");
+
+        // Проверим hit-testing: клик на x-координате каждого glyph
+        // cosmic-text hit() возвращает ближайшую ГРАНИЦУ КЛАСТЕРА (cursor position),
+        // а не начало glyph. Это может быть start или start+cluster_len.
+        for (i, &(start, gx, gw)) in glyphs.iter().enumerate() {
+            // Клик в начало glyph
+            let hit = doc.buffer.hit(gx + 1.0, run.line_top + 1.0);
+            assert!(hit.is_some(), "hit для glyph {} должен быть Some", i);
+            let hit = hit.unwrap();
+            // hit.index должен быть char boundary (не внутри multi-byte)
+            let text = "**текст**";
+            assert!(
+                text.is_char_boundary(hit.index),
+                "glyph {}: hit.index={} не является char boundary в {:?}",
+                i, hit.index, text
+            );
+            // И должен быть корректным: start (перед) или start+cluster_len (после)
+            let cluster_byte_len = if i + 1 < glyphs.len() {
+                glyphs[i + 1].0 - start
+            } else {
+                text.len() - start
+            };
+            assert!(
+                hit.index == start || hit.index == start + cluster_byte_len,
+                "glyph {}: hit.index={} не в {{start={}, start+len={}}}",
+                i, hit.index, start, start + cluster_byte_len,
+            );
+        }
+
+        // Клик ПЕРЕД первым glyph'ом (слева от строки)
+        let hit_before = doc.buffer.hit(-1.0, run.line_top + 1.0);
+        assert!(hit_before.is_some(), "hit слева от строки должен быть Some");
+        assert_eq!(hit_before.unwrap().index, 0, "hit слева от строки должен давать index=0");
+
+        // Клик ПОСЛЕ последнего glyph'а (справа от строки)
+        let last = glyphs.last().unwrap();
+        let after_x = last.1 + last.2 + 5.0;
+        let hit_after = doc.buffer.hit(after_x, run.line_top + 1.0);
+        assert!(hit_after.is_some(), "hit справа от строки должен быть Some");
+        assert_eq!(
+            hit_after.unwrap().index, last.0 + 1,
+            "hit справа от строки должен давать index = последний байт + 1 (len)"
+        );
+    }
 }
