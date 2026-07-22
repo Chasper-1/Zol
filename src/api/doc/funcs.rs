@@ -1,5 +1,5 @@
 use crate::document::Document;
-use crate::editor::utils::line_utils;
+use crate::editor::utils;
 
 pub fn doc_create(text: &str) -> Document {
     Document::new(text)
@@ -10,11 +10,11 @@ pub fn doc_text(doc: &Document) -> &str {
 }
 
 pub fn doc_line(doc: &Document, idx: usize) -> Option<&str> {
-    line_utils::line_text(&doc.content, idx)
+    utils::line_text(&doc.content, idx)
 }
 
 pub fn doc_line_count(doc: &Document) -> usize {
-    line_utils::count_lines(&doc.content)
+    utils::count_lines(&doc.content)
 }
 
 pub fn doc_len(doc: &Document) -> usize {

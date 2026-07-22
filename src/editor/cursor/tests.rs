@@ -1,4 +1,6 @@
     use super::*;
+    use std::time::{Duration, Instant};
+    use super::grapheme::clamp_to_char_boundary;
 
     // ------------------------------------------------------------------
     // helpers

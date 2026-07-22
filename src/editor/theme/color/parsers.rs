@@ -3,7 +3,7 @@
 //! Все функции доступны только внутри модуля `color` (`pub(super)`).
 
 use super::named::NAMED_COLORS;
-use super::Rgba;
+use super::rgba::Rgba;
 
 pub(super) fn parse_hex(s: &str) -> Result<Rgba, String> {
     let hex = &s[1..]; // убираем #

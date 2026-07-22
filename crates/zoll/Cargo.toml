@@ -1,0 +1,7 @@
+[package]
+name = "zoll"
+version = "0.1.0"
+edition = "2021"
+description = "Zoll markup language — tokenizer, parser, AST"
+
+[dependencies]

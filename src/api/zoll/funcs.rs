@@ -1,14 +1,17 @@
-use crate::zoll as zoll_core;
+use ::zoll;
 
-pub fn zoll_tokenize(text: &str) -> Vec<zoll_core::token::Token> {
-    zoll_core::token::tokenize(text)
+/// Токенизирует текст zoll.
+pub fn zoll_tokenize(text: &str) -> Vec<zoll::token::Token> {
+    zoll::token::tokenize(text)
 }
 
-pub fn zoll_parse(text: &str) -> zoll_core::ast::MarkupDoc {
-    let tokens = zoll_core::token::tokenize(text);
-    zoll_core::parser::parse(&tokens)
+/// Парсит текст zoll в AST.
+pub fn zoll_parse(text: &str) -> zoll::ast::MarkupDoc {
+    let tokens = zoll::token::tokenize(text);
+    zoll::parser::parse(&tokens)
 }
 
+/// Парсит текст zoll в DocumentCache редактора.
 pub fn zoll_parse_cache(text: &str) -> crate::editor::cache::DocumentCache {
-    zoll_core::parse_document(text)
+    crate::editor::markup::parse_document(text)
 }

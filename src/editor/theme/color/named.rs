@@ -2,7 +2,7 @@
 //!
 //! Алфавитный порядок для бинарного поиска (`binary_search_by_key`).
 
-use super::Rgba;
+use super::rgba::Rgba;
 
 pub(super) const NAMED_COLORS: &[(&str, Rgba)] = &[
     ("aqua", Rgba::new(0.0, 1.0, 1.0)),

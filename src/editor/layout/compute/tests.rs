@@ -1,5 +1,6 @@
     use super::*;
     use crate::editor::cache::MarkupCache;
+    use crate::editor::theme::EditorTheme;
     use crate::editor::markup::segment::{Segment, STYLE_BOLD, STYLE_CODE, STYLE_COMMENT, STYLE_DELETION, STYLE_DISPLAY_FORMULA, STYLE_FORMULA, STYLE_HIGHLIGHT, STYLE_INSERTION, STYLE_ITALIC, STYLE_STRIKETHROUGH, STYLE_SUBSCRIPT, STYLE_SUPERSCRIPT, STYLE_UNDERLINE};
 
     fn cache(segments: Vec<Segment>) -> MarkupCache {
