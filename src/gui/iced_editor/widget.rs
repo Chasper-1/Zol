@@ -208,6 +208,17 @@ where
                                 .map(|g| g.x + g.w)
                                 .unwrap_or(0.0);
                         }
+
+                        if std::env::var("ZOL_DEBUG_CURSOR").is_ok() {
+                            let glyphs_debug: Vec<_> = run.glyphs.iter()
+                                .map(|g| format!("{{start={},x={},w={}}}", g.start, g.x, g.w))
+                                .collect();
+                            eprintln!(
+                                "[ZOL_DEBUG_CURSOR] cursor_line={} byte_in_line={} cursor_x={} found={} glyphs=[{}]",
+                                cursor_line, byte_in_line, cx, found, glyphs_debug.join(", ")
+                            );
+                        }
+
                         break;
                     }
 

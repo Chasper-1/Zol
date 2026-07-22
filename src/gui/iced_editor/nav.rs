@@ -174,6 +174,44 @@ mod tests {
         assert_eq!(x, 0.0);
     }
 
+    /// Сквозная проверка курсора для "**текст**" с кириллицей и маркерами.
+    /// Проверяет, что cursor_x_on_line возвращает корректную x для каждой pos
+    /// и что raw_at_x_on_line (hit-testing) даёт обратно ту же позицию.
+    #[test]
+    fn cursor_x_roundtrip_bold_cyrillic() {
+        let text = "**текст**";
+        let doc = shaped_line(text, 14.0);
+        let run = doc.buffer.layout_runs().next().unwrap();
+        let glyphs: Vec<_> = run.glyphs.iter().map(|g| (g.start, g.x, g.w)).collect();
+
+        // Для каждой границы между кластерами проверяем roundtrip:
+        //   cursor_x_on_line(byte_in_line) → x
+        //   raw_at_x_on_line(x) → byte_in_line
+        // Должны получить ту же позицию (или соседнюю валидную).
+        let mut boundaries = vec![0usize];
+        for &(start, _, _) in &glyphs {
+            if start != *boundaries.last().unwrap() {
+                boundaries.push(start);
+            }
+        }
+        // Добавляем конец строки
+        let line_end = text.len();
+        if *boundaries.last().unwrap() != line_end {
+            boundaries.push(line_end);
+        }
+
+        for &byte_in_line in &boundaries {
+            let x = cursor_x_on_line(&doc, 0, byte_in_line);
+            let recovered = raw_at_x_on_line(&doc, 0, x, 0, line_end);
+            // recovered должен быть byte_in_line или соседней границей
+            assert!(
+                recovered == byte_in_line,
+                "byte_in_line={}: x={} recovered={}. glyphs={:?}",
+                byte_in_line, x, recovered, glyphs
+            );
+        }
+    }
+
     // ------------------------------------------------------------------
     // raw_at_x_on_line
     // ------------------------------------------------------------------
