@@ -24,3 +24,21 @@ pub fn doc_len(doc: &Document) -> usize {
 pub fn doc_is_empty(doc: &Document) -> bool {
     doc.content.is_empty()
 }
+
+pub fn doc_set_text(doc: &mut Document, text: &str) {
+    doc.content = text.to_string();
+    doc.cursor = crate::editor::cursor::Cursor::new();
+    doc.dirty = true;
+}
+
+pub fn doc_is_dirty(doc: &Document) -> bool {
+    doc.dirty
+}
+
+pub fn doc_set_dirty(doc: &mut Document, dirty: bool) {
+    doc.dirty = dirty;
+}
+
+pub fn doc_make_dirty(doc: &mut Document) {
+    doc.dirty = true;
+}

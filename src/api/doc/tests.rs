@@ -98,3 +98,72 @@ fn doc_line_with_unicode() {
     assert_eq!(doc_line(&d, 0), Some("строка1"));
     assert_eq!(doc_line(&d, 1), Some("строка2"));
 }
+
+#[test]
+fn doc_set_text_replaces_content() {
+    let mut d = doc_create("old");
+    doc_set_text(&mut d, "new text");
+    assert_eq!(doc_text(&d), "new text");
+}
+
+#[test]
+fn doc_set_text_resets_cursor() {
+    let mut d = doc_create("old text");
+    // Передвигаем курсор на 4-й байт
+    d.cursor.set_raw(&d.content, 4);
+    doc_set_text(&mut d, "new");
+    assert_eq!(d.cursor.raw(), 0);
+}
+
+#[test]
+fn doc_set_text_sets_dirty() {
+    let mut d = doc_create("old");
+    d.dirty = false;
+    doc_set_text(&mut d, "new");
+    assert!(doc_is_dirty(&d));
+}
+
+#[test]
+fn doc_set_text_empty() {
+    let mut d = doc_create("something");
+    doc_set_text(&mut d, "");
+    assert!(doc_is_empty(&d));
+    assert_eq!(d.cursor.raw(), 0);
+}
+
+#[test]
+fn doc_is_dirty_after_create() {
+    let d = doc_create("x");
+    assert!(doc_is_dirty(&d));
+}
+
+#[test]
+fn doc_is_dirty_after_set_dirty_false() {
+    let mut d = doc_create("x");
+    doc_set_dirty(&mut d, false);
+    assert!(!doc_is_dirty(&d));
+}
+
+#[test]
+fn doc_set_dirty_true() {
+    let mut d = doc_create("x");
+    doc_set_dirty(&mut d, false);
+    doc_set_dirty(&mut d, true);
+    assert!(doc_is_dirty(&d));
+}
+
+#[test]
+fn doc_make_dirty_sets_flag() {
+    let mut d = doc_create("x");
+    doc_set_dirty(&mut d, false);
+    doc_make_dirty(&mut d);
+    assert!(doc_is_dirty(&d));
+}
+
+#[test]
+fn doc_make_dirty_idempotent() {
+    let mut d = doc_create("x");
+    assert!(doc_is_dirty(&d));
+    doc_make_dirty(&mut d);
+    assert!(doc_is_dirty(&d));
+}

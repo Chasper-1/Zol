@@ -1,24 +1,37 @@
-use crate::editor::theme::EditorTheme;
-
+/// Режим редактирования.
+///
+/// Определяет, как отображается разметка и можно ли редактировать текст.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EditMode {
+    /// Спрятать маркеры разметки, только чтение (редактирование отключено).
     Preview,
+    /// Активная строка — Source, остальные — Preview.
     LivePreview,
+    /// Показать сырую разметку с маркерами, полное редактирование.
     Source,
 }
 
-pub struct EditorState {
-    pub theme: EditorTheme,
-    pub content: String,
-    pub mode: EditMode,
-}
+impl EditMode {
+    /// Можно ли редактировать текст в этом режиме.
+    pub fn is_editable(&self) -> bool {
+        !matches!(self, EditMode::Preview)
+    }
 
-impl EditorState {
-    pub fn new(theme: EditorTheme, text: String) -> Self {
-        Self {
-            theme,
-            content: text,
-            mode: EditMode::LivePreview,
+    /// Следующий режим по циклу: Preview → LivePreview → Source → Preview.
+    pub fn next(&self) -> Self {
+        match self {
+            EditMode::Preview => EditMode::LivePreview,
+            EditMode::LivePreview => EditMode::Source,
+            EditMode::Source => EditMode::Preview,
+        }
+    }
+
+    /// Название режима в нижнем регистре.
+    pub fn name(&self) -> &'static str {
+        match self {
+            EditMode::Preview => "preview",
+            EditMode::LivePreview => "live_preview",
+            EditMode::Source => "source",
         }
     }
 }

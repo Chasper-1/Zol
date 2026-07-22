@@ -98,7 +98,7 @@ where
                 let doc = self.inner.doc.borrow();
                 (doc.content.clone(), doc.cursor.line(), self.inner.scroll_y.get())
             };
-            let mode = self.inner.mode;
+            let mode = self.inner.get_mode();
             let theme = &self.inner.theme;
             let cache = self.inner.cache.borrow().clone();
             let mut shaped = self.inner.shaped_doc.borrow_mut();
@@ -170,7 +170,7 @@ where
         }
 
         // --- Курсор ---
-        if self.inner.mode != EditMode::Preview {
+        if self.inner.get_mode() != EditMode::Preview {
             let (cursor_line, cursor_raw, should_blink) = {
                 let doc = self.inner.doc.borrow();
                 (doc.cursor.line(), doc.cursor.raw(), doc.cursor.should_blink())

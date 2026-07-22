@@ -11,6 +11,8 @@
 
 use std::cell::{Cell, RefCell};
 
+use crate::api::editor as api_editor;
+
 use crate::document::Document;
 use crate::editor::cache::DocumentCache;
 use crate::editor::render::{self, ShapedDocument};
@@ -36,7 +38,7 @@ pub struct EditorInner {
     /// Кеш разметки — перестраивается при каждом изменении документа.
     pub cache: RefCell<DocumentCache>,
     /// Режим редактирования.
-    pub mode: EditMode,
+    pub mode: Cell<EditMode>,
     /// Базовый размер шрифта.
     pub base_size: f32,
     /// Размер заголовков.
@@ -78,7 +80,7 @@ impl EditorInner {
             doc: RefCell::new(doc),
             shaped_doc: RefCell::new(shaped_doc),
             cache: RefCell::new(cache),
-            mode: EditMode::LivePreview,
+            mode: Cell::new(EditMode::LivePreview),
             base_size,
             heading_size,
             theme,
@@ -119,6 +121,28 @@ impl EditorInner {
     /// Вызывается после косвенных изменений (скролл, смена режима).
     pub fn mark_dirty(&self) {
         self.doc.borrow_mut().dirty = true;
+    }
+
+    /// Текущий режим редактирования.
+    pub fn get_mode(&self) -> EditMode {
+        self.mode.get()
+    }
+
+    /// Установить режим редактирования.
+    /// Все мутации mode проходят через `api::editor`.
+    pub fn set_mode(&self, new_mode: EditMode) {
+        let mut current = self.mode.get();
+        api_editor::mode_set(&mut current, new_mode);
+        self.mode.set(current);
+        self.mark_dirty();
+    }
+
+    /// Переключить режим по циклу: Preview → LivePreview → Source → Preview.
+    pub fn cycle_mode(&self) {
+        let mut current = self.mode.get();
+        api_editor::mode_cycle(&mut current);
+        self.mode.set(current);
+        self.mark_dirty();
     }
 }
 
@@ -182,7 +206,7 @@ mod tests {
         assert_eq!(inner.base_size, 14.0);
         assert_eq!(inner.heading_size, 24.0);
         assert_eq!(inner.file_path, "notes.zoll");
-        assert_eq!(inner.mode, EditMode::LivePreview);
+        assert_eq!(inner.mode.get(), EditMode::LivePreview);
         assert_eq!(inner.scroll_y.get(), 0.0);
     }
 
