@@ -39,7 +39,7 @@ pub struct EditorTheme {
 }
 
 pub struct TextTheme {
-    pub size: f32,         // font size (default: 16.0)
+    pub size: f32,         // font size (default: 14.0)
     pub color: Rgba,       // text color
     pub font_family: Option<String>,
 }
@@ -79,5 +79,5 @@ If `theme.rhai` is missing, fails to parse, or a specific field is absent:
 | `editor.padding` | `10.0` |
 | `editor.radius` | `16.0` |
 | `editor.background` | `rgba(39, 46, 51, 0.9)` |
-| `text.size` | `16.0` |
+| `text.size` | `14.0` |
 | `text.color` | `rgba(205, 214, 244, 1.0)` |

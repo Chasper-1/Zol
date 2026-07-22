@@ -11,7 +11,11 @@
 │  gui/ (Iced::Application)                    │
 │  ┌──────────────────────────────┐            │
 │  │  Iced backend                │            │
-│  │  app_iced.rs, iced_editor.rs │            │
+│  │  app_iced.rs, iced_editor/   │            │
+│  │  ├── inner.rs                │            │
+│  │  ├── widget.rs               │            │
+│  │  ├── nav.rs                  │            │
+│  │  └── scroll.rs               │            │
 │  └──────────────┬───────────────┘            │
 │                 │                            │
 ├─────────────────┼────────────────────────────┤
@@ -24,7 +28,7 @@
 │  │  │ cursor.rs│  │ compute/ │  │shape/│  │    │
 │  │  └──────────┘  └──────────┘  └──┬──┘  │    │
 │  │  ┌──────────┐  ┌──────────┐     │     │    │
-│  │  │ ZML      │  │ Cache    │     │     │    │
+│  │  │ zoll     │  │ Cache    │     │     │    │
 │  │  │ parser   │→│ Document │     │     │    │
 │  │  └──────────┘  └──────────┘     │     │    │
 │  │  ┌──────────────────────┐       │     │    │
@@ -51,11 +55,11 @@
   └─ мышь → buffer.hit() → request_redraw()
 
 Кадр → IcedEditor::draw()
-  ├─ dirty? → zml::parse_document()
+  ├─ dirty? → zoll::parse_document()
   │         → layout::compute_line_runs() для каждой строки
   │         → render::shape_document() (cosmic-text Buffer)
   │         → только видимые строки (viewport optimization)
-  └─ render: fill_quad() для фона, глифов, курсора
+  └─ render: fill_text() для фона, глифов, курсора
 ```
 
 ## Зависимости модулей
@@ -74,11 +78,11 @@ main.rs
   ├── api::cursor
   ├── api::text
   ├── api::editor
-  └── zml
-        ├── zml::token
-        ├── zml::parser
-        ├── zml::ast
-        └── zml::segmenter
+  └── zoll
+        ├── zoll::token
+        ├── zoll::parser
+        ├── zoll::ast
+        └── zoll::segmenter
 ```
 
 ## Конкурентность

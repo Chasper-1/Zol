@@ -37,7 +37,7 @@ pub struct EditorTheme {
 }
 
 pub struct TextTheme {
-    pub size: f32,              // размер шрифта (по умолчанию: 16.0)
+    pub size: f32,              // размер шрифта (по умолчанию: 14.0)
     pub color: Rgba,            // цвет текста
     pub font_family: Option<String>,
 }
@@ -77,5 +77,5 @@ pub struct EditorSection {
 | `editor.padding` | `10.0` |
 | `editor.radius` | `16.0` |
 | `editor.background` | `rgba(39, 46, 51, 0.9)` |
-| `text.size` | `16.0` |
+| `text.size` | `14.0` |
 | `text.color` | `rgba(205, 214, 244, 1.0)` |

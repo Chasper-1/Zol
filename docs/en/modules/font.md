@@ -1,5 +1,7 @@
 # Font Module
 
+*Translation of the Russian original.*
+
 `src/editor/font/mod.rs` — global font system for Zol.
 
 ## Singleton Architecture
@@ -29,6 +31,10 @@ where F: FnOnce(&mut cosmic_text::FontSystem) -> T;
 // Access SwashCache for glyph rasterization
 pub fn with_swash_cache<F, T>(f: F) -> T
 where F: FnOnce(&mut cosmic_text::SwashCache) -> T;
+
+// Access FontSystem and SwashCache simultaneously (avoids deadlock)
+pub fn with_font_and_cache<F, T>(f: F) -> T
+where F: FnOnce(&mut cosmic_text::FontSystem, &mut cosmic_text::SwashCache) -> T;
 
 // List all available font families
 pub fn list_families() -> Vec<String>;

@@ -1,5 +1,7 @@
 # Editor Module
 
+*Translation of the Russian original.*
+
 `src/editor/` — core editor logic, independent of any GUI framework.
 
 ## Files
@@ -8,12 +10,13 @@
 |------|---------|
 | `cursor.rs` | Grapheme-aware cursor with vertical movement |
 | `font/mod.rs` | Font system singleton (fontdb + cosmic-text) |
-| `layout/` | TextRun computation from zml markup |
+| `layout/` | TextRun computation from zoll markup |
 | `render/` | Shaping (cosmic-text Buffer) + rendering |
 | `state.rs` | EditorState, EditMode |
-| `theme/` | EditorTheme, Rhai theme parser |
+| `theme/` | EditorTheme, Rhai theme parser, color parser |
 | `cache/` | DocumentCache, MarkupCache, Segment types |
-| `markup/` | zml parser integration |
+| `markup/` | zoll parser integration (delegates to `zoll::parse_document`) |
+| `utils/` | Line utilities (safe slice, line bounds, line counting) |
 
 ## Cursor
 

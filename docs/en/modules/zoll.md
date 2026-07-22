@@ -1,9 +1,11 @@
-# zml Parser Module
+# zoll Parser Module
 
-`src/zml/` — standalone parser for the **zml** markup language (Zol Markup Language).
+*Translation of the Russian original.*
+
+`src/zoll/` — standalone parser for the **zoll** markup language (Zol Markup Language).
 
 ```
-zml/
+zoll/
 ├── mod.rs        — Public API: parse_document()
 ├── ast.rs        — AST types (MarkupDoc, MarkupNode, MarkupStyle)
 ├── token.rs      — Tokenizer
@@ -14,7 +16,7 @@ zml/
 ## Pipeline
 
 ```
-Raw text (.zml) → token::tokenize() → parser::parse() → segmenter::to_document_cache()
+Raw text (.zoll) → token::tokenize() → parser::parse() → segmenter::to_document_cache()
 ```
 
 ## Token Types
@@ -42,7 +44,7 @@ pub enum MarkupNode {
 
 Parser uses a stack for open markers. Validates pairing, nesting, whitespace rules.
 
-## Markers (15)
+## Markers (14)
 
 | Open | Close | Style | Multiline |
 |------|-------|-------|-----------|
@@ -52,14 +54,13 @@ Parser uses a stack for open markers. Validates pairing, nesting, whitespace rul
 | `~~` | `~~` | STRIKETHROUGH | no |
 | `''` | `''` | SUPERSCRIPT | no |
 | `,,` | `,,` | SUBSCRIPT | no |
-| `` ` `` | `` ` `` | CODE | no |
 | `==` | `==` | HIGHLIGHT | no |
 | `!!` | `!!` | SPOILER | no |
 | `!!!` | `!!!` | SPOILER_BLOCK | **yes** |
 | `++` | `++` | INSERTION | no |
 | `--` | `--` | DELETION | no |
-| `/*` | `*\` | COMMENT | **yes** |
+| `%%` | `%%` | COMMENT | **yes** |
 | `$` | `$` | FORMULA | no |
 | `$$` | `$$` | DISPLAY_FORMULA | **yes** |
 
-`MarkupStyle`: u32 bitmask with 15 flags. ~30 unit tests.
+`MarkupStyle`: u32 bitmask with 15 flags (14 markers + PLAIN). ~30 unit tests.

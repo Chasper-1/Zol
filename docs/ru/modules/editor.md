@@ -8,16 +8,14 @@
 |------|------------|
 | `mod.rs` | Реэкспорт всех подмодулей |
 | `cursor.rs` | Курсор с grapheme-навигацией и вертикальным движением |
-| `editor_widget.rs` | Iced-виджет редактора (обёртка над IcedEditor) |
 | `font/mod.rs` | Синглтон системы шрифтов (fontdb + cosmic-text) |
-| `input.rs` | Обработка клавиатурного ввода |
-| `layout/` | Вычисление TextRun из zml-разметки |
+| `layout/` | Вычисление TextRun из zoll-разметки |
 | `render/` | Шейпинг (cosmic-text Buffer) + отрисовка |
 | `state.rs` | EditorState, EditMode |
-| `theme/` | EditorTheme, парсер темы Rhai |
+| `theme/` | EditorTheme, парсер темы Rhai, парсер цветов |
 | `utils/` | Утилиты границ строк, безопасные слайсы |
 | `cache/` | DocumentCache, MarkupCache, Segment |
-| `markup/` | Интеграция zml-парсера (parse_document) |
+| `markup/` | Интеграция zoll-парсера (делегирует в `zoll::parse_document`) |
 
 ## Курсор
 
@@ -62,20 +60,21 @@ API:
 | `init()` | Инициализация (безопасно вызывать многократно) |
 | `with_font_system(f)` | Доступ к FontSystem для шейпинга |
 | `with_swash_cache(f)` | Доступ к SwashCache для растрирования |
+| `with_font_and_cache(f)` | Доступ к обоим ресурсам одновременно |
 | `list_families()` | Список всех доступных семейств шрифтов |
 | `reload_system_fonts()` | Пересканировать системные шрифты |
 
 ## Layout
 
-`editor::layout::compute::compute_line_runs()` — преобразует строку исходного текста с её `MarkupCache` в `Vec<TextRun>`, применяя флаги стилей zml.
+`editor::layout::compute::compute_line_runs()` — преобразует строку исходного текста с её `MarkupCache` в `Vec<TextRun>`, применяя флаги стилей zoll.
 
 ```
 TextRun {
     text: String,
-    byte_offset: usize,
+    style_flags: u32,
+    color: Rgba,
     size: f32,
     font_family: Option<String>,
-    color: Rgba,
 }
 ```
 
@@ -90,7 +89,7 @@ TextRun {
 
 Принимает `viewport_height: Option<f32>` — шейпятся только видимые строки.
 
-Отрисовка (в Iced): `iced_editor.rs` итерирует `buffer.layout_runs()` и рисует glyph-quad'ы через `fill_quad()`.
+Отрисовка (в Iced): `iced_editor::widget.rs` итерирует `buffer.layout_runs()` и рисует glyph-quad'ы через `fill_text()`.
 
 ## ShapedDocument
 
@@ -115,7 +114,7 @@ pub enum EditMode {
 ```
 Ввод → IcedEditor::update()
     │
-    ├─ zml::parse_document() → DocumentCache
+    ├─ zoll::parse_document() → DocumentCache
     │
     └─ dirty = true
 

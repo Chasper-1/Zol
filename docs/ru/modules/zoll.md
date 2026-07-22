@@ -1,9 +1,9 @@
-# Модуль парсера zml
+# Модуль парсера zoll
 
-`src/zml/` — автономный парсер разметки языка **zml** (Zol Markup Language).
+`src/zoll/` — автономный парсер разметки языка **zoll** (Zol Markup Language).
 
 ```
-zml/
+zoll/
 ├── mod.rs        — Публичное API: parse_document()
 ├── ast.rs        — Типы AST (MarkupDoc, MarkupNode, MarkupStyle)
 ├── token.rs      — Токенизатор
@@ -14,7 +14,7 @@ zml/
 ## Пайплайн
 
 ```
-Сырой текст (.zml)
+Сырой текст (.zoll)
     │
     ▼
 token::tokenize(text)  →  Vec<Token>
@@ -55,7 +55,7 @@ pub enum MarkupNode {
 
 Парсер использует стек для отслеживания открытых маркеров.
 
-## Маркеры zml (15)
+## Маркеры zoll (14)
 
 | Открытие | Закрытие | Стиль | Многострочный |
 |----------|----------|-------|---------------|
@@ -65,14 +65,13 @@ pub enum MarkupNode {
 | `~~` | `~~` | STRIKETHROUGH | нет |
 | `''` | `''` | SUPERSCRIPT | нет |
 | `,,` | `,,` | SUBSCRIPT | нет |
-| `` ` `` | `` ` `` | CODE | нет |
 | `==` | `==` | HIGHLIGHT | нет |
 | `!!` | `!!` | SPOILER | нет |
 | `!!!` | `!!!` | SPOILER_BLOCK | **да** |
 | `++` | `++` | INSERTION | нет |
 | `--` | `--` | DELETION | нет |
-| `/*` | `*\` | COMMENT | **да** |
+| `%%` | `%%` | COMMENT | **да** |
 | `$` | `$` | FORMULA | нет |
 | `$$` | `$$` | DISPLAY_FORMULA | **да** |
 
-Флаги стилей: `MarkupStyle` — битовая маска u32, 15 флагов. Тесты: ~30 unit-тестов.
+Флаги стилей: `MarkupStyle` — битовая маска u32, 15 флагов (14 маркеров + PLAIN). Тесты: ~30 unit-тестов.

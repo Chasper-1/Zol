@@ -1,5 +1,7 @@
 # Zol
 
+*Translation of the Russian original.*
+
 **Zol** is a semantic text editor with custom markup (zoll — Zol Markup Language), Iced rendering, Rhai-based theming, and grapheme-aware cursor navigation.
 
 ## Quick Start

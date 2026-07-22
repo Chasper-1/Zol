@@ -1,5 +1,7 @@
 # Architecture
 
+*Translation of the Russian original.*
+
 ## Layer Diagram
 
 ```
@@ -11,7 +13,11 @@
 │  gui/ (Iced::Application)                    │
 │  ┌──────────────────────────────┐            │
 │  │  Iced backend                │            │
-│  │  app_iced.rs, iced_editor.rs │            │
+│  │  app_iced.rs, iced_editor/   │            │
+│  │  ├── inner.rs                │            │
+│  │  ├── widget.rs               │            │
+│  │  ├── nav.rs                  │            │
+│  │  └── scroll.rs               │            │
 │  └──────────────┬───────────────┘            │
 │                 │                            │
 ├─────────────────┼────────────────────────────┤
@@ -24,7 +30,7 @@
 │  │  │ cursor.rs│  │ compute/ │  │shape/│  │    │
 │  │  └──────────┘  └──────────┘  └──┬──┘  │    │
 │  │  ┌──────────┐  ┌──────────┐     │     │    │
-│  │  │ zml      │  │ Cache    │     │     │    │
+│  │  │ zoll     │  │ Cache    │     │     │    │
 │  │  │ parser   │→│ Document │     │     │    │
 │  │  └──────────┘  └──────────┘     │     │    │
 │  │  ┌──────────────────────┐       │     │    │
@@ -48,11 +54,11 @@ Event → IcedEditor::update()
   └─ mouse → buffer.hit() → request_redraw()
 
 Frame → IcedEditor::draw()
-  ├─ dirty? → zml::parse_document()
+  ├─ dirty? → zoll::parse_document()
   │         → layout::compute_line_runs()
   │         → render::shape_document() (cosmic-text Buffer)
   │         → viewport optimization (visible lines only)
-  └─ render: fill_quad() for background, glyphs, cursor
+  └─ render: fill_text() for background, glyphs, cursor
 ```
 
 ## Module Dependencies
@@ -69,7 +75,7 @@ main.rs
   ├── editor::state
   ├── editor::theme
   ├── api::cursor, api::text, api::editor
-  └── zml (token, parser, ast, segmenter)
+  └── zoll (token, parser, ast, segmenter)
 ```
 
 ## Concurrency

@@ -30,6 +30,10 @@ where F: FnOnce(&mut cosmic_text::FontSystem) -> T;
 pub fn with_swash_cache<F, T>(f: F) -> T
 where F: FnOnce(&mut cosmic_text::SwashCache) -> T;
 
+// Доступ к FontSystem и SwashCache одновременно (избегает взаимной блокировки)
+pub fn with_font_and_cache<F, T>(f: F) -> T
+where F: FnOnce(&mut cosmic_text::FontSystem, &mut cosmic_text::SwashCache) -> T;
+
 // Список всех доступных семейств шрифтов
 pub fn list_families() -> Vec<String>;
 
