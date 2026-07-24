@@ -3,16 +3,6 @@
 use crate::ast::{BlockType, LineAST, MarkupDoc, MarkupNode};
 
 /// Собирает `Vec<LineAST>` (по одному на строку) в `MarkupDoc`.
-///
-/// ## Алгоритм
-///
-/// 1. Проходит по строкам слева направо.
-/// 2. Группирует последовательные `Paragraph` → один параграф (с `\n`).
-/// 3. Группирует `Quote` → `BlockQuote`.
-/// 4. Группирует `ListItem` → `List`.
-/// 5. Группирует `TableRow` → `Table`.
-/// 6. Обрабатывает `BlockMarker` через стек (open/close).
-/// 7. Всё остальное — напрямую в `MarkupDoc`.
 pub fn merge(lines: &[LineAST]) -> MarkupDoc {
     let mut doc = MarkupDoc {
         children: Vec::new(),
@@ -22,13 +12,12 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
     let mut block_stack: Vec<BlockFrame> = Vec::new();
 
     // Временные буферы для группировки
-    let mut para_buffer: Vec<Vec<MarkupNode>> = Vec::new(); // строки параграфа
+    let mut para_buffer: Vec<Vec<MarkupNode>> = Vec::new();
     let mut quote_buffer: Vec<Vec<MarkupNode>> = Vec::new();
     let mut list_items: Vec<ListItemData> = Vec::new();
     let mut list_ordered: Option<bool> = None;
     let mut table_rows: Vec<TableRowData> = Vec::new();
 
-    // Сбрасывает накопленный параграф в doc
     let mut flush_paragraph = |doc: &mut MarkupDoc, buffer: &mut Vec<Vec<MarkupNode>>| {
         if buffer.is_empty() {
             return;
@@ -36,7 +25,6 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
         if buffer.len() == 1 {
             doc.children.append(&mut buffer.swap_remove(0));
         } else {
-            // Соединяем строки через \n
             let mut all = buffer.swap_remove(0);
             for next_line in buffer.drain(..) {
                 all.push(MarkupNode::Text("\n".to_string()));
@@ -46,7 +34,6 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
         }
     };
 
-    // Сбрасывает цитаты
     let mut flush_quote = |doc: &mut MarkupDoc, buffer: &mut Vec<Vec<MarkupNode>>| {
         if buffer.is_empty() {
             return;
@@ -59,7 +46,6 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
         doc.children.push(MarkupNode::Quote(all));
     };
 
-    // Сбрасывает список
     let mut flush_list = |doc: &mut MarkupDoc,
                           items: &mut Vec<ListItemData>,
                           ordered: &mut Option<bool>| {
@@ -76,7 +62,6 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
         *ordered = None;
     };
 
-    // Сбрасывает таблицу
     let mut flush_table = |doc: &mut MarkupDoc, rows: &mut Vec<TableRowData>| {
         if rows.is_empty() {
             return;
@@ -88,7 +73,6 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
 
     for line_ast in lines {
         match line_ast {
-            // ── Обработка блок-левел стека ──
             LineAST::BlockMarker(bt) => {
                 flush_all(
                     &mut doc,
@@ -105,10 +89,8 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
 
                 if let Some(top) = block_stack.last() {
                     if top.block_type == *bt {
-                        // Закрываем блок
                         let frame = block_stack.pop().unwrap();
                         let node = block_to_node(*bt, frame.title, frame.content);
-                        // Если есть родительский блок — добавляем к нему
                         if let Some(parent) = block_stack.last_mut() {
                             parent.content.push(node);
                         } else {
@@ -117,7 +99,6 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
                         continue;
                     }
                 }
-                // Открываем блок
                 block_stack.push(BlockFrame {
                     block_type: *bt,
                     title: None,
@@ -146,7 +127,6 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
                 });
             }
 
-            // ── Строки внутри блоков ──
             LineAST::CodeLine(text) => {
                 if let Some(top) = block_stack.last_mut() {
                     top.add_line(text.clone());
@@ -169,25 +149,21 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
                 }
             }
 
-            // ── Параграф ──
             LineAST::Paragraph(children) => {
                 if !block_stack.is_empty() {
                     block_stack.last_mut().unwrap().content.extend(children.clone());
                     block_stack.last_mut().unwrap().content.push(MarkupNode::Text("\n".to_string()));
                     continue;
                 }
-                // Сбрасываем другие буферы
                 flush_quote(&mut doc, &mut quote_buffer);
                 flush_list(&mut doc, &mut list_items, &mut list_ordered);
                 flush_table(&mut doc, &mut table_rows);
                 if children.is_empty() {
-                    // Пустой параграф (после сброса)
                     continue;
                 }
                 para_buffer.push(children.clone());
             }
 
-            // ── Цитаты ──
             LineAST::Quote(children) => {
                 if !block_stack.is_empty() {
                     block_stack.last_mut().unwrap().content.extend(children.clone());
@@ -200,7 +176,6 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
                 quote_buffer.push(children.clone());
             }
 
-            // ── Списки ──
             LineAST::ListItem(ordered, number, children) => {
                 if !block_stack.is_empty() {
                     block_stack.last_mut().unwrap().content.extend(children.clone());
@@ -210,7 +185,6 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
                 flush_paragraph(&mut doc, &mut para_buffer);
                 flush_quote(&mut doc, &mut quote_buffer);
                 flush_table(&mut doc, &mut table_rows);
-                // Если тип списка меняется → сбрасываем
                 if let Some(is_ordered) = list_ordered {
                     if is_ordered != *ordered {
                         flush_list(&mut doc, &mut list_items, &mut list_ordered);
@@ -224,7 +198,6 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
                 });
             }
 
-            // ── Строки таблицы ──
             LineAST::TableRow(cells) => {
                 if !block_stack.is_empty() {
                     block_stack.last_mut().unwrap().content.push(MarkupNode::TableRow(cells.clone()));
@@ -239,7 +212,6 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
                 });
             }
 
-            // ── Заголовки, спойлеры, формулы, комментарии, разделители, теги ──
             LineAST::Header(level, children) => {
                 flush_all(
                     &mut doc,
@@ -351,7 +323,6 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
             }
 
             LineAST::Tag(_tag) => {
-                // Теги пока игнорируем или можно хранить как Text
                 flush_all(
                     &mut doc,
                     &mut para_buffer,
@@ -367,7 +338,6 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
             }
 
             LineAST::Empty => {
-                // Пустая строка разделяет блоки
                 flush_all(
                     &mut doc,
                     &mut para_buffer,
@@ -384,13 +354,11 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
         }
     }
 
-    // Финальный сброс
     flush_paragraph(&mut doc, &mut para_buffer);
     flush_quote(&mut doc, &mut quote_buffer);
     flush_list(&mut doc, &mut list_items, &mut list_ordered);
     flush_table(&mut doc, &mut table_rows);
 
-    // Закрываем незакрытые блоки
     while let Some(frame) = block_stack.pop() {
         let node = block_to_node(frame.block_type, frame.title, frame.content);
         if let Some(parent) = block_stack.last_mut() {
@@ -440,7 +408,6 @@ fn block_to_node(bt: BlockType, title: Option<String>, content: Vec<MarkupNode>)
     }
 }
 
-/// Сбрасывает все временные буферы.
 #[allow(clippy::too_many_arguments)]
 fn flush_all(
     doc: &mut MarkupDoc,
@@ -474,7 +441,6 @@ pub fn parse_full(text: &str) -> MarkupDoc {
 mod tests {
     use super::*;
     use crate::ast::MarkupNode;
-    use crate::ast::MarkupStyle;
 
     #[test]
     fn plain_text_paragraph() {
@@ -493,7 +459,7 @@ mod tests {
             LineAST::Paragraph(vec![MarkupNode::Text("line 2".to_string())]),
         ];
         let doc = merge(&lines);
-        assert_eq!(doc.children.len(), 3); // line1 + \n + line2
+        assert_eq!(doc.children.len(), 3);
         assert_eq!(doc.children[0], MarkupNode::Text("line 1".to_string()));
         assert_eq!(doc.children[1], MarkupNode::Text("\n".to_string()));
         assert_eq!(doc.children[2], MarkupNode::Text("line 2".to_string()));
@@ -568,7 +534,6 @@ mod tests {
             LineAST::Paragraph(vec![MarkupNode::Text("p2".to_string())]),
         ];
         let doc = merge(&lines);
-        // Пустая строка — разделитель, p1 и p2 — отдельные параграфы
         assert_eq!(doc.children.len(), 2);
         assert_eq!(doc.children[0], MarkupNode::Text("p1".to_string()));
         assert_eq!(doc.children[1], MarkupNode::Text("p2".to_string()));

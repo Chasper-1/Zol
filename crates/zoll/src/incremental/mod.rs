@@ -10,9 +10,9 @@
 //!
 //! let mut doc = IncrementalDoc::new("**hello** world");
 //! doc.edit(0, 0, "very ");  // вставить "very " в начало
-//! // Теперь AST обновлён, токены пересчитаны
+//! // Теперь AST обновлён
 //! ```
 
 mod doc;
 
-pub use doc::IncrementalDoc;
+pub use doc::{build_line_starts, IncrementalDoc};

@@ -42,20 +42,17 @@ pub fn parse_line(line: &str) -> LineAST {
     }
 
     // ── Line-level: %% (комментарий до конца строки с любого места) ──
-    // Ищем %% в строке. Если %% найдено — всё до %% — контент, после %% — комментарий.
     if let Some(pos) = trimmed.find("%%") {
         let before = &trimmed[..pos];
         let after = &trimmed[pos + 2..];
-        // Парсим то, что ДО %% как обычный контент
-        let children = parse_inline(before.trim_end());
-        // Если перед %% ничего нет — чисто комментарий
+        let _children = parse_inline(before.trim_end());
         let comment_content = parse_inline(after.trim());
         return LineAST::Comment(comment_content);
     }
 
     // ── $$ с любого места строки ──
     if let Some(pos) = trimmed.find("$$") {
-        let before = &trimmed[..pos];
+        let _before = &trimmed[..pos];
         let after = &trimmed[pos + 2..];
         let children = parse_inline(after.trim());
         return LineAST::Formula(children);
@@ -63,7 +60,7 @@ pub fn parse_line(line: &str) -> LineAST {
 
     // ── !! с любого места строки ── (не !!!, проверено выше)
     if let Some(pos) = trimmed.find("!!") {
-        let before = &trimmed[..pos];
+        let _before = &trimmed[..pos];
         let after = &trimmed[pos + 2..];
         let rest = after.trim();
         if let Some(title_end) = rest.find(':') {
@@ -95,11 +92,8 @@ pub fn parse_line(line: &str) -> LineAST {
     }
 
     // ── Ненумерованный список: - / * / + с пробелом ПОСЛЕ маркера ──
-    // Проверяем * и + до - и *, потому что * и + НЕ часть inline-маркеров
-    // (но * ещё используется для **bold**, так что проверяем, что после * идёт ПРОБЕЛ)
     for delim in &['-', '*', '+'] {
         if let Some(rest) = trimmed.strip_prefix(*delim) {
-            // Обязательно: после маркера пробел или конец строки
             if rest.is_empty() || rest.starts_with(' ') {
                 let content = rest.trim();
                 return LineAST::ListItem(false, 0, parse_inline(content));
@@ -112,7 +106,6 @@ pub fn parse_line(line: &str) -> LineAST {
         if end > 0 && trimmed.as_bytes().get(end) == Some(&b'.') {
             let num = trimmed[..end].parse::<u32>().unwrap_or(1);
             let content = trimmed[end + 1..].trim();
-            // После точки должен быть пробел
             if trimmed.as_bytes().get(end + 1).map_or(true, |&b| b == b' ') {
                 return LineAST::ListItem(true, num, parse_inline(content));
             }
@@ -461,7 +454,6 @@ mod tests {
 
     #[test]
     fn star_not_confused_with_bold() {
-        // **bold** — это НЕ список, а жирный
         let ast = parse_line("**bold**");
         assert!(matches!(ast, LineAST::Paragraph(_)));
     }
@@ -508,7 +500,6 @@ mod tests {
 
     #[test]
     fn escape_char() {
-        // \* экранирует только первый *, второй * — обычный текст
         let ast = parse_line(r"\**not bold**");
         assert_eq!(
             ast,
@@ -527,7 +518,6 @@ mod tests {
 
     #[test]
     fn mixed_on_line() {
-        // %% в середине строки — всё до %% видимо, после — комментарий
         let ast = parse_line("text %% comment");
         assert_eq!(
             ast,
