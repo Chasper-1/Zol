@@ -26,7 +26,7 @@ impl Cursor {
     }
 
     /// В начало текущей строки.
-    pub fn move_home(&mut self, content: &str, line_starts: &[usize]) {
+    pub fn move_home(&mut self, _content: &str, line_starts: &[usize]) {
         self.raw = line_starts.get(self.line).copied().unwrap_or(0);
         self.col_visual = 0.0;
         self.force_blink();

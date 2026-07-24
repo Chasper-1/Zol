@@ -1,6 +1,5 @@
 use super::named::NAMED_COLORS;
 use super::parse::ColorFormat;
-use super::parsers;
 
 /// Определяет формат цвета по строке.
 pub fn detect_format(s: &str) -> Option<ColorFormat> {

@@ -8,7 +8,7 @@ pub fn line_text<'a>(content: &'a str, line_starts: &[usize], line: usize) -> Op
 }
 
 /// Байтовое смещение начала строки.
-pub fn line_start_byte(content: &str, line_starts: &[usize], line: usize) -> usize {
+pub fn line_start_byte(_content: &str, line_starts: &[usize], line: usize) -> usize {
     line_starts.get(line).copied().unwrap_or(0)
 }
 

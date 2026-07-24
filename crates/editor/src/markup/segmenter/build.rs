@@ -1,6 +1,6 @@
 use zoll::ast::{MarkupNode, MarkupStyle};
 
-use crate::markup::segment::{Segment, StyleFlags};
+use crate::markup::segment::Segment;
 use crate::markup::segmenter::helpers::{combine_style, marker_open_len, to_style_flags};
 
 /// Рекурсивно обходит AST и собирает сегменты.
