@@ -9,6 +9,7 @@ edition = "2024"
 
 [dependencies]
 gui = { path = "crates/gui" }
+iced = "0.14.0"
 
 [profile.release]
 opt-level = 3
