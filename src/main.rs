@@ -14,11 +14,12 @@ fn main() {
         eprintln!("[mem] старт: {rss}");
 
         // Опросник каждые 200 мс
-        std::thread::spawn(|| loop {
+        let start = std::time::Instant::now();
+        std::thread::spawn(move || loop {
             std::thread::sleep(std::time::Duration::from_millis(200));
-            let now = std::time::Instant::now();
+            let t = start.elapsed();
             let rss = current_rss_kb().map(|k| format!("{:>8} kB", k)).unwrap_or_else(|| "  неизвестно".into());
-            eprintln!("[mem] {:>4}.{:03}s: {rss}", now.elapsed().as_secs(), now.elapsed().subsec_millis());
+            eprintln!("[mem] {:>4}.{:03}s: {rss}", t.as_secs(), t.subsec_millis());
         });
     }
 
