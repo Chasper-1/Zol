@@ -1,10 +1,10 @@
-use super::*;
-use crate::token::tokenize;
 use crate::ast::{MarkupDoc, MarkupNode, MarkupStyle};
+use crate::token::tokenize;
+use super::parse;
 
 fn flatten_text(node: &MarkupNode) -> String {
     match node {
-        MarkupNode::Text(t) => t.clone(),
+        MarkupNode::Text(t, _) => t.clone(),
         MarkupNode::Formatted { children, .. } => children.iter().map(flatten_text).collect(),
     }
 }
@@ -33,9 +33,9 @@ fn bold_with_text() {
     let doc = parse(&tokens);
     assert_eq!(collect_text(&doc), "a bold b");
     assert_eq!(doc.children.len(), 3);
-    assert!(matches!(doc.children[0], MarkupNode::Text(_)));
+    assert!(matches!(doc.children[0], MarkupNode::Text(_, _)));
     assert!(matches!(doc.children[1], MarkupNode::Formatted { .. }));
-    assert!(matches!(doc.children[2], MarkupNode::Text(_)));
+    assert!(matches!(doc.children[2], MarkupNode::Text(_, _)));
 }
 
 #[test]
@@ -43,7 +43,7 @@ fn nested_bold_italic() {
     let tokens = tokenize("**a //b// c**");
     let doc = parse(&tokens);
     assert_eq!(collect_text(&doc), "a b c");
-    if let MarkupNode::Formatted { style, children } = &doc.children[0] {
+    if let MarkupNode::Formatted { style, children, .. } = &doc.children[0] {
         assert_eq!(*style, MarkupStyle::BOLD);
         assert_eq!(children.len(), 3);
         if let MarkupNode::Formatted { style, .. } = &children[1] {
@@ -68,7 +68,7 @@ fn same_type_nesting() {
     let tokens = tokenize("**a **b** c**");
     let doc = parse(&tokens);
     assert_eq!(collect_text(&doc), "a b c");
-    if let MarkupNode::Formatted { style, children } = &doc.children[0] {
+    if let MarkupNode::Formatted { style, children, .. } = &doc.children[0] {
         assert_eq!(*style, MarkupStyle::BOLD);
         assert_eq!(children.len(), 3);
         if let MarkupNode::Formatted { style, .. } = &children[1] {

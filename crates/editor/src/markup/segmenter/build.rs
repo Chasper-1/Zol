@@ -12,7 +12,7 @@ pub fn build_segments(
 ) -> usize {
     for node in nodes {
         match node {
-            MarkupNode::Text(text) => {
+            MarkupNode::Text(text, _) => {
                 let combined = combine_style(inherited_style, MarkupStyle::PLAIN);
                 segments.push(Segment {
                     text: text.clone(),
@@ -24,7 +24,7 @@ pub fn build_segments(
                 });
                 raw_offset += text.len();
             }
-            MarkupNode::Formatted { style, children } => {
+            MarkupNode::Formatted { style, children, .. } => {
                 let combined = combine_style(inherited_style, *style);
                 let marker_len = marker_open_len(*style);
 

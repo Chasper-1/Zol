@@ -21,7 +21,7 @@ fn zoll_tokenize_bold() {
 fn zoll_parse_plain_text() {
     let ast = zoll_parse("hello");
     assert_eq!(ast.children.len(), 1);
-    assert!(matches!(&ast.children[0], zoll::ast::MarkupNode::Text(t) if t == "hello"));
+    assert!(matches!(&ast.children[0], zoll::ast::MarkupNode::Text(t, _) if t == "hello"));
 }
 
 #[test]
@@ -29,10 +29,10 @@ fn zoll_parse_bold() {
     let ast = zoll_parse("**bold**");
     assert_eq!(ast.children.len(), 1);
     match &ast.children[0] {
-        zoll::ast::MarkupNode::Formatted { style, children } => {
+        zoll::ast::MarkupNode::Formatted { style, children, .. } => {
             assert!(style.contains(zoll::ast::MarkupStyle::BOLD));
             assert_eq!(children.len(), 1);
-            assert!(matches!(&children[0], zoll::ast::MarkupNode::Text(t) if t == "bold"));
+            assert!(matches!(&children[0], zoll::ast::MarkupNode::Text(t, _) if t == "bold"));
         }
         _ => panic!("expected Formatted node"),
     }
