@@ -28,14 +28,17 @@ impl EditorInner {
         let heading_size = 24.0;
         let theme = EditorTheme::default();
         let doc = Document::new(&content);
-        let cache = editor::markup::parse_document(&content);
+
+        // Кеш из IncrementalDoc (без полного parse_full)
+        let cache = editor::markup::segmenter::incremental_to_cache(&doc.incremental);
+
         let metrics = cosmic_text::Metrics::new(base_size, base_size * 1.4);
         let mut shaped_doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
 
         editor::font::init();
         render::build(
             &mut shaped_doc,
-            &content,
+            doc.content(),
             &cache,
             EditMode::LivePreview,
             0,

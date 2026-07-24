@@ -4,14 +4,14 @@ use editor::state::EditMode;
 #[test]
 fn new_empty_content() {
     let inner = EditorInner::new(String::new());
-    assert_eq!(inner.doc.borrow().content.as_str(), "");
+    assert_eq!(inner.doc.borrow().content(), "");
     assert!(inner.doc.borrow().dirty);
 }
 
 #[test]
 fn new_with_text() {
     let inner = EditorInner::new("hello world".to_string());
-    assert_eq!(inner.doc.borrow().content.as_str(), "hello world");
+    assert_eq!(inner.doc.borrow().content(), "hello world");
     assert!(inner.doc.borrow().dirty);
 }
 
@@ -57,7 +57,7 @@ fn defaults_are_sane() {
 #[test]
 fn edit_doc_insert_syncs_cache() {
     let inner = EditorInner::new("".to_string());
-    inner.edit_doc(|doc| { doc.content.insert_str(0, "**bold**"); });
+    inner.edit_doc(|doc| { doc.incremental.edit(0, 0, "**bold**"); });
     let cache = inner.cache.borrow();
     assert!(cache.lines.len() >= 1);
 }
@@ -66,14 +66,14 @@ fn edit_doc_insert_syncs_cache() {
 fn edit_doc_sets_dirty() {
     let inner = EditorInner::new("x".to_string());
     inner.doc.borrow_mut().dirty = false;
-    inner.edit_doc(|doc| { doc.content.push_str("y"); });
+    inner.edit_doc(|doc| { doc.incremental.edit(1, 1, "y"); });
     assert!(inner.doc.borrow().dirty, "edit_doc should set dirty=true");
 }
 
 #[test]
 fn edit_doc_cache_updates_after_content_change() {
     let inner = EditorInner::new("hello".to_string());
-    inner.edit_doc(|doc| { doc.content.push_str(" **world**"); });
+    inner.edit_doc(|doc| { doc.incremental.edit(5, 5, " **world**"); });
     let cache = inner.cache.borrow();
     assert!(!cache.lines.is_empty(), "cache should be rebuilt after content change");
 }
@@ -81,7 +81,10 @@ fn edit_doc_cache_updates_after_content_change() {
 #[test]
 fn edit_doc_multiple_calls() {
     let inner = EditorInner::new("".to_string());
-    inner.edit_doc(|doc| doc.content.push_str("a"));
-    inner.edit_doc(|doc| doc.content.push_str("b"));
-    assert_eq!(inner.doc.borrow().content, "ab");
+    inner.edit_doc(|doc| { doc.incremental.edit(0, 0, "a"); });
+    inner.edit_doc(|doc| {
+        let len = doc.incremental.source.len();
+        doc.incremental.edit(len, len, "b");
+    });
+    assert_eq!(inner.doc.borrow().content(), "ab");
 }

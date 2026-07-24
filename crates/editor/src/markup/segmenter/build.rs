@@ -92,3 +92,12 @@ pub fn build_segments(
     }
     raw_offset
 }
+
+/// Упрощённый вход: принимает `&[MarkupNode]`, возвращает `Vec<Segment>`.
+///
+/// Используется `incremental.rs` для построчной генерации сегментов из LineAST.
+pub fn build_segments_from_nodes(nodes: &[MarkupNode], raw_offset: usize) -> Vec<Segment> {
+    let mut segments = Vec::new();
+    build_segments(nodes, zoll::ast::MarkupStyle::PLAIN, &mut segments, raw_offset);
+    segments
+}

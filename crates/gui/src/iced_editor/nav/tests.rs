@@ -144,9 +144,8 @@ fn raw_at_x_beyond_end() {
 
 /// Helper: установить курсор на конкретный байт.
 fn set_cursor_raw(inner: &EditorInner, raw: usize) {
-    let content = inner.doc.borrow().content.clone();
     let mut doc = inner.doc.borrow_mut();
-    doc.cursor.set_raw(&content, raw);
+    doc.set_cursor_raw(raw);
 }
 
 #[test]

@@ -4,7 +4,9 @@
 
 mod build;
 mod helpers;
+mod incremental;
 #[cfg(test)] mod tests;
 mod to_doc;
 
+pub use incremental::incremental_to_cache;
 pub use to_doc::to_document_cache;

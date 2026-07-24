@@ -10,7 +10,7 @@ fn make_doc(text: &str) -> Document {
 #[test]
 fn move_left_basic() {
     let mut d = make_doc("abc");
-    d.cursor.set_raw(&d.content, 2);
+    d.set_cursor_raw( 2);
     move_left(&mut d);
     assert_eq!(d.cursor.raw(), 1);
     assert_eq!(d.cursor.line(), 0);
@@ -33,7 +33,7 @@ fn move_right_basic() {
 #[test]
 fn move_right_at_end() {
     let mut d = make_doc("abc");
-    d.cursor.set_raw(&d.content, 3);
+    d.set_cursor_raw( 3);
     move_right(&mut d);
     assert_eq!(d.cursor.raw(), 3);
 }
@@ -41,7 +41,7 @@ fn move_right_at_end() {
 #[test]
 fn move_left_grapheme() {
     let mut d = make_doc("e\u{0301}x");
-    d.cursor.set_raw(&d.content, 3);
+    d.set_cursor_raw( 3);
     move_left(&mut d);
     assert_eq!(d.cursor.raw(), 0);
 }
@@ -58,7 +58,7 @@ fn move_right_grapheme() {
 #[test]
 fn move_home_works() {
     let mut d = make_doc("hello world");
-    d.cursor.set_raw(&d.content, 5);
+    d.set_cursor_raw( 5);
     move_home(&mut d);
     assert_eq!(d.cursor.raw(), 0);
 }
@@ -75,7 +75,7 @@ fn move_end_works() {
 #[test]
 fn move_up_to_prev_line() {
     let mut d = make_doc("first\nsecond");
-    d.cursor.set_raw(&d.content, 8);
+    d.set_cursor_raw( 8);
     move_up(&mut d);
     assert_eq!(d.cursor.line(), 0);
 }
@@ -92,7 +92,7 @@ fn move_down_to_next_line() {
 #[test]
 fn move_word_left_works() {
     let mut d = make_doc("hello world foo");
-    d.cursor.set_raw(&d.content, 16);
+    d.set_cursor_raw( 16);
     move_word_left(&mut d);
     assert_eq!(d.cursor.raw(), 12);
 }
@@ -122,7 +122,7 @@ fn cursor_raw_setter() {
 #[test]
 fn cursor_line_getter() {
     let mut d = make_doc("a\nb\nc");
-    d.cursor.set_raw(&d.content, 3);
+    d.set_cursor_raw( 3);
     assert_eq!(cursor_line(&d), 1);
 }
 
@@ -160,7 +160,7 @@ fn cursor_reset_col_works() {
 #[test]
 fn unicode_move_left_right() {
     let mut d = make_doc("Привет");
-    d.cursor.set_raw(&d.content, 12);
+    d.set_cursor_raw( 12);
     move_left(&mut d);
     assert_eq!(d.cursor.raw(), 10);
     move_right(&mut d);

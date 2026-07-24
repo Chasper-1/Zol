@@ -29,9 +29,11 @@ pub fn handle_mouse<'a, Message>(
                 let cosmic_cursor = shaped.buffer.hit(local_x, local_y + scroll_y);
 
                 if let Some(cosmic) = cosmic_cursor {
-                    let content = this.inner.doc.borrow().content.clone();
-                    let (line_start, _) = cursor_line_bounds(&content, cosmic.line);
+                    let doc = this.inner.doc.borrow();
+                    let content: &str = &doc.incremental.source;
+                    let (line_start, _) = cursor_line_bounds(content, cosmic.line);
                     let new_raw = (line_start + cosmic.index).min(content.len());
+                    // doc borrow ends here (NLL)
 
                     let mut doc = this.inner.doc.borrow_mut();
                     api_cursor::cursor_set_raw(&mut *doc, new_raw);

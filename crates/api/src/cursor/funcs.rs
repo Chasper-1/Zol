@@ -1,35 +1,35 @@
 use editor::document::Document;
 
 pub fn move_left(doc: &mut Document) {
-    doc.cursor.move_left(&doc.content);
+    doc.cursor_move_left();
 }
 
 pub fn move_right(doc: &mut Document) {
-    doc.cursor.move_right(&doc.content);
+    doc.cursor_move_right();
 }
 
 pub fn move_home(doc: &mut Document) {
-    doc.cursor.move_home(&doc.content);
+    doc.cursor_move_home();
 }
 
 pub fn move_end(doc: &mut Document) {
-    doc.cursor.move_end(&doc.content);
+    doc.cursor_move_end();
 }
 
 pub fn move_up(doc: &mut Document) {
-    doc.cursor.move_up(&doc.content);
+    doc.cursor_move_up();
 }
 
 pub fn move_down(doc: &mut Document) {
-    doc.cursor.move_down(&doc.content);
+    doc.cursor_move_down();
 }
 
 pub fn move_word_left(doc: &mut Document) {
-    doc.cursor.move_word_left(&doc.content);
+    doc.cursor_move_word_left();
 }
 
 pub fn move_word_right(doc: &mut Document) {
-    doc.cursor.move_word_right(&doc.content);
+    doc.cursor_move_word_right();
 }
 
 pub fn cursor_raw(doc: &Document) -> usize {
@@ -37,7 +37,7 @@ pub fn cursor_raw(doc: &Document) -> usize {
 }
 
 pub fn cursor_set_raw(doc: &mut Document, byte: usize) {
-    doc.cursor.set_raw(&doc.content, byte);
+    doc.set_cursor_raw(byte);
 }
 
 pub fn cursor_line(doc: &Document) -> usize {

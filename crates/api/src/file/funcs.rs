@@ -2,7 +2,7 @@ use editor::document::Document;
 use std::path::Path;
 
 pub fn file_save(doc: &Document, path: impl AsRef<Path>) -> std::io::Result<()> {
-    std::fs::write(path, doc.content.as_bytes())
+    std::fs::write(path, doc.incremental.source.as_bytes())
 }
 
 pub fn file_load(path: impl AsRef<Path>) -> std::io::Result<Document> {

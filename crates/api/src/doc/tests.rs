@@ -4,7 +4,7 @@ use editor::document::Document;
 #[test]
 fn doc_create_with_text() {
     let d = doc_create("hello world");
-    assert_eq!(d.content, "hello world");
+    assert_eq!(d.content(), "hello world");
 }
 
 #[test]
@@ -110,7 +110,7 @@ fn doc_set_text_replaces_content() {
 fn doc_set_text_resets_cursor() {
     let mut d = doc_create("old text");
     // Передвигаем курсор на 4-й байт
-    d.cursor.set_raw(&d.content, 4);
+    d.set_cursor_raw( 4);
     doc_set_text(&mut d, "new");
     assert_eq!(d.cursor.raw(), 0);
 }

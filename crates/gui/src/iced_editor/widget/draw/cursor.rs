@@ -29,8 +29,9 @@ pub fn draw_cursor<'a, Renderer>(
     }
 
     let shaped = this.inner.shaped_doc.borrow();
-    let content = this.inner.doc.borrow().content.clone();
-    let (line_start, _) = cursor_line_bounds(&content, cursor_line);
+    let doc = this.inner.doc.borrow();
+    let content: &str = &doc.incremental.source;
+    let (line_start, _) = cursor_line_bounds(content, cursor_line);
     let byte_in_line = cursor_raw.saturating_sub(line_start);
     let scroll_y = this.inner.scroll_y.get();
 

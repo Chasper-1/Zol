@@ -8,8 +8,9 @@ pub fn move_vertical(inner: &EditorInner, target_line: usize) {
     let x = {
         let doc = inner.doc.borrow();
         let shaped = inner.shaped_doc.borrow();
+        let src: &str = &doc.incremental.source;
         let cl = doc.cursor.line();
-        let (ls, _) = cursor_line_bounds(&doc.content, cl);
+        let (ls, _) = cursor_line_bounds(src, cl);
         let byte_in_line = doc.cursor.raw().saturating_sub(ls);
         cursor_x_on_line(&shaped, cl, byte_in_line)
     };
@@ -17,14 +18,14 @@ pub fn move_vertical(inner: &EditorInner, target_line: usize) {
     let new_raw = {
         let doc = inner.doc.borrow();
         let shaped = inner.shaped_doc.borrow();
-        let (t_start, t_end) = cursor_line_bounds(&doc.content, target_line);
+        let src: &str = &doc.incremental.source;
+        let (t_start, t_end) = cursor_line_bounds(src, target_line);
         raw_at_x_on_line(&shaped, target_line, x, t_start, t_end)
     };
 
-    let content = inner.doc.borrow().content.clone();
     {
         let mut doc = inner.doc.borrow_mut();
-        doc.cursor.set_raw(&content, new_raw);
+        doc.set_cursor_raw(new_raw);
         doc.cursor.set_col_visual(x);
         doc.dirty = true;
     }

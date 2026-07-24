@@ -11,7 +11,7 @@ fn file_save_load_roundtrip() {
     file_save(&d, &path).unwrap();
 
     let loaded = file_load(&path).unwrap();
-    assert_eq!(loaded.content, "hello world");
+    assert_eq!(loaded.content(), "hello world");
 
     let _ = std::fs::remove_file(&path);
 }
@@ -44,7 +44,7 @@ fn file_load_empty_file() {
 
     file_save_str("", &path).unwrap();
     let d = file_load(&path).unwrap();
-    assert!(d.content.is_empty());
+    assert!(d.content().is_empty());
 
     let _ = std::fs::remove_file(&path);
 }

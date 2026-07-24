@@ -41,17 +41,19 @@ fn draw_reshape(this: &IcedEditor<'_>, bounds: Rectangle) {
     };
 
     if needs_reshape {
-        let (content, cursor_line, scroll_y) = {
-            let doc = this.inner.doc.borrow();
-            (doc.content.clone(), doc.cursor.line(), this.inner.scroll_y.get())
-        };
+        // Заимствуем всё, что нужно для render::build, без клонирования
+        let doc = this.inner.doc.borrow();
+        let content: &str = doc.content();
+        let cursor_line = doc.cursor.line();
+        let scroll_y = this.inner.scroll_y.get();
         let mode = this.inner.get_mode();
         let theme = &this.inner.theme;
-        let cache = this.inner.cache.borrow().clone();
+        let cache = this.inner.cache.borrow();
         let mut shaped = this.inner.shaped_doc.borrow_mut();
+
         editor::render::build(
             &mut *shaped,
-            &content,
+            content,
             &cache,
             mode,
             cursor_line,
@@ -61,7 +63,10 @@ fn draw_reshape(this: &IcedEditor<'_>, bounds: Rectangle) {
             scroll_y,
             Some(bounds.height),
         );
+        // Все заимствования (doc, cache, shaped) завершаются здесь
         drop(shaped);
+        drop(cache);
+        drop(doc);
         this.inner.doc.borrow_mut().dirty = false;
     }
 }
