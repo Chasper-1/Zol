@@ -6,22 +6,40 @@
 
 use zoll::ast::LineAST;
 use zoll::incremental::IncrementalDoc;
+use zoll::viewport::Viewport;
 
 use crate::cache::DocumentCache;
 use crate::markup::segment::Segment;
 use crate::markup::segmenter::build::build_segments_from_nodes;
 use crate::markup::segmenter::helpers::to_style_flags;
 
-/// Преобразовать `IncrementalDoc` в `DocumentCache`.
-///
-/// Проходит по всем `line_asts` и генерирует сегменты для каждой строки.
+/// Преобразовать `IncrementalDoc` в `DocumentCache` (все строки).
 pub fn incremental_to_cache(inc: &IncrementalDoc) -> DocumentCache {
+    incremental_to_cache_visible(inc, None)
+}
+
+/// Преобразовать `IncrementalDoc` в `DocumentCache`, генерируя сегменты
+/// только для строк в `viewport`. Строки вне viewport получают пустой
+/// `MarkupCache` — при рендеринге они отобразятся как plain-текст.
+pub fn incremental_to_cache_visible(inc: &IncrementalDoc, viewport: Option<&Viewport>) -> DocumentCache {
     let num_lines = inc.line_starts.len();
     let mut cache = DocumentCache {
         lines: vec![Default::default(); num_lines],
     };
 
+    let vp = viewport.map(|v| {
+        let first = v.first_line.min(num_lines.saturating_sub(1));
+        let last = v.last_line.min(num_lines.saturating_sub(1));
+        (first, last)
+    });
+
     for i in 0..inc.line_asts.len() {
+        // Если есть viewport и строка вне его — пропускаем (оставляем пустой MarkupCache)
+        if let Some((first, last)) = vp {
+            if i < first || i > last {
+                continue;
+            }
+        }
         let line_text = get_line_text(inc, i);
         let line_start = inc.line_starts[i];
         cache.lines[i].segments = line_ast_to_segments(&inc.line_asts[i], line_text, line_start);

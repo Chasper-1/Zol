@@ -41,6 +41,10 @@ fn draw_reshape(this: &IcedEditor<'_>, bounds: Rectangle) {
     };
 
     if needs_reshape {
+        // Обновляем viewport из текущего scroll_y и высоты виджета
+        let vp = this.inner.compute_viewport(bounds.height);
+        this.inner.viewport.set(vp);
+
         // Заимствуем всё, что нужно для render::build, без клонирования
         let doc = this.inner.doc.borrow();
         let content: &str = doc.content();

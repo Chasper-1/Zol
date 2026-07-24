@@ -6,7 +6,6 @@ use iced::{Rectangle, Point};
 
 use api::cursor as api_cursor;
 use api::file as api_file;
-use api::text as api_text;
 
 use super::IcedEditor;
 use super::auto_scroll;
@@ -74,28 +73,54 @@ pub fn handle_keyboard<'a, Message>(
         }
 
         keyboard::Key::Named(Named::Backspace) => {
-            this.inner.edit_doc(|doc| {
-                api_text::delete_before(doc);
-            });
+            let (from, to) = {
+                let doc = this.inner.doc.borrow();
+                let raw = doc.cursor.raw();
+                if raw == 0 || doc.content().is_empty() {
+                    (0, 0)
+                } else {
+                    let prev = editor::cursor::prev_grapheme_boundary(doc.content(), raw).unwrap_or(0);
+                    (prev, raw)
+                }
+            };
+            if from < to {
+                this.inner.edit_doc_raw(from, to, "");
+                let mut doc = this.inner.doc.borrow_mut();
+                doc.set_cursor_raw(from);
+            }
         }
         keyboard::Key::Named(Named::Delete) => {
-            this.inner.edit_doc(|doc| {
-                api_text::delete_after(doc);
-            });
+            let (from, to) = {
+                let doc = this.inner.doc.borrow();
+                let raw = doc.cursor.raw();
+                if raw >= doc.content().len() || doc.content().is_empty() {
+                    (0, 0)
+                } else {
+                    let next = editor::cursor::next_grapheme_boundary(doc.content(), raw)
+                        .unwrap_or(doc.content().len());
+                    (raw, next)
+                }
+            };
+            if from < to {
+                this.inner.edit_doc_raw(from, to, "");
+            }
         }
         keyboard::Key::Named(Named::Enter) => {
-            this.inner.edit_doc(|doc| {
-                api_text::newline(doc);
-            });
+            let raw = this.inner.doc.borrow().cursor.raw();
+            this.inner.edit_doc_raw(raw, raw, "\n");
+            let mut doc = this.inner.doc.borrow_mut();
+            doc.set_cursor_raw(raw + 1);
+            doc.cursor.reset_col_visual();
         }
         _ => {
             if let Some(text) = text {
                 if !cmd && !modifiers.alt() {
                     let filtered: String = text.chars().filter(|c| !c.is_control()).collect();
                     if !filtered.is_empty() {
-                        this.inner.edit_doc(|doc| {
-                            api_text::insert_at_cursor(doc, &filtered);
-                        });
+                        let raw = this.inner.doc.borrow().cursor.raw();
+                        this.inner.edit_doc_raw(raw, raw, &filtered);
+                        let mut doc = this.inner.doc.borrow_mut();
+                        doc.set_cursor_raw(raw + filtered.len());
                     }
                 }
             }
