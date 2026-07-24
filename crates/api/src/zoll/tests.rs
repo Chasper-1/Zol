@@ -5,16 +5,16 @@ use ::zoll;
 fn zoll_tokenize_plain_text() {
     let tokens = zoll_tokenize("hello world");
     assert_eq!(tokens.len(), 1);
-    assert!(matches!(tokens[0], zoll::token::Token::Text(_)));
+    assert!(matches!(tokens[0].token, zoll::token::Token::Text(_)));
 }
 
 #[test]
 fn zoll_tokenize_bold() {
     let tokens = zoll_tokenize("**bold**");
     assert_eq!(tokens.len(), 3);
-    assert!(matches!(tokens[0], zoll::token::Token::Open(_)));
-    assert!(matches!(tokens[1], zoll::token::Token::Text(_)));
-    assert!(matches!(tokens[2], zoll::token::Token::Close(_)));
+    assert!(matches!(tokens[0].token, zoll::token::Token::Open(_)));
+    assert!(matches!(tokens[1].token, zoll::token::Token::Text(_)));
+    assert!(matches!(tokens[2].token, zoll::token::Token::Close(_)));
 }
 
 #[test]

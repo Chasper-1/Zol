@@ -1,7 +1,7 @@
 use ::zoll;
 
-/// Токенизирует текст zoll.
-pub fn zoll_tokenize(text: &str) -> Vec<zoll::token::Token> {
+/// Токенизирует текст zoll, возвращает токены с позициями.
+pub fn zoll_tokenize(text: &str) -> Vec<zoll::token::SpannedToken> {
     zoll::token::tokenize(text)
 }
 

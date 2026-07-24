@@ -1,9 +1,12 @@
 use crate::ast::{MarkupDoc, MarkupNode, MarkupStyle};
-use crate::token::Token;
+use crate::token::{SpannedToken, Token};
 use crate::parser::marker_text::marker_text_for_close;
 
 /// Парсит токены в AST-документ.
-pub fn parse(tokens: &[Token]) -> MarkupDoc {
+///
+/// Принимает `&[SpannedToken]` — позиции игнорируются, парсер работает
+/// только с логической структурой токенов.
+pub fn parse(tokens: &[SpannedToken]) -> MarkupDoc {
     let mut doc = MarkupDoc {
         children: Vec::new(),
     };
@@ -12,8 +15,8 @@ pub fn parse(tokens: &[Token]) -> MarkupDoc {
     // Текущий список children (пишем в doc.children, пока не войдём в formatted)
     let current_children = &mut doc.children;
 
-    for token in tokens {
-        match token {
+    for st in tokens {
+        match &st.token {
             Token::Text(t) => {
                 current_children.push(MarkupNode::Text(t.clone()));
             }

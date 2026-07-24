@@ -1,16 +1,25 @@
-use crate::token::types::Token;
+use crate::token::types::{SpannedToken, Token};
 
 /// Добавляет текст в конец списка токенов, склеивая с последним текстовым токеном.
-pub fn push_text_token(tokens: &mut Vec<Token>, text: &str) {
-    if !text.is_empty() {
-        if let Some(Token::Text(existing)) = tokens.last_mut() {
-            existing.push_str(text);
-        } else {
-            tokens.push(Token::Text(text.to_string()));
-        }
+/// Если `is_new` — начать новый текстовый токен (не склеивать с предыдущим).
+pub fn push_text_token(tokens: &mut Vec<SpannedToken>, text: &str, start: usize, end: usize) {
+    if text.is_empty() {
+        return;
+    }
+    if let Some(SpannedToken {
+        token: Token::Text(existing),
+        end: last_end,
+        ..
+    }) = tokens.last_mut()
+    {
+        existing.push_str(text);
+        *last_end = end;
+    } else {
+        tokens.push(SpannedToken::new(Token::Text(text.to_string()), start, end));
     }
 }
 
 /// Принудительно завершает текущий текстовый буфер.
-/// Сейчас — заглушка; текстовые токены сливаются автоматически.
-pub fn flush_text(_tokens: &mut Vec<Token>) {}
+/// Сейчас текстовые токены и так сливаются, но точка вызова обозначает
+/// границу: после неё следующий текст начнёт новый токен.
+pub fn flush_text(_tokens: &mut Vec<SpannedToken>) {}

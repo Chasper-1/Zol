@@ -10,4 +10,4 @@ mod tokenize;
 mod types;
 
 pub use tokenize::tokenize;
-pub use types::Token;
+pub use types::{SpannedToken, Token};
