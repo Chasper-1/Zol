@@ -41,9 +41,6 @@ impl EditorInner {
         };
         *self.cache.borrow_mut() = new_cache;
 
-        // Обновляем курсор
-        let cursor = &self.doc.borrow().cursor;
-        let _ = cursor; // замыкание ниже может мутировать doc
         self.doc.borrow_mut().dirty = true;
     }
 }
