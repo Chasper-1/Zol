@@ -1,10 +1,10 @@
-//! Стековый парсер zoll.
+//! Строчный парсер zoll.
 //!
-//! Преобразует поток токенов в AST (MarkupDoc).
-//! Использует стек вместо рекурсии — нет переполнения стека на глубокой вложенности.
+//! - `parse_line()` — парсит одну строку в `LineAST`
+//! - `merge()` — собирает `Vec<LineAST>` в `MarkupDoc`
 
-mod marker_text;
-mod parse;
-mod tests;
+mod line;
+mod merge;
 
-pub use parse::parse;
+pub use line::parse_line;
+pub use merge::{merge, parse_full};

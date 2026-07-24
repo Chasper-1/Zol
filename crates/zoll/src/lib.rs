@@ -2,12 +2,10 @@
 //!
 //! Зависимостей нет, только `std`.
 //!
-//! - [`ast`] — AST (MarkupDoc, MarkupNode, MarkupStyle, MarkerDef)
-//! - [`token`] — токенизатор (Token, tokenize, SpannedToken)
-//! - [`parser`] — стековый парсер (Token → MarkupDoc)
+//! - [`ast`] — AST (MarkupDoc, MarkupNode, MarkupStyle, LineAST)
+//! - [`parser`] — строчный парсер (parse_line, merge)
 //! - [`incremental`] — инкрементальный парсер (IncrementalDoc)
 
 pub mod ast;
 pub mod incremental;
 pub mod parser;
-pub mod token;

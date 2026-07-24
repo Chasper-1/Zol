@@ -12,7 +12,7 @@ pub fn build_segments(
 ) -> usize {
     for node in nodes {
         match node {
-            MarkupNode::Text(text, _) => {
+            MarkupNode::Text(text) => {
                 let combined = combine_style(inherited_style, MarkupStyle::PLAIN);
                 segments.push(Segment {
                     text: text.clone(),
@@ -24,7 +24,7 @@ pub fn build_segments(
                 });
                 raw_offset += text.len();
             }
-            MarkupNode::Formatted { style, children, .. } => {
+            MarkupNode::Formatted { style, children } => {
                 let combined = combine_style(inherited_style, *style);
                 let marker_len = marker_open_len(*style);
 
@@ -39,7 +39,7 @@ pub fn build_segments(
                 let child_end = raw_offset;
                 raw_offset += marker_len;
 
-                // Помечаем первый и последний сегмент маркерами
+                // Помечаем первый сегмент маркером
                 if let Some(first) = segments
                     .iter_mut()
                     .rev()
@@ -47,6 +47,46 @@ pub fn build_segments(
                 {
                     first.left_marker_len += marker_len;
                 }
+            }
+
+            // Блок-левел ноды: рекурсивно обходим их детей
+            MarkupNode::Header { children, .. }
+            | MarkupNode::ListItem { children, .. }
+            | MarkupNode::Quote(children)
+            | MarkupNode::Spoiler { children, .. }
+            | MarkupNode::Comment(children)
+            | MarkupNode::Formula(children) => {
+                raw_offset = build_segments(children, inherited_style, segments, raw_offset);
+            }
+
+            MarkupNode::TableRow(cells) => {
+                for cell in cells {
+                    raw_offset = build_segments(cell, inherited_style, segments, raw_offset);
+                }
+            }
+
+            MarkupNode::CodeBlock { content, .. } => {
+                segments.push(Segment {
+                    text: content.clone(),
+                    style: to_style_flags(inherited_style),
+                    left_marker_len: 0,
+                    right_marker_len: 0,
+                    raw_start: raw_offset,
+                    raw_end: raw_offset + content.len(),
+                });
+                raw_offset += content.len();
+            }
+
+            MarkupNode::ThematicBreak => {
+                // Разделитель — пустой сегмент
+                segments.push(Segment {
+                    text: String::new(),
+                    style: to_style_flags(inherited_style),
+                    left_marker_len: 0,
+                    right_marker_len: 0,
+                    raw_start: raw_offset,
+                    raw_end: raw_offset,
+                });
             }
         }
     }
