@@ -9,5 +9,5 @@ mod tests;
 mod tokenize;
 mod types;
 
-pub use tokenize::tokenize;
+pub use tokenize::{tokenize, tokenize_range};
 pub use types::{SpannedToken, Token};
