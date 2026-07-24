@@ -16,7 +16,7 @@ fn init_and_list_families() {
 #[test]
 fn with_font_system_works() {
     init();
-    let metrics = with_font_system(|fs| {
+    let metrics = with_font_system(|_fs| {
         let buf = cosmic_text::Buffer::new_empty(cosmic_text::Metrics::new(14.0, 19.6));
         buf.metrics()
     });

@@ -1,5 +1,4 @@
 use super::*;
-use editor::document::Document;
 
 #[test]
 fn doc_create_with_text() {

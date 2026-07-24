@@ -1,4 +1,3 @@
-use std::io::Read;
 use editor::document::Document;
 use super::*;
 

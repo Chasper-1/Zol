@@ -1,5 +1,4 @@
 use super::*;
-use editor::theme::color::Rgba;
 
 #[test]
 fn theme_default_has_name() {
