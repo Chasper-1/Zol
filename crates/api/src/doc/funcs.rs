@@ -1,5 +1,4 @@
 use editor::document::Document;
-use editor::utils;
 
 pub fn doc_create(text: &str) -> Document {
     Document::new(text)
@@ -10,11 +9,11 @@ pub fn doc_text(doc: &Document) -> &str {
 }
 
 pub fn doc_line(doc: &Document, idx: usize) -> Option<&str> {
-    utils::line_text(&doc.incremental.source, idx)
+    doc.line_text(idx)
 }
 
 pub fn doc_line_count(doc: &Document) -> usize {
-    utils::count_lines(&doc.incremental.source)
+    doc.incremental.num_lines()
 }
 
 pub fn doc_len(doc: &Document) -> usize {

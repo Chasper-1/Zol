@@ -277,23 +277,34 @@
         assert_eq!(runs[0].text, "short");
     }
 
+    fn ls(text: &str) -> Vec<usize> {
+        let mut v = vec![0usize];
+        for (i, c) in text.char_indices() {
+            if c == '\n' { v.push(i + 1); }
+        }
+        v
+    }
+
     #[test]
     fn cursor_line_bounds_works() {
-        let (start, end) = cursor_line_bounds("abc\ndef\nghi", 1);
+        let text = "abc\ndef\nghi";
+        let (start, end) = cursor_line_bounds(text, &ls(text), 1);
         assert_eq!(start, 4);
         assert_eq!(end, 7);
     }
 
     #[test]
     fn cursor_line_bounds_out_of_range() {
-        let (start, end) = cursor_line_bounds("abc", 99);
+        let text = "abc";
+        let (start, end) = cursor_line_bounds(text, &ls(text), 99);
         assert_eq!(start, 0);
         assert_eq!(end, 0);
     }
 
     #[test]
     fn cursor_line_bounds_single_line() {
-        let (start, end) = cursor_line_bounds("abc", 0);
+        let text = "abc";
+        let (start, end) = cursor_line_bounds(text, &ls(text), 0);
         assert_eq!(start, 0);
         assert_eq!(end, 3);
     }

@@ -55,6 +55,7 @@ fn draw_reshape(this: &IcedEditor<'_>, bounds: Rectangle) {
         let cache = this.inner.cache.borrow();
         let mut shaped = this.inner.shaped_doc.borrow_mut();
 
+        let vp = this.inner.viewport.get();
         editor::render::build(
             &mut *shaped,
             content,
@@ -66,6 +67,7 @@ fn draw_reshape(this: &IcedEditor<'_>, bounds: Rectangle) {
             this.inner.heading_size,
             scroll_y,
             Some(bounds.height),
+            Some(&vp),
         );
         // Все заимствования (doc, cache, shaped) завершаются здесь
         drop(shaped);

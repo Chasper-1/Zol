@@ -27,6 +27,7 @@ fn shaped_doc(text: &str, vp_height: f32) -> ShapedDocument {
         24.0,
         0.0,
         Some(vp_height),
+        None,
     );
     doc
 }

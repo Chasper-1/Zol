@@ -5,7 +5,6 @@ use iced::{Rectangle, Point};
 use iced::mouse::ScrollDelta;
 
 use api::cursor as api_cursor;
-use editor::layout::cursor_line_bounds;
 
 use super::IcedEditor;
 use super::auto_scroll;
@@ -30,9 +29,9 @@ pub fn handle_mouse<'a, Message>(
 
                 if let Some(cosmic) = cosmic_cursor {
                     let doc = this.inner.doc.borrow();
-                    let content: &str = &doc.incremental.source;
-                    let (line_start, _) = cursor_line_bounds(content, cosmic.line);
-                    let new_raw = (line_start + cosmic.index).min(content.len());
+                    let (line_start, line_end) = doc.line_bounds(cosmic.line).map(|b| (b.start, b.end)).unwrap_or((0, 0));
+                    let line_len = line_end.saturating_sub(line_start);
+                    let new_raw = (line_start + cosmic.index).min(line_start + line_len);
                     // doc borrow ends here (NLL)
 
                     let mut doc = this.inner.doc.borrow_mut();

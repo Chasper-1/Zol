@@ -17,7 +17,7 @@ fn shaped_line(text: &str, size: f32) -> ShapedDocument {
     let cache = DocumentCache::default();
     let theme = EditorTheme::default();
     render::build(
-        &mut doc, text, &cache, EditMode::Source, 0, &theme, size, 24.0, 0.0, None,
+        &mut doc, text, &cache, EditMode::Source, 0, &theme, size, 24.0, 0.0, None, None,
     );
     doc
 }

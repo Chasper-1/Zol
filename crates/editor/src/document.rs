@@ -39,54 +39,55 @@ impl Document {
 
     /// Установить курсор на байт (с проверкой границ).
     pub fn set_cursor_raw(&mut self, raw: usize) {
-        self.cursor.set_raw(&self.incremental.source, raw);
+        self.cursor.set_raw(&self.incremental.source, &self.incremental.line_starts, raw);
     }
 
     /// Двигать курсор влево.
     pub fn cursor_move_left(&mut self) {
-        self.cursor.move_left(&self.incremental.source);
+        self.cursor.move_left(&self.incremental.source, &self.incremental.line_starts);
     }
 
     /// Двигать курсор вправо.
     pub fn cursor_move_right(&mut self) {
-        self.cursor.move_right(&self.incremental.source);
+        self.cursor.move_right(&self.incremental.source, &self.incremental.line_starts);
     }
 
     /// В начало строки.
     pub fn cursor_move_home(&mut self) {
-        self.cursor.move_home(&self.incremental.source);
+        self.cursor.move_home(&self.incremental.source, &self.incremental.line_starts);
     }
 
     /// В конец строки.
     pub fn cursor_move_end(&mut self) {
-        self.cursor.move_end(&self.incremental.source);
+        self.cursor.move_end(&self.incremental.source, &self.incremental.line_starts);
     }
 
     /// Вверх (с сохранением колонки).
     pub fn cursor_move_up(&mut self) {
-        self.cursor.move_up(&self.incremental.source);
+        self.cursor.move_up(&self.incremental.source, &self.incremental.line_starts);
     }
 
     /// Вниз (с сохранением колонки).
     pub fn cursor_move_down(&mut self) {
-        self.cursor.move_down(&self.incremental.source);
+        self.cursor.move_down(&self.incremental.source, &self.incremental.line_starts);
     }
 
     /// Влево на слово.
     pub fn cursor_move_word_left(&mut self) {
-        self.cursor.move_word_left(&self.incremental.source);
+        self.cursor.move_word_left(&self.incremental.source, &self.incremental.line_starts);
     }
 
     /// Вправо на слово.
     pub fn cursor_move_word_right(&mut self) {
-        self.cursor.move_word_right(&self.incremental.source);
+        self.cursor.move_word_right(&self.incremental.source, &self.incremental.line_starts);
     }
 
     /// Вставить текст в позицию курсора.
     pub fn insert_at_cursor(&mut self, text: &str) {
         let raw = self.cursor.raw();
         self.incremental.edit(raw, raw, text);
-        self.cursor.set_raw(&self.incremental.source, raw + text.len());
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, raw + text.len());
         self.dirty = true;
     }
 
@@ -98,7 +99,8 @@ impl Document {
         }
         let prev = crate::cursor::prev_grapheme_boundary(&self.incremental.source, raw).unwrap_or(0);
         self.incremental.edit(prev, raw, "");
-        self.cursor.set_raw(&self.incremental.source, prev);
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, prev);
         self.dirty = true;
     }
 
@@ -111,7 +113,8 @@ impl Document {
         let next = crate::cursor::next_grapheme_boundary(&self.incremental.source, raw)
             .unwrap_or(self.incremental.source.len());
         self.incremental.edit(raw, next, "");
-        self.cursor.set_raw(&self.incremental.source, raw);
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, raw);
         self.dirty = true;
     }
 
@@ -119,9 +122,44 @@ impl Document {
     pub fn newline_at_cursor(&mut self) {
         let raw = self.cursor.raw();
         self.incremental.edit(raw, raw, "\n");
-        self.cursor.set_raw(&self.incremental.source, raw + 1);
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, raw + 1);
         self.cursor.reset_col_visual();
         self.dirty = true;
+    }
+
+    // ─── O(1) line helpers via IncrementalDoc.line_starts ────────
+
+    /// Границы строки (start..end) по индексу.
+    pub fn line_bounds(&self, line: usize) -> Option<crate::utils::LineBounds> {
+        let starts = &self.incremental.line_starts;
+        let start = *starts.get(line)?;
+        let end = starts
+            .get(line + 1)
+            .map(|&next| next.saturating_sub(1))
+            .unwrap_or(self.incremental.source.len());
+        Some(crate::utils::LineBounds { start, end })
+    }
+
+    /// Текст строки по индексу.
+    pub fn line_text(&self, line: usize) -> Option<&str> {
+        self.line_bounds(line).map(|b| {
+            unsafe { self.incremental.source.get_unchecked(b.start..b.end) }
+        })
+    }
+
+    /// Номер строки, содержащей байтовую позицию (O(log n) бинарный поиск).
+    pub fn line_of_byte(&self, byte: usize) -> usize {
+        let starts = &self.incremental.line_starts;
+        if self.incremental.source.is_empty() || starts.is_empty() || byte == 0 {
+            return 0;
+        }
+        let byte_pos = byte.min(self.incremental.source.len());
+        match starts.binary_search(&byte_pos) {
+            Ok(i) => i,
+            Err(0) => 0,
+            Err(i) => i - 1,
+        }
     }
 }
 

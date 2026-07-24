@@ -13,7 +13,7 @@ fn build_does_not_deadlock() {
     let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
     let cache = DocumentCache::default();
     let theme = EditorTheme::default();
-    build(&mut doc, "hello", &cache, EditMode::LivePreview, 0, &theme, 14.0, 24.0, 0.0, None);
+    build(&mut doc, "hello", &cache, EditMode::LivePreview, 0, &theme, 14.0, 24.0, 0.0, None, None);
     assert!(doc.line_count() > 0, "doc should be shaped after build");
 }
 
@@ -24,7 +24,7 @@ fn build_multiline() {
     let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
     let cache = DocumentCache::default();
     let theme = EditorTheme::default();
-    build(&mut doc, "line 1\nline 2\nline 3", &cache, EditMode::Source, 0, &theme, 14.0, 24.0, 0.0, None);
+    build(&mut doc, "line 1\nline 2\nline 3", &cache, EditMode::Source, 0, &theme, 14.0, 24.0, 0.0, None, None);
     assert_eq!(doc.line_count(), 3);
 }
 
@@ -35,7 +35,7 @@ fn build_empty_content() {
     let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
     let cache = DocumentCache::default();
     let theme = EditorTheme::default();
-    build(&mut doc, "", &cache, EditMode::LivePreview, 0, &theme, 14.0, 24.0, 0.0, None);
+    build(&mut doc, "", &cache, EditMode::LivePreview, 0, &theme, 14.0, 24.0, 0.0, None, None);
     assert_eq!(doc.line_count(), 1);
 }
 
@@ -46,7 +46,7 @@ fn build_with_scroll() {
     let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
     let cache = DocumentCache::default();
     let theme = EditorTheme::default();
-    build(&mut doc, "hello\nworld", &cache, EditMode::Source, 0, &theme, 14.0, 24.0, 100.0, Some(200.0));
+    build(&mut doc, "hello\nworld", &cache, EditMode::Source, 0, &theme, 14.0, 24.0, 100.0, Some(200.0), None);
     assert!(doc.total_height() >= 0.0);
 }
 

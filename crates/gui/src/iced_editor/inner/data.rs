@@ -53,6 +53,7 @@ impl EditorInner {
             heading_size,
             0.0,
             None,
+            None,
         );
 
         let total_lines = doc.incremental.num_lines();

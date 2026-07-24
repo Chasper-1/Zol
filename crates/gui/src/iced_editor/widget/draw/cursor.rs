@@ -3,7 +3,6 @@
 use iced::advanced::renderer;
 use iced::{Color, Point, Rectangle, Size};
 
-use editor::layout::cursor_line_bounds;
 use editor::state::EditMode;
 
 use super::IcedEditor;
@@ -30,8 +29,7 @@ pub fn draw_cursor<'a, Renderer>(
 
     let shaped = this.inner.shaped_doc.borrow();
     let doc = this.inner.doc.borrow();
-    let content: &str = &doc.incremental.source;
-    let (line_start, _) = cursor_line_bounds(content, cursor_line);
+    let (line_start, _) = doc.line_bounds(cursor_line).map(|b| (b.start, b.end)).unwrap_or((0, 0));
     let byte_in_line = cursor_raw.saturating_sub(line_start);
     let scroll_y = this.inner.scroll_y.get();
 
