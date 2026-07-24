@@ -5,3 +5,18 @@ edition = "2024"
 description = "Zoll markup language — lazy, line-level parser"
 
 [dependencies]
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "parse"
+harness = false
+
+[[bench]]
+name = "edit"
+harness = false
+
+[[bench]]
+name = "line_lookup"
+harness = false
