@@ -34,56 +34,91 @@ impl IncrementalDoc {
     ///
     /// ## Алгоритм
     ///
-    /// 1. Применить правку к `source`
-    /// 2. Найти `dirty_start` — байт, с которого нужно перетокенизировать:
-    ///    - начало строки, содержащей `from`
-    ///    - или раньше, если строка внутри multiline-маркера (`%%`, `$$`, `!!!`)
-    /// 3. Удалить все старые токены с позицией ≥ `dirty_start`
-    /// 4. Перетокенизировать `source[dirty_start..]`
-    /// 5. Перепарсить только dirty-диапазон токенов инкрементально
+    /// 1. Найти dirty-диапазон (байты) ДО изменения source — для поиска старых токенов.
+    /// 2. Применить правку к `source`.
+    /// 3. Найти dirty_end в НОВОМ source — для токенизации.
+    /// 4. Токенизировать ТОЛЬКО `source[dirty_start..dirty_end_new]`.
+    /// 5. Если есть незакрытый multiline — расширить до конца файла.
+    /// 6. Сдвинуть байтовые span'ы старых токенов после dirty_end_old на byte_shift.
+    /// 7. Заменить старые dirty-токены на новые.
+    /// 8. Перепарсить инкрементально.
     pub fn edit(&mut self, from: usize, to: usize, text: &str) -> &MarkupDoc {
-        // 1. Применить правку к source
-        self.source.replace_range(from..to, text);
+        // 1. Найти dirty_start и dirty_end в СТАРОМ source (для поиска старых токенов)
+        let dirty_info = self.find_dirty_info(from);
+        let dirty_start = dirty_info.start;
+        let old_dirty_end = dirty_info.end; // в старом source
+        let is_multiline_mode = dirty_info.is_multiline;
 
-        // 2. Найти dirty_start
-        let dirty_start = self.find_dirty_start(from);
-
-        // 3. Найти индекс первого грязного токена
-        let dirty_token_idx = self
+        // 2. Найти старые dirty-токены (используя старые source и позиции)
+        let old_dirty_token_start = self
             .tokens
             .iter()
             .position(|t| t.start >= dirty_start)
             .unwrap_or(self.tokens.len());
+        let old_dirty_token_end = self
+            .tokens
+            .iter()
+            .position(|t| t.start >= old_dirty_end)
+            .unwrap_or(self.tokens.len());
 
-        // 4. Удалить старые токены от dirty_token_idx
-        self.tokens.truncate(dirty_token_idx);
+        // 3. Применить правку к source
+        let byte_shift = text.len() as isize - (to - from) as isize;
+        self.source.replace_range(from..to, text);
 
-        // 5. Перетокенизировать от dirty_start до конца
-        let new_tokens = token::tokenize_range(&self.source, dirty_start..self.source.len());
-        self.tokens.extend(new_tokens);
+        // 4. Найти dirty_end в НОВОМ source (для токенизации)
+        let new_dirty_end = if is_multiline_mode {
+            // multiline — до конца файла
+            self.source.len()
+        } else {
+            self.source[dirty_start..]
+                .find('\n')
+                .map(|p| dirty_start + p + 1) // включая \n
+                .unwrap_or(self.source.len())
+        };
 
-        // 6. Перепарсить инкрементально: только dirty-хвост токенов
-        self.ast = incremental_parse(&self.tokens, &self.ast, dirty_token_idx);
+        // 5. Токенизировать dirty-диапазон из нового source
+        let mut new_tokens = token::tokenize_range(&self.source, dirty_start..new_dirty_end);
+
+        // 6. Проверить незакрытые multiline-маркеры в новых токенах.
+        //    Если есть — расширяем до конца файла и перетокенизируем.
+        if has_open_multiline(&new_tokens) {
+            self.tokens.truncate(old_dirty_token_start);
+            let extended_tokens =
+                token::tokenize_range(&self.source, dirty_start..self.source.len());
+            self.tokens.extend(extended_tokens);
+            self.ast = incremental_parse(&self.tokens, &self.ast, old_dirty_token_start);
+            return &self.ast;
+        }
+
+        // 7. Сдвинуть span'ы старых токенов ПОСЛЕ dirty_end на byte_shift.
+        //    Используем old_dirty_token_end (по старому source),
+        //    сдвигаем на byte_shift — все токены после edit сместились.
+        for st in &mut self.tokens[old_dirty_token_end..] {
+            st.start = (st.start as isize + byte_shift) as usize;
+            st.end = (st.end as isize + byte_shift) as usize;
+        }
+
+        // 8. Заменить старые dirty-токены на новые
+        self.tokens.splice(
+            old_dirty_token_start..old_dirty_token_end,
+            new_tokens,
+        );
+
+        // 9. Инкрементальный парсинг
+        self.ast = incremental_parse(&self.tokens, &self.ast, old_dirty_token_start);
 
         &self.ast
     }
 
-    /// Определяет байт, с которого нужно начинать перетокенизацию.
-    ///
-    /// В простом случае — начало строки, содержащей `from`.
-    /// Если строка находится внутри multiline-маркера (`%%`, `$$`, `!!!`),
-    /// откатывается до открытия этого маркера.
-    fn find_dirty_start(&self, from: usize) -> usize {
-        // Начало строки, содержащей `from` (в новом source)
+        /// Определяет dirty-диапазон ДО изменения source.
+    fn find_dirty_info(&self, from: usize) -> DirtyInfo {
         let line_start = self.source[..from]
             .rfind('\n')
             .map(|p| p + 1)
             .unwrap_or(0);
 
-        // Сканируем токены от начала до line_start,
-        // отслеживая открытые multiline-маркеры
         let mut open_multiline: Vec<MarkupStyle> = Vec::new();
-        let mut earliest_open = line_start;
+        let mut dirty_start = line_start;
 
         for st in &self.tokens {
             if st.start >= line_start {
@@ -92,7 +127,7 @@ impl IncrementalDoc {
             match &st.token {
                 Token::Open(style) if is_multiline(*style) => {
                     if open_multiline.is_empty() {
-                        earliest_open = st.start;
+                        dirty_start = st.start;
                     }
                     open_multiline.push(*style);
                 }
@@ -100,7 +135,7 @@ impl IncrementalDoc {
                     if let Some(idx) = open_multiline.iter().rposition(|s| s == style) {
                         open_multiline.remove(idx);
                         if open_multiline.is_empty() {
-                            earliest_open = line_start;
+                            dirty_start = line_start;
                         }
                     }
                 }
@@ -108,17 +143,48 @@ impl IncrementalDoc {
             }
         }
 
-        if open_multiline.is_empty() {
-            line_start
+        let is_multiline = !open_multiline.is_empty();
+        let dirty_end = if is_multiline {
+            self.source.len()
         } else {
-            earliest_open
+            // Конец строки в старом source
+            self.source[dirty_start..]
+                .find('\n')
+                .map(|p| dirty_start + p + 1)
+                .unwrap_or(self.source.len())
+        };
+
+        DirtyInfo {
+            start: dirty_start,
+            end: dirty_end,
+            is_multiline,
         }
     }
+}
+
+/// Информация о dirty-диапазоне: старт, конец (в старом source), multiline-флаг.
+struct DirtyInfo {
+    start: usize,
+    end: usize,
+    is_multiline: bool,
 }
 
 /// Проверяет, является ли стиль multiline-маркером.
 fn is_multiline(style: MarkupStyle) -> bool {
     MARKERS.iter().any(|m| m.style == style && m.multiline)
+}
+
+/// Есть ли в списке токенов незакрытый multiline-маркер?
+fn has_open_multiline(tokens: &[SpannedToken]) -> bool {
+    let mut depth: isize = 0;
+    for st in tokens {
+        match &st.token {
+            Token::Open(s) if is_multiline(*s) => depth += 1,
+            Token::Close(s) if is_multiline(*s) => depth -= 1,
+            _ => {}
+        }
+    }
+    depth > 0
 }
 
 // ---------------------------------------------------------------------------
