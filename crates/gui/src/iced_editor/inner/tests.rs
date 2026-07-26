@@ -771,6 +771,106 @@ fn auto_scroll_marks_dirty_when_scroll_changes() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// compute_viewport — все краевые случаи
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn compute_viewport_empty_doc() {
+    let inner = EditorInner::new(String::new());
+    let vp = inner.compute_viewport(600.0);
+    assert_eq!(vp.first_line, 0);
+    assert_eq!(vp.last_line, 0);
+}
+
+#[test]
+fn compute_viewport_single_line() {
+    let inner = EditorInner::new("hello".to_string());
+    let vp = inner.compute_viewport(600.0);
+    assert_eq!(vp.first_line, 0);
+    assert_eq!(vp.last_line, 0); // total_lines=1, saturating_sub(1)=0
+}
+
+#[test]
+fn compute_viewport_start_of_doc() {
+    let inner = EditorInner::new((0..50).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    let vp = inner.compute_viewport(600.0);
+    assert_eq!(vp.first_line, 0, "at scroll=0, start should be 0");
+    assert!(vp.last_line > 0, "end_line should cover some lines");
+}
+
+#[test]
+fn compute_viewport_scrolled_mid() {
+    let inner = EditorInner::new((0..100).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    inner.scroll_y.set(500.0);
+    let vp = inner.compute_viewport(200.0);
+    assert!(vp.first_line > 0, "scrolled down, first_line should advance, got {}", vp.first_line);
+    assert!(vp.last_line > vp.first_line, "end should be after start");
+}
+
+#[test]
+fn compute_viewport_scrolled_near_end() {
+    let inner = EditorInner::new((0..100).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    // scroll_y=1500 → first≈66, last≈97 (все в пределах документа)
+    inner.scroll_y.set(1500.0);
+    let vp = inner.compute_viewport(200.0);
+    assert_eq!(vp.last_line, 97, "last_line should be clamped but near end");
+    assert!(vp.first_line > 60, "first_line should be scrolled down");
+}
+
+#[test]
+fn compute_viewport_negative_scroll_clamps() {
+    let inner = EditorInner::new((0..50).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    inner.scroll_y.set(-100.0);
+    let vp = inner.compute_viewport(600.0);
+    assert_eq!(vp.first_line, 0, "negative scroll treated as 0");
+}
+
+#[test]
+fn compute_viewport_zero_viewport() {
+    let inner = EditorInner::new((0..50).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    let vp = inner.compute_viewport(0.0);
+    // При нулевой высоте видно только строку со скроллом (с padding)
+    assert!(vp.first_line <= 10); // padding влево
+    assert!(vp.last_line >= 10);   // padding вправо
+}
+
+#[test]
+fn compute_viewport_very_large_viewport() {
+    let inner = EditorInner::new((0..100).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    let total = inner.doc.borrow().incremental.num_lines();
+    let vp = inner.compute_viewport(999999.0);
+    assert_eq!(vp.last_line, total.saturating_sub(1), "large viewport should show all lines");
+}
+
+#[test]
+fn compute_viewport_padding_applied() {
+    let inner = EditorInner::new((0..100).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    let vp = inner.compute_viewport(50.0);
+    // Минимальный viewport: 50/19.6 ≈ 3 строки + padding 10 снизу
+    assert!(vp.last_line >= 13, "padding should extend beyond logical viewport, got last_line={}", vp.last_line);
+    assert_eq!(vp.first_line, 0, "at scroll=0, first_line stays 0");
+}
+
+#[test]
+fn compute_viewport_monotonic() {
+    let inner = EditorInner::new((0..100).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    let vp1 = inner.compute_viewport(100.0);
+    inner.scroll_y.set(50.0);
+    let vp2 = inner.compute_viewport(100.0);
+    assert!(vp2.first_line >= vp1.first_line || vp2.first_line == 0,
+        "scrolling down should not decrease first_line (vp1={:?}, vp2={:?})", vp1, vp2);
+}
+
+#[test]
+fn compute_viewport_few_lines_no_negative_clamp() {
+    // Если total_lines < VIEWPORT_PADDING, start_line не уходит в минус
+    let inner = EditorInner::new("a\nb\nc".to_string());
+    let vp = inner.compute_viewport(200.0);
+    assert_eq!(vp.first_line, 0);
+    assert_eq!(vp.last_line, 2); // total=3, saturating_sub(1)=2
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Комплексная симуляция — полный цикл ввода-навигации
 // ═══════════════════════════════════════════════════════════════════
 

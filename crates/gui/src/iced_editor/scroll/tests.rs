@@ -121,7 +121,6 @@ fn cursor_visible_stays() {
 #[test]
 fn cursor_on_mid_line_visible_stays() {
     let doc = shaped_multi("a\nb\nc\nd\ne\nf\nghijklmn");
-    let _line_y = layout_line_y(&doc, 3);
     // scroll_y=0, line 3 visible in viewport
     let result = ensure_cursor_visible(0.0, 200.0, &doc, 3);
     assert_eq!(result, 0.0);

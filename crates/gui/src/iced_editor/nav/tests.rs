@@ -357,9 +357,10 @@ fn move_vertical_on_empty_doc() {
 fn move_vertical_shorter_target_line() {
     let inner = make_inner("hello world\nshort");
     set_cursor_raw(&inner, 6); // после пробела, col_visual ~ x at 'w'
-    let _x_before = inner.doc.borrow().cursor.raw();
+    let x_before = inner.doc.borrow().cursor.raw();
     move_vertical(&inner, 1); // "short" (5 chars)
     let new_raw = inner.doc.borrow().cursor.raw();
+    assert_ne!(x_before, new_raw, "cursor should move to a different position");
     // raw должен быть ≤ длины второй строки
     let bounds = inner.doc.borrow().line_bounds(1).unwrap();
     assert!(new_raw <= bounds.end, "cursor raw {new_raw} should not exceed line end {}", bounds.end);
