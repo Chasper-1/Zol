@@ -45,13 +45,15 @@ pub fn draw_cursor<'a, Renderer>(
             cy = run.line_top - scroll_y;
             lh = run.line_height;
 
+            let mut found_glyph = false;
             for glyph in run.glyphs.iter() {
                 if glyph.start >= byte_in_line {
                     cx = glyph.x;
+                    found_glyph = true;
                     break;
                 }
             }
-            if cx == 0.0 {
+            if !found_glyph {
                 cx = run
                     .glyphs
                     .last()
