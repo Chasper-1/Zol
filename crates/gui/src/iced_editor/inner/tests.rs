@@ -1,4 +1,5 @@
 use super::*;
+use api::cursor as api_cursor;
 use editor::state::EditMode;
 
 #[test]
@@ -369,4 +370,155 @@ fn edit_doc_raw_at_line_boundaries() {
     // Вставляем много текста
     inner.edit_doc_raw(0, 0, "START\n");
     assert_eq!(inner.doc.borrow().content(), "START\nabc123def\nghi");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Хоткеи: режимы, word movement, scroll
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn esc_switches_to_preview() {
+    let inner = EditorInner::new("test".to_string());
+    assert_eq!(inner.get_mode(), EditMode::LivePreview);
+
+    inner.set_mode(EditMode::Source);
+    assert_eq!(inner.get_mode(), EditMode::Source);
+
+    // Esc → Preview
+    inner.set_mode(EditMode::Preview);
+    assert_eq!(inner.get_mode(), EditMode::Preview);
+}
+
+#[test]
+fn cycle_mode_loops() {
+    let inner = EditorInner::new("test".to_string());
+    assert_eq!(inner.get_mode(), EditMode::LivePreview);
+
+    inner.cycle_mode(); // LivePreview → Source
+    assert_eq!(inner.get_mode(), EditMode::Source);
+
+    inner.cycle_mode(); // Source → Preview
+    assert_eq!(inner.get_mode(), EditMode::Preview);
+
+    inner.cycle_mode(); // Preview → LivePreview
+    assert_eq!(inner.get_mode(), EditMode::LivePreview);
+}
+
+#[test]
+fn word_movement_left() {
+    let inner = EditorInner::new("hello world foo".to_string());
+    // cursor starts at 0
+    inner.doc.borrow_mut().set_cursor_raw(15); // end of "foo"
+
+    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 12); // start of "foo"
+
+    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 6); // start of "world"
+
+    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0); // start of "hello"
+}
+
+#[test]
+fn word_movement_right() {
+    let inner = EditorInner::new("hello world foo".to_string());
+
+    api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 6); // start of "world"
+
+    api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 12); // start of "foo"
+
+    // последнее слово — не двигается (нет следующего слова)
+    api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 12);
+}
+
+#[test]
+fn word_movement_does_not_panic_on_single_word() {
+    let inner = EditorInner::new("hello".to_string());
+    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+
+    // одно слово — move_word_right не двигает
+    api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+}
+
+#[test]
+fn goto_document_start() {
+    let inner = EditorInner::new("hello world".to_string());
+    inner.doc.borrow_mut().set_cursor_raw(8);
+
+    // Ctrl+Home
+    inner.doc.borrow_mut().set_cursor_raw(0);
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+}
+
+#[test]
+fn goto_document_end() {
+    let inner = EditorInner::new("hello world".to_string());
+    inner.doc.borrow_mut().set_cursor_raw(0);
+
+    // Ctrl+End
+    let len = inner.doc.borrow().content().len();
+    inner.doc.borrow_mut().set_cursor_raw(len);
+    assert_eq!(inner.doc.borrow().cursor.raw(), 11);
+}
+
+#[test]
+fn scroll_page_down_does_not_panic() {
+    let inner = EditorInner::new("a\nb\nc\nd\ne".to_string());
+    // scroll_y is f32, just change it
+    inner.scroll_y.set(100.0);
+    assert_eq!(inner.scroll_y.get(), 100.0);
+    inner.mark_dirty();
+}
+
+#[test]
+fn scroll_page_up_does_not_panic() {
+    let inner = EditorInner::new("a\nb\nc\nd\ne".to_string());
+    inner.scroll_y.set(50.0);
+    assert_eq!(inner.scroll_y.get(), 50.0);
+    // scroll up — decrease
+    let new = (inner.scroll_y.get() - 30.0).max(0.0);
+    inner.scroll_y.set(new);
+    assert_eq!(inner.scroll_y.get(), 20.0);
+    inner.mark_dirty();
+}
+
+#[test]
+fn scroll_page_up_clamps_at_zero() {
+    let inner = EditorInner::new("a\nb\nc\nd\ne".to_string());
+    inner.scroll_y.set(10.0);
+    let new = (inner.scroll_y.get() - 100.0).max(0.0);
+    inner.scroll_y.set(new);
+    assert_eq!(inner.scroll_y.get(), 0.0);
+}
+
+#[test]
+fn all_keyboard_actions_refcell_safe() {
+    // Симулирует последовательность: movement → edit → mode switch → scroll
+    // Проверяет что нет RefCell конфликтов
+    let inner = EditorInner::new("hello world\nsecond line".to_string());
+
+    // word movement: от 0 → start of "world" (pos 6)
+    api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
+    let pos = inner.doc.borrow().cursor.raw();
+    assert_eq!(pos, 6);
+
+    // mode switch
+    inner.cycle_mode();
+    assert_eq!(inner.get_mode(), EditMode::Source);
+
+    // scroll
+    inner.scroll_y.set(50.0);
+    assert_eq!(inner.scroll_y.get(), 50.0);
+
+    // edit: вставляем перед "world" → "hello !!!world"
+    inner.edit_doc_raw(pos, pos, "!!!");
+    assert_eq!(inner.doc.borrow().content(), "hello !!!world\nsecond line");
+    inner.mark_dirty();
+    assert!(inner.doc.borrow().dirty);
 }
