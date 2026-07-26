@@ -72,7 +72,7 @@ fn get_line_text(inc: &IncrementalDoc, idx: usize) -> &str {
 ///
 /// Каждый вариант `LineAST` превращается в соответствующие сегменты,
 /// с учётом raw-позиций в исходном тексте.
-fn line_ast_to_segments(line_ast: &LineAST, _line_text: &str, line_start: usize) -> Vec<Segment> {
+fn line_ast_to_segments(line_ast: &LineAST, line_text: &str, line_start: usize) -> Vec<Segment> {
     match line_ast {
         LineAST::Empty => vec![],
 

@@ -284,7 +284,7 @@ fn edit_doc_closure_with_mut_borrow_inside() {
     });
     // После edit_doc все заимствования дропнуты
     assert_eq!(inner.doc.borrow().content(), "hello world");
-    let _line = inner.doc.borrow().cursor.line();
+    let line = inner.doc.borrow().cursor.line();
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -383,35 +383,35 @@ fn mode_cycle_marks_dirty() {
 #[test]
 fn borrow_then_borrow_mut_no_conflict() {
     let inner = EditorInner::new(String::new());
-    let _doc = inner.doc.borrow();            // immutable
+    let doc = inner.doc.borrow();            // immutable
     drop(_doc);                                // дропнули
-    let _doc = inner.doc.borrow_mut();         // mutable — ок
+    let doc = inner.doc.borrow_mut();         // mutable — ок
 }
 
 #[test]
 fn borrow_mut_then_borrow_no_conflict() {
     let inner = EditorInner::new(String::new());
-    let _doc = inner.doc.borrow_mut();         // mutable
+    let doc = inner.doc.borrow_mut();         // mutable
     drop(_doc);                                // дропнули
-    let _doc = inner.doc.borrow();             // immutable — ок
+    let doc = inner.doc.borrow();             // immutable — ок
 }
 
 #[test]
 fn scoped_borrow_before_borrow_mut() {
     let inner = EditorInner::new("hello".to_string());
     {
-        let _doc = inner.doc.borrow();
+        let doc = inner.doc.borrow();
     } // dropped
-    let _doc = inner.doc.borrow_mut();
+    let doc = inner.doc.borrow_mut();
 }
 
 #[test]
 fn scoped_borrow_mut_before_borrow() {
     let inner = EditorInner::new("hello".to_string());
     {
-        let _doc = inner.doc.borrow_mut();
+        let doc = inner.doc.borrow_mut();
     } // dropped
-    let _doc = inner.doc.borrow();
+    let doc = inner.doc.borrow();
 }
 
 #[test]
@@ -467,8 +467,8 @@ fn borrow_doc_and_shaped_then_borrow_mut_doc() {
     let inner = EditorInner::new("test".to_string());
     let doc = inner.doc.borrow();
     let shaped = inner.shaped_doc.borrow();
-    let _line = doc.cursor.line();
-    let _h = shaped.total_height();
+    let line = doc.cursor.line();
+    let h = shaped.total_height();
     drop(doc);   // дропаем doc, shaped остаётся
     let mut doc = inner.doc.borrow_mut(); // должно работать — doc дропнут
     doc.dirty = true;
@@ -907,12 +907,12 @@ fn mixed_borrow_and_edit_refcell_safe() {
     // Этот тест проверяет конкретную последовательность, которая
     // раньше падала из-за мёртвого кода в edit_doc_raw
     let inner = EditorInner::new("hello world".to_string());
-    let _line = inner.doc.borrow().cursor.line();
+    let line = inner.doc.borrow().cursor.line();
     inner.edit_doc_raw(5, 5, "!!");
-    let _raw = inner.doc.borrow().cursor.raw();
-    let _content = inner.doc.borrow().content().len();
+    let raw = inner.doc.borrow().cursor.raw();
+    let content = inner.doc.borrow().content().len();
     inner.doc.borrow_mut().set_cursor_raw(0);
-    let _line2 = inner.doc.borrow().cursor.line();
+    let line2 = inner.doc.borrow().cursor.line();
     assert_eq!(inner.doc.borrow().content(), "hello!! world");
 }
 

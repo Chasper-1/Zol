@@ -15,7 +15,7 @@ pub fn handle_keyboard<'a, Message>(
     this: &mut IcedEditor<'a>,
     kb_event: &keyboard::Event,
     bounds: Rectangle,
-    _origin: Point,
+    origin: Point,
     shell: &mut Shell<'_, Message>,
 ) {
     let keyboard::Event::KeyPressed {

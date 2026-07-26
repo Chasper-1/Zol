@@ -30,7 +30,7 @@ fn boot() -> (AppState, Task<Message>) {
     (app, Task::none())
 }
 
-fn update(_app_state: &mut AppState, message: Message) -> Task<Message> {
+fn update(app_state: &mut AppState, message: Message) -> Task<Message> {
     match message {
         // Tick нужен только чтобы Iced вызвал view → draw.
         // should_blink() сам определяет фазу по Instant::now(),
@@ -41,7 +41,7 @@ fn update(_app_state: &mut AppState, message: Message) -> Task<Message> {
     Task::none()
 }
 
-fn subscription(_app_state: &AppState) -> Subscription<Message> {
+fn subscription(app_state: &AppState) -> Subscription<Message> {
     iced::time::every(Duration::from_millis(500)).map(|_| Message::Tick)
 }
 

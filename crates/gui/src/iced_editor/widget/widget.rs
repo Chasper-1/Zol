@@ -31,8 +31,8 @@ where
 
     fn layout(
         &mut self,
-        _tree: &mut widget::Tree,
-        _renderer: &Renderer,
+        tree: &mut widget::Tree,
+        renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
         layout::Node::new(limits.max())
@@ -54,25 +54,25 @@ where
 
     fn update(
         &mut self,
-        _tree: &mut widget::Tree,
+        tree: &mut widget::Tree,
         event: &Event,
         layout: Layout<'_>,
         cursor_state: mouse::Cursor,
-        _renderer: &Renderer,
-        _clipboard: &mut dyn Clipboard,
+        renderer: &Renderer,
+        clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
-        _viewport: &Rectangle,
+        viewport: &Rectangle,
     ) {
         input::update(self, event, layout, cursor_state, shell);
     }
 
     fn mouse_interaction(
         &self,
-        _tree: &widget::Tree,
+        tree: &widget::Tree,
         _layout: Layout<'_>,
-        _cursor: mouse::Cursor,
-        _viewport: &Rectangle,
-        _renderer: &Renderer,
+        cursor: mouse::Cursor,
+        viewport: &Rectangle,
+        renderer: &Renderer,
     ) -> mouse::Interaction {
         mouse::Interaction::Text
     }
