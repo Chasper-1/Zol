@@ -8,7 +8,7 @@ use iced::{
 
 use editor::markup::segment::{STYLE_BOLD, STYLE_ITALIC};
 
-use super::IcedEditor;
+use crate::iced_editor::widget::editor::IcedEditor;
 
 pub fn draw_text<'a, Renderer>(
     this: &IcedEditor<'a>,

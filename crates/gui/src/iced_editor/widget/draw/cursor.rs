@@ -5,7 +5,7 @@ use iced::{Color, Point, Rectangle, Size};
 
 use editor::state::EditMode;
 
-use super::IcedEditor;
+use crate::iced_editor::widget::editor::IcedEditor;
 
 pub fn draw_cursor<'a, Renderer>(
     this: &IcedEditor<'a>,

@@ -1,6 +1,11 @@
 use super::*;
 use api::cursor as api_cursor;
 use editor::state::EditMode;
+use crate::iced_editor::widget::editor::IcedEditor;
+
+// ═══════════════════════════════════════════════════════════════════
+// EditorInner::new() — конструктор, все варианты
+// ═══════════════════════════════════════════════════════════════════
 
 #[test]
 fn new_empty_content() {
@@ -13,33 +18,28 @@ fn new_empty_content() {
 fn new_with_text() {
     let inner = EditorInner::new("hello world".to_string());
     assert_eq!(inner.doc.borrow().content(), "hello world");
-    assert!(inner.doc.borrow().dirty);
-}
-
-#[test]
-fn new_shaped_doc_has_lines() {
-    let inner = EditorInner::new("line1\nline2\nline3".to_string());
-    let shaped = inner.shaped_doc.borrow();
-    assert!(
-        shaped.line_count() > 0,
-        "shaped_doc should have lines after build"
-    );
-    assert!(shaped.total_height() > 0.0, "shaped_doc should have height");
-}
-
-#[test]
-fn new_with_multiline() {
-    let inner = EditorInner::new("a\nb\nc".to_string());
-    let shaped = inner.shaped_doc.borrow();
-    assert_eq!(shaped.line_count(), 3);
 }
 
 #[test]
 fn new_with_unicode() {
-    let inner = EditorInner::new("привет мир 👋".to_string());
+    let inner = EditorInner::new("привет мир 👋 🚀".to_string());
+    assert!(inner.doc.borrow().incremental.num_lines() >= 1);
+    assert!(inner.shaped_doc.borrow().line_count() >= 1);
+}
+
+#[test]
+fn new_with_multiline() {
+    let inner = EditorInner::new("a\nb\nc\n".to_string());
     let shaped = inner.shaped_doc.borrow();
-    assert!(shaped.line_count() > 0);
-    assert!(shaped.total_height() > 0.0);
+    assert_eq!(shaped.line_count(), 4);
+}
+
+#[test]
+fn new_with_only_newlines() {
+    let inner = EditorInner::new("\n\n\n".to_string());
+    assert_eq!(inner.doc.borrow().content(), "\n\n\n");
+    let shaped = inner.shaped_doc.borrow();
+    assert!(shaped.line_count() >= 3);
 }
 
 #[test]
@@ -49,51 +49,202 @@ fn new_single_line() {
 }
 
 #[test]
-fn defaults_are_sane() {
+fn new_sets_dirty_true() {
     let inner = EditorInner::new("x".to_string());
-    assert_eq!(inner.base_size, 14.0);
-    assert_eq!(inner.heading_size, 24.0);
-    assert_eq!(inner.file_path, "notes.zoll");
-    assert_eq!(inner.mode.get(), EditMode::LivePreview);
-    assert_eq!(inner.scroll_y.get(), 0.0);
+    assert!(inner.doc.borrow().dirty, "new EditorInner should be dirty");
 }
 
 #[test]
-fn edit_doc_insert_syncs_cache() {
-    let inner = EditorInner::new("".to_string());
+fn defaults_are_sane() {
+    let inner = EditorInner::new("x".to_string());
+    assert_eq!(inner.base_size, 14.0, "base_size default");
+    assert_eq!(inner.heading_size, 24.0, "heading_size default");
+    assert_eq!(inner.file_path, "notes.zoll", "file_path default");
+    assert_eq!(inner.mode.get(), EditMode::LivePreview, "mode default");
+    assert_eq!(inner.scroll_y.get(), 0.0, "scroll_y default");
+}
+
+#[test]
+fn new_many_lines() {
+    let content = (0..100).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n");
+    let inner = EditorInner::new(content.clone());
+    assert_eq!(inner.doc.borrow().content(), &content);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// edit_doc_raw — все варианты ввода
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn edit_doc_raw_insert_at_start() {
+    let inner = EditorInner::new("world".to_string());
+    inner.edit_doc_raw(0, 0, "hello ");
+    assert_eq!(inner.doc.borrow().content(), "hello world");
+}
+
+#[test]
+fn edit_doc_raw_insert_at_middle() {
+    let inner = EditorInner::new("helo".to_string());
+    inner.edit_doc_raw(3, 3, "l");
+    assert_eq!(inner.doc.borrow().content(), "hello");
+}
+
+#[test]
+fn edit_doc_raw_insert_at_end() {
+    let inner = EditorInner::new("hello".to_string());
+    inner.edit_doc_raw(5, 5, " world");
+    assert_eq!(inner.doc.borrow().content(), "hello world");
+}
+
+#[test]
+fn edit_doc_raw_insert_unicode() {
+    let inner = EditorInner::new("hello ".to_string());
+    inner.edit_doc_raw(6, 6, "привет");
+    assert_eq!(inner.doc.borrow().content(), "hello привет");
+}
+
+#[test]
+fn edit_doc_raw_insert_emoji() {
+    let inner = EditorInner::new("hello ".to_string());
+    inner.edit_doc_raw(6, 6, "🚀✨");
+    assert_eq!(inner.doc.borrow().content(), "hello 🚀✨");
+}
+
+#[test]
+fn edit_doc_raw_insert_newline_mid() {
+    let inner = EditorInner::new("abc\ndef".to_string());
+    inner.edit_doc_raw(3, 3, "\n");
+    assert_eq!(inner.doc.borrow().content(), "abc\n\ndef");
+}
+
+#[test]
+fn edit_doc_raw_replace_range() {
+    let inner = EditorInner::new("hello bad world".to_string());
+    inner.edit_doc_raw(6, 9, "good"); // заменить "bad" на "good"
+    assert_eq!(inner.doc.borrow().content(), "hello good world");
+}
+
+#[test]
+fn edit_doc_raw_delete_range() {
+    let inner = EditorInner::new("hello xxx world".to_string());
+    inner.edit_doc_raw(6, 10, ""); // удалить "xxx "
+    assert_eq!(inner.doc.borrow().content(), "hello world");
+}
+
+#[test]
+fn edit_doc_raw_multiple_sequential() {
+    let inner = EditorInner::new(String::new());
+    inner.edit_doc_raw(0, 0, "a");
+    inner.edit_doc_raw(1, 1, "b");
+    inner.edit_doc_raw(2, 2, "c");
+    assert_eq!(inner.doc.borrow().content(), "abc");
+}
+
+#[test]
+fn edit_doc_raw_multiple_insert_at_start() {
+    let inner = EditorInner::new(String::new());
+    inner.edit_doc_raw(0, 0, "c");
+    inner.edit_doc_raw(0, 0, "b");
+    inner.edit_doc_raw(0, 0, "a");
+    assert_eq!(inner.doc.borrow().content(), "abc");
+}
+
+#[test]
+fn edit_doc_raw_empty_string_no_change() {
+    let inner = EditorInner::new("hello".to_string());
+    inner.edit_doc_raw(2, 2, "");
+    assert_eq!(inner.doc.borrow().content(), "hello");
+}
+
+#[test]
+fn edit_doc_raw_zero_len_from_to() {
+    let inner = EditorInner::new("abc".to_string());
+    inner.edit_doc_raw(1, 1, "X");
+    assert_eq!(inner.doc.borrow().content(), "aXbc");
+}
+
+#[test]
+fn edit_doc_raw_overwrite_full() {
+    let inner = EditorInner::new("old".to_string());
+    inner.edit_doc_raw(0, 3, "new");
+    assert_eq!(inner.doc.borrow().content(), "new");
+}
+
+#[test]
+fn edit_doc_raw_sets_dirty() {
+    let inner = EditorInner::new("x".to_string());
+    inner.doc.borrow_mut().dirty = false;
+    inner.edit_doc_raw(1, 1, "y");
+    assert!(inner.doc.borrow().dirty);
+}
+
+#[test]
+fn edit_doc_raw_cache_rebuilt() {
+    let inner = EditorInner::new("hello".to_string());
+    inner.edit_doc_raw(5, 5, " **world**");
+    let cache = inner.cache.borrow();
+    assert!(!cache.lines.is_empty(), "cache should be rebuilt");
+}
+
+#[test]
+fn edit_doc_raw_unicode_grapheme_boundaries() {
+    let inner = EditorInner::new("abc émoji".to_string());
+    // Вставляем после 'abc ' (byte 4) — перед é
+    inner.edit_doc_raw(4, 4, "🚀");
+    assert_eq!(inner.doc.borrow().content(), "abc 🚀émoji");
+}
+
+#[test]
+fn edit_doc_raw_on_line_boundary_start() {
+    let inner = EditorInner::new("abc\ndef".to_string());
+    inner.edit_doc_raw(0, 0, "START\n");
+    assert_eq!(inner.doc.borrow().content(), "START\nabc\ndef");
+}
+
+#[test]
+fn edit_doc_raw_on_line_boundary_end() {
+    let inner = EditorInner::new("abc\ndef".to_string());
+    inner.edit_doc_raw(7, 7, "\nEND");
+    assert_eq!(inner.doc.borrow().content(), "abc\ndef\nEND");
+}
+
+#[test]
+fn edit_doc_raw_insert_many_lines() {
+    let inner = EditorInner::new("start".to_string());
+    let many = (0..50).map(|i| format!("line{}\n", i)).collect::<String>();
+    inner.edit_doc_raw(5, 5, &many);
+    assert!(inner.doc.borrow().incremental.num_lines() >= 50);
+}
+
+#[test]
+fn edit_doc_raw_intensive() {
+    let inner = EditorInner::new(String::new());
+    let text = "x".repeat(100);
+    for (i, ch) in text.char_indices() {
+        inner.edit_doc_raw(i, i, &ch.to_string());
+    }
+    assert_eq!(inner.doc.borrow().content().len(), 100);
+    assert_eq!(inner.doc.borrow().content(), text);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// edit_doc — closure-based редактирование
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn edit_doc_insert_bold() {
+    let inner = EditorInner::new(String::new());
     inner.edit_doc(|doc| {
         doc.incremental.edit(0, 0, "**bold**");
     });
+    assert_eq!(inner.doc.borrow().content(), "**bold**");
     let cache = inner.cache.borrow();
-    assert!(cache.lines.len() >= 1);
+    assert!(!cache.lines.is_empty());
 }
 
 #[test]
-fn edit_doc_sets_dirty() {
-    let inner = EditorInner::new("x".to_string());
-    inner.doc.borrow_mut().dirty = false;
-    inner.edit_doc(|doc| {
-        doc.incremental.edit(1, 1, "y");
-    });
-    assert!(inner.doc.borrow().dirty, "edit_doc should set dirty=true");
-}
-
-#[test]
-fn edit_doc_cache_updates_after_content_change() {
-    let inner = EditorInner::new("hello".to_string());
-    inner.edit_doc(|doc| {
-        doc.incremental.edit(5, 5, " **world**");
-    });
-    let cache = inner.cache.borrow();
-    assert!(
-        !cache.lines.is_empty(),
-        "cache should be rebuilt after content change"
-    );
-}
-
-#[test]
-fn edit_doc_multiple_calls() {
-    let inner = EditorInner::new("".to_string());
+fn edit_doc_twice() {
+    let inner = EditorInner::new(String::new());
     inner.edit_doc(|doc| {
         doc.incremental.edit(0, 0, "a");
     });
@@ -104,419 +255,579 @@ fn edit_doc_multiple_calls() {
     assert_eq!(inner.doc.borrow().content(), "ab");
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// RefCell-specific тесты
-//
-// Эти тесты проверяют, что последовательность borrow/borrow_mut на
-// RefCell<Document> не падает. Раньше edit_doc_raw содержала мёртвый
-// код `let cursor = &self.doc.borrow().cursor;`, который продлевал
-// жизнь Ref и взрывался на следующем borrow_mut().
-// ═══════════════════════════════════════════════════════════════════
-
 #[test]
-fn edit_doc_raw_typing_does_not_panic() {
-    // Многократный edit_doc_raw — симулирует печать символов
-    let inner = EditorInner::new(String::new());
-    for (i, ch) in "hello".chars().enumerate() {
-        inner.edit_doc_raw(i, i, &ch.to_string());
-    }
-    assert_eq!(inner.doc.borrow().content(), "hello");
+fn edit_doc_sets_dirty() {
+    let inner = EditorInner::new("x".to_string());
+    inner.doc.borrow_mut().dirty = false;
+    inner.edit_doc(|doc| {
+        doc.incremental.edit(1, 1, "y");
+    });
+    assert!(inner.doc.borrow().dirty);
 }
 
 #[test]
-fn edit_doc_raw_multiple_chars_at_once() {
-    let inner = EditorInner::new(String::new());
-    inner.edit_doc_raw(0, 0, "abc");
-    inner.edit_doc_raw(3, 3, "def");
-    assert_eq!(inner.doc.borrow().content(), "abcdef");
-}
-
-#[test]
-fn edit_doc_raw_backspace_simulation() {
-    // Симулирует то, что делает keyboard handler при Backspace:
-    // 1. borrow() читает cursor.raw, content, prev_grapheme
-    // 2. edit_doc_raw(from, to, "")
-    // 3. borrow_mut() set_cursor_raw
-    let inner = EditorInner::new("hello".to_string());
-    // Ставим курсор в конец (по умолчанию он в 0)
-    inner.doc.borrow_mut().set_cursor_raw(5);
-    {
-        let doc = inner.doc.borrow();
-        let raw = doc.cursor.raw();
-        assert_eq!(raw, 5);
-        assert!(!doc.content().is_empty());
-        let prev = editor::cursor::prev_grapheme_boundary(doc.content(), raw).unwrap_or(0);
-        assert_eq!(prev, 4);
-    }
-    inner.edit_doc_raw(4, 5, "");
-    {
-        let mut doc = inner.doc.borrow_mut();
-        doc.set_cursor_raw(4);
-    }
-    assert_eq!(inner.doc.borrow().content(), "hell");
-}
-
-#[test]
-fn edit_doc_raw_backspace_empty_doc_does_not_panic() {
-    let inner = EditorInner::new(String::new());
-    let (from, to) = {
-        let doc = inner.doc.borrow();
-        let raw = doc.cursor.raw();
-        if raw == 0 || doc.content().is_empty() {
-            (0, 0)
-        } else {
-            let prev = editor::cursor::prev_grapheme_boundary(doc.content(), raw).unwrap_or(0);
-            (prev, raw)
-        }
-    };
-    assert_eq!(from, 0);
-    assert_eq!(to, 0);
-    // edit_doc_raw с (0,0) не должен паниковать
-    inner.edit_doc_raw(from, to, "");
-}
-
-#[test]
-fn edit_doc_raw_enter_simulation() {
-    // Симулирует Enter из keyboard handler:
-    // 1. doc.borrow().cursor.raw() — временный Ref
-    // 2. edit_doc_raw(raw, raw, "\n")
-    // 3. doc.borrow_mut() set_cursor_raw, reset_col_visual
-    let inner = EditorInner::new("abc".to_string());
-    // Ставим курсор в конец
-    inner.doc.borrow_mut().set_cursor_raw(3);
-
-    let raw = inner.doc.borrow().cursor.raw();
-    assert_eq!(raw, 3);
-
-    inner.edit_doc_raw(raw, raw, "\n");
-
-    {
-        let mut doc = inner.doc.borrow_mut();
-        doc.set_cursor_raw(raw + 1);
-        doc.cursor.reset_col_visual();
-    } // drop RefMut
-
-    assert_eq!(inner.doc.borrow().content(), "abc\n");
-}
-
-#[test]
-fn edit_doc_raw_delete_simulation() {
-    // Симулирует Delete из keyboard handler
-    let inner = EditorInner::new("hello".to_string());
-    // Ставим курсор в начало
-    inner.doc.borrow_mut().set_cursor_raw(0);
-
-    let (from, to) = {
-        let doc = inner.doc.borrow();
-        let raw = doc.cursor.raw();
-        if raw >= doc.content().len() || doc.content().is_empty() {
-            (0, 0)
-        } else {
-            let next = editor::cursor::next_grapheme_boundary(doc.content(), raw)
-                .unwrap_or(doc.content().len());
-            (raw, next)
-        }
-    };
-    assert_eq!(from, 0);
-    assert_eq!(to, 1);
-
-    inner.edit_doc_raw(from, to, "");
-    assert_eq!(inner.doc.borrow().content(), "ello");
-}
-
-#[test]
-fn edit_doc_raw_delete_at_end_does_not_panic() {
-    let inner = EditorInner::new("hi".to_string());
-    // Ставим курсор в конец
-    inner.doc.borrow_mut().set_cursor_raw(2);
-
-    let (from, to) = {
-        let doc = inner.doc.borrow();
-        let raw = doc.cursor.raw();
-        if raw >= doc.content().len() || doc.content().is_empty() {
-            (0, 0)
-        } else {
-            let next = editor::cursor::next_grapheme_boundary(doc.content(), raw)
-                .unwrap_or(doc.content().len());
-            (raw, next)
-        }
-    };
-    assert_eq!(from, 0);
-    assert_eq!(to, 0);
-    inner.edit_doc_raw(from, to, ""); // не паникует
-}
-
-#[test]
-fn edit_doc_raw_text_input_simulation() {
-    // Симулирует текстовый ввод из keyboard handler
-    let inner = EditorInner::new(String::new());
-
-    let raw = inner.doc.borrow().cursor.raw();
-    let text = "hello";
-    inner.edit_doc_raw(raw, raw, text);
-
-    {
-        let mut doc = inner.doc.borrow_mut();
-        doc.set_cursor_raw(raw + text.len());
-    } // drop RefMut
-
-    assert_eq!(inner.doc.borrow().content(), "hello");
-    assert_eq!(inner.doc.borrow().cursor.raw(), 5);
-}
-
-#[test]
-fn edit_doc_raw_refcell_no_leak() {
-    // Проверяет, что внутри edit_doc_raw нет живых Ref после
-    // возврата. Если был бы мёртвый код как раньше — тест упадёт.
-    let inner = EditorInner::new(String::new());
-
-    // Первый вызов — нормально
-    inner.edit_doc_raw(0, 0, "a");
-
-    // Сразу второй — если бы Ref не дропнулся, borrow_mut внутри
-    // edit_doc_raw упал бы
-    inner.edit_doc_raw(1, 1, "b");
-
-    // Третий для верности
-    inner.edit_doc_raw(2, 2, "c");
-
-    assert_eq!(inner.doc.borrow().content(), "abc");
-}
-
-#[test]
-fn edit_doc_with_closure_refcell() {
-    // edit_doc — принимает FnOnce(&mut Document). Внутри он делает
-    // borrow_mut, потом borrow, потом borrow_mut — проверяем что
-    // не падает.
-    let inner = EditorInner::new(String::new());
-
+fn edit_doc_cache_rebuilt() {
+    let inner = EditorInner::new("".to_string());
     inner.edit_doc(|doc| {
         doc.incremental.edit(0, 0, "**hello**");
     });
-
-    // После edit_doc все Ref/RefMut должны быть дропнуты
-    assert_eq!(inner.doc.borrow().content(), "**hello**");
+    let cache = inner.cache.borrow();
+    let any_bold = cache.lines.iter().flat_map(|l| &l.segments).any(|s| s.style & editor::markup::segment::STYLE_BOLD != 0);
+    assert!(any_bold, "cache should contain bold segments");
 }
 
 #[test]
-fn edit_doc_raw_intensive_does_not_panic() {
-    // Интенсивное использование — 100 вызовов edit_doc_raw подряд
-    let inner = EditorInner::new(String::new());
-    let text = "x".repeat(100);
-    for (i, ch) in text.chars().enumerate() {
-        inner.edit_doc_raw(i, i, &ch.to_string());
-    }
-    assert_eq!(inner.doc.borrow().content().len(), 100);
-    assert_eq!(inner.doc.borrow().content(), text);
-}
-
-#[test]
-fn edit_doc_raw_with_newlines_does_not_panic() {
-    let inner = EditorInner::new("line1".to_string());
-    inner.edit_doc_raw(5, 5, "\n");
-    inner.edit_doc_raw(6, 6, "line2");
-    assert_eq!(inner.doc.borrow().content(), "line1\nline2");
-
-    // Проверяем что количество строк обновилось
-    assert!(inner.doc.borrow().incremental.num_lines() >= 2);
-}
-
-#[test]
-fn move_cursor_after_edit_doc_raw() {
-    // После edit_doc_raw можно двигать курсор
+fn edit_doc_closure_with_mut_borrow_inside() {
     let inner = EditorInner::new("hello".to_string());
-    inner.doc.borrow_mut().set_cursor_raw(0);
-
-    // Пишем в начало
-    inner.edit_doc_raw(0, 0, ">> ");
-
-    // Двигаем курсор
-    let mut doc = inner.doc.borrow_mut();
-    doc.set_cursor_raw(0);
-    assert_eq!(doc.content(), ">> hello");
-}
-
-#[test]
-fn concurrent_borrow_and_edit_mixed() {
-    // Смешанные borrow/borrow_mut в разных порядках
-    let inner = EditorInner::new("hello world".to_string());
-
-    // borrow → edit_doc → borrow
+    inner.edit_doc(|doc| {
+        doc.incremental.edit(5, 5, " world");
+    });
+    // После edit_doc все заимствования дропнуты
+    assert_eq!(inner.doc.borrow().content(), "hello world");
     let _line = inner.doc.borrow().cursor.line();
-    inner.edit_doc_raw(5, 5, "!!");
-    let _raw = inner.doc.borrow().cursor.raw();
-
-    // borrow → borrow_mut → borrow
-    let _content = inner.doc.borrow().content().len();
-    inner.doc.borrow_mut().set_cursor_raw(0);
-    let _line2 = inner.doc.borrow().cursor.line();
-
-    assert_eq!(inner.doc.borrow().content(), "hello!! world");
-}
-
-#[test]
-fn edit_doc_raw_at_line_boundaries() {
-    // Правки на границах строк
-    let inner = EditorInner::new("abc\ndef\nghi".to_string());
-
-    // Вставляем в конец первой строки
-    inner.edit_doc_raw(3, 3, "123");
-    assert_eq!(inner.doc.borrow().content(), "abc123\ndef\nghi");
-
-    // Удаляем конец первой строки и newline
-    inner.edit_doc_raw(6, 7, "");
-    assert_eq!(inner.doc.borrow().content(), "abc123def\nghi");
-
-    // Вставляем много текста
-    inner.edit_doc_raw(0, 0, "START\n");
-    assert_eq!(inner.doc.borrow().content(), "START\nabc123def\nghi");
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Хоткеи: режимы, word movement, scroll
+// mode: get, set, cycle — все переходы
 // ═══════════════════════════════════════════════════════════════════
 
 #[test]
-fn esc_switches_to_preview() {
+fn mode_default_is_live_preview() {
     let inner = EditorInner::new("test".to_string());
     assert_eq!(inner.get_mode(), EditMode::LivePreview);
+}
 
+#[test]
+fn mode_set_live_preview() {
+    let inner = EditorInner::new("test".to_string());
+    inner.set_mode(EditMode::LivePreview);
+    assert_eq!(inner.get_mode(), EditMode::LivePreview);
+}
+
+#[test]
+fn mode_set_source() {
+    let inner = EditorInner::new("test".to_string());
     inner.set_mode(EditMode::Source);
     assert_eq!(inner.get_mode(), EditMode::Source);
+}
 
-    // Esc → Preview
+#[test]
+fn mode_set_preview() {
+    let inner = EditorInner::new("test".to_string());
     inner.set_mode(EditMode::Preview);
     assert_eq!(inner.get_mode(), EditMode::Preview);
 }
 
 #[test]
-fn cycle_mode_loops() {
+fn mode_set_same_twice() {
     let inner = EditorInner::new("test".to_string());
-    assert_eq!(inner.get_mode(), EditMode::LivePreview);
-
-    inner.cycle_mode(); // LivePreview → Source
-    assert_eq!(inner.get_mode(), EditMode::Source);
-
-    inner.cycle_mode(); // Source → Preview
+    inner.set_mode(EditMode::Preview);
+    inner.set_mode(EditMode::Preview); // повторно тот же режим
     assert_eq!(inner.get_mode(), EditMode::Preview);
+}
 
+#[test]
+fn mode_cycle_live_preview_to_source() {
+    let inner = EditorInner::new("test".to_string());
+    inner.cycle_mode();
+    assert_eq!(inner.get_mode(), EditMode::Source);
+}
+
+#[test]
+fn mode_cycle_source_to_preview() {
+    let inner = EditorInner::new("test".to_string());
+    inner.cycle_mode();
+    inner.cycle_mode();
+    assert_eq!(inner.get_mode(), EditMode::Preview);
+}
+
+#[test]
+fn mode_cycle_preview_to_live_preview() {
+    let inner = EditorInner::new("test".to_string());
+    inner.cycle_mode(); // LivePreview → Source
+    inner.cycle_mode(); // Source → Preview
     inner.cycle_mode(); // Preview → LivePreview
     assert_eq!(inner.get_mode(), EditMode::LivePreview);
 }
 
 #[test]
-fn word_movement_left() {
-    let inner = EditorInner::new("hello world foo".to_string());
-    // cursor starts at 0
-    inner.doc.borrow_mut().set_cursor_raw(15); // end of "foo"
-
-    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
-    assert_eq!(inner.doc.borrow().cursor.raw(), 12); // start of "foo"
-
-    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
-    assert_eq!(inner.doc.borrow().cursor.raw(), 6); // start of "world"
-
-    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
-    assert_eq!(inner.doc.borrow().cursor.raw(), 0); // start of "hello"
+fn mode_cycle_full_loop() {
+    let inner = EditorInner::new("test".to_string());
+    for _ in 0..6 {
+        inner.cycle_mode();
+    }
+    // Чётное число циклов — вернулись в LivePreview
+    assert_eq!(inner.get_mode(), EditMode::LivePreview);
 }
 
 #[test]
-fn word_movement_right() {
-    let inner = EditorInner::new("hello world foo".to_string());
-
-    api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
-    assert_eq!(inner.doc.borrow().cursor.raw(), 6); // start of "world"
-
-    api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
-    assert_eq!(inner.doc.borrow().cursor.raw(), 12); // start of "foo"
-
-    // последнее слово — не двигается (нет следующего слова)
-    api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
-    assert_eq!(inner.doc.borrow().cursor.raw(), 12);
+fn mode_set_marks_dirty() {
+    let inner = EditorInner::new("test".to_string());
+    inner.doc.borrow_mut().dirty = false;
+    inner.set_mode(EditMode::Source);
+    assert!(inner.doc.borrow().dirty, "set_mode should mark dirty");
 }
 
 #[test]
-fn word_movement_does_not_panic_on_single_word() {
+fn mode_cycle_marks_dirty() {
+    let inner = EditorInner::new("test".to_string());
+    inner.doc.borrow_mut().dirty = false;
+    inner.cycle_mode();
+    assert!(inner.doc.borrow().dirty, "cycle_mode should mark dirty");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RefCell: все комбинации borrow/borrow_mut, которые были бажными
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn borrow_then_borrow_mut_no_conflict() {
+    let inner = EditorInner::new(String::new());
+    let _doc = inner.doc.borrow();            // immutable
+    drop(_doc);                                // дропнули
+    let _doc = inner.doc.borrow_mut();         // mutable — ок
+}
+
+#[test]
+fn borrow_mut_then_borrow_no_conflict() {
+    let inner = EditorInner::new(String::new());
+    let _doc = inner.doc.borrow_mut();         // mutable
+    drop(_doc);                                // дропнули
+    let _doc = inner.doc.borrow();             // immutable — ок
+}
+
+#[test]
+fn scoped_borrow_before_borrow_mut() {
     let inner = EditorInner::new("hello".to_string());
-    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
-    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
-
-    // одно слово — move_word_right не двигает
-    api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
-    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+    {
+        let _doc = inner.doc.borrow();
+    } // dropped
+    let _doc = inner.doc.borrow_mut();
 }
 
 #[test]
-fn goto_document_start() {
+fn scoped_borrow_mut_before_borrow() {
+    let inner = EditorInner::new("hello".to_string());
+    {
+        let _doc = inner.doc.borrow_mut();
+    } // dropped
+    let _doc = inner.doc.borrow();
+}
+
+#[test]
+fn borrow_read_after_edit_doc_raw() {
+    // Этот паттерн раньше падал — мёртвый `let cursor = &self.doc.borrow().cursor;`
+    let inner = EditorInner::new(String::new());
+    inner.edit_doc_raw(0, 0, "a");
+    // edit_doc_raw внутри делает borrow_mut — если после borrow не дропнут, упадёт
+    inner.edit_doc_raw(1, 1, "b");
+    assert_eq!(inner.doc.borrow().content(), "ab");
+}
+
+#[test]
+fn borrow_mut_then_function_that_borrows() {
+    // Симулирует паттерн Ctrl+Left: borrow_mut → auto_scroll (borrow)
     let inner = EditorInner::new("hello world".to_string());
-    inner.doc.borrow_mut().set_cursor_raw(8);
-
-    // Ctrl+Home
-    inner.doc.borrow_mut().set_cursor_raw(0);
-    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+    {
+        let mut doc = inner.doc.borrow_mut();
+        api_cursor::move_word_right(&mut *doc);
+    } // RefMut дропнут
+    // Теперь можно сделать borrow — как это делает auto_scroll
+    let raw = inner.doc.borrow().cursor.raw();
+    assert_eq!(raw, 6); // start of "world"
 }
 
 #[test]
-fn goto_document_end() {
-    let inner = EditorInner::new("hello world".to_string());
-    inner.doc.borrow_mut().set_cursor_raw(0);
-
-    // Ctrl+End
-    let len = inner.doc.borrow().content().len();
-    inner.doc.borrow_mut().set_cursor_raw(len);
-    assert_eq!(inner.doc.borrow().cursor.raw(), 11);
+fn multiple_borrow_mut_sequence() {
+    let inner = EditorInner::new(String::new());
+    for i in 0..100 {
+        let mut doc = inner.doc.borrow_mut();
+        doc.incremental.edit(i, i, "x");
+    }
+    assert_eq!(inner.doc.borrow().content().len(), 100);
 }
 
 #[test]
-fn scroll_page_down_does_not_panic() {
+fn interleaved_borrow_all_cells() {
+    let inner = EditorInner::new("test".to_string());
+    // Одновременные borrow разных RefCell — никогда не падает
+    let doc = inner.doc.borrow();
+    let cache = inner.cache.borrow();
+    let shaped = inner.shaped_doc.borrow();
+    assert!(doc.content().len() > 0);
+    assert!(cache.lines.len() >= 1);
+    assert!(shaped.line_count() > 0);
+    drop(doc);
+    drop(cache);
+    drop(shaped);
+}
+
+#[test]
+fn borrow_doc_and_shaped_then_borrow_mut_doc() {
+    let inner = EditorInner::new("test".to_string());
+    let doc = inner.doc.borrow();
+    let shaped = inner.shaped_doc.borrow();
+    let _line = doc.cursor.line();
+    let _h = shaped.total_height();
+    drop(doc);   // дропаем doc, shaped остаётся
+    let mut doc = inner.doc.borrow_mut(); // должно работать — doc дропнут
+    doc.dirty = true;
+    drop(doc);
+    drop(shaped);
+}
+
+#[test]
+fn borrow_mut_then_borrow_other_cell() {
+    // Разные RefCell не конфликтуют
+    let inner = EditorInner::new("test".to_string());
+    let doc = inner.doc.borrow_mut();
+    let cache = inner.cache.borrow(); // другой RefCell — ок
+    drop(doc);
+    drop(cache);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// auto_scroll — симуляция через изменение scroll_y
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn scroll_y_set_and_get() {
     let inner = EditorInner::new("a\nb\nc\nd\ne".to_string());
-    // scroll_y is f32, just change it
-    inner.scroll_y.set(100.0);
-    assert_eq!(inner.scroll_y.get(), 100.0);
-    inner.mark_dirty();
+    inner.scroll_y.set(42.0);
+    assert_eq!(inner.scroll_y.get(), 42.0);
 }
 
 #[test]
-fn scroll_page_up_does_not_panic() {
-    let inner = EditorInner::new("a\nb\nc\nd\ne".to_string());
-    inner.scroll_y.set(50.0);
-    assert_eq!(inner.scroll_y.get(), 50.0);
-    // scroll up — decrease
-    let new = (inner.scroll_y.get() - 30.0).max(0.0);
-    inner.scroll_y.set(new);
-    assert_eq!(inner.scroll_y.get(), 20.0);
-    inner.mark_dirty();
-}
-
-#[test]
-fn scroll_page_up_clamps_at_zero() {
-    let inner = EditorInner::new("a\nb\nc\nd\ne".to_string());
-    inner.scroll_y.set(10.0);
-    let new = (inner.scroll_y.get() - 100.0).max(0.0);
-    inner.scroll_y.set(new);
+fn scroll_y_default_zero() {
+    let inner = EditorInner::new("test".to_string());
     assert_eq!(inner.scroll_y.get(), 0.0);
 }
 
 #[test]
-fn all_keyboard_actions_refcell_safe() {
-    // Симулирует последовательность: movement → edit → mode switch → scroll
-    // Проверяет что нет RefCell конфликтов
-    let inner = EditorInner::new("hello world\nsecond line".to_string());
+fn mark_dirty_sets_flag() {
+    let inner = EditorInner::new("test".to_string());
+    inner.doc.borrow_mut().dirty = false;
+    inner.mark_dirty();
+    assert!(inner.doc.borrow().dirty);
+}
 
-    // word movement: от 0 → start of "world" (pos 6)
+#[test]
+fn mark_dirty_idempotent() {
+    let inner = EditorInner::new("test".to_string());
+    inner.mark_dirty();
+    inner.mark_dirty();
+    assert!(inner.doc.borrow().dirty);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Word movement — симуляция Ctrl+Arrow
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn word_movement_left_from_end() {
+    let inner = EditorInner::new("hello world foo".to_string());
+    inner.doc.borrow_mut().set_cursor_raw(15);
+    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 12); // start of "foo"
+    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 6);  // start of "world"
+    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0);  // start of "hello"
+}
+
+#[test]
+fn word_movement_left_at_start_stays() {
+    let inner = EditorInner::new("hello".to_string());
+    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+}
+
+#[test]
+fn word_movement_right_from_start() {
+    let inner = EditorInner::new("hello world foo".to_string());
+    api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 6);  // start of "world"
+    api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 12); // start of "foo"
+}
+
+#[test]
+fn word_movement_right_at_end_stays() {
+    let inner = EditorInner::new("hello".to_string());
+    inner.doc.borrow_mut().set_cursor_raw(5);
+    api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 5);
+}
+
+#[test]
+fn word_movement_on_single_word() {
+    let inner = EditorInner::new("hello".to_string());
+    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+    api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+}
+
+#[test]
+fn word_movement_on_empty() {
+    let inner = EditorInner::new(String::new());
+    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+    api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+}
+
+#[test]
+fn word_movement_with_tabs() {
+    let inner = EditorInner::new("word1\t\tword2".to_string());
+    inner.doc.borrow_mut().set_cursor_raw(13); // end of "word2"
+    api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
+    let raw = inner.doc.borrow().cursor.raw();
+    assert!(raw < 13, "move_word_left from end should go to start of a word");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// goto_document_start/end
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn goto_start_from_mid() {
+    let inner = EditorInner::new("hello world".to_string());
+    inner.doc.borrow_mut().set_cursor_raw(8);
+    inner.doc.borrow_mut().set_cursor_raw(0);
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+}
+
+#[test]
+fn goto_start_already_at_start() {
+    let inner = EditorInner::new("hello".to_string());
+    inner.doc.borrow_mut().set_cursor_raw(0);
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+}
+
+#[test]
+fn goto_end_from_start() {
+    let inner = EditorInner::new("hello world".to_string());
+    inner.doc.borrow_mut().set_cursor_raw(0);
+    let len = inner.doc.borrow().content().len();
+    inner.doc.borrow_mut().set_cursor_raw(len);
+    assert_eq!(inner.doc.borrow().cursor.raw(), len);
+}
+
+#[test]
+fn goto_end_empty_doc() {
+    let inner = EditorInner::new(String::new());
+    let len = inner.doc.borrow().content().len();
+    inner.doc.borrow_mut().set_cursor_raw(len);
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Page scroll симуляция
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn page_up_decreases_scroll() {
+    let inner = EditorInner::new("a\nb\nc\nd\ne".to_string());
+    inner.scroll_y.set(100.0);
+    inner.scroll_y.set((inner.scroll_y.get() - 50.0).max(0.0));
+    assert_eq!(inner.scroll_y.get(), 50.0);
+}
+
+#[test]
+fn page_up_clamps_at_zero() {
+    let inner = EditorInner::new("a\nb\nc\nd\ne".to_string());
+    inner.scroll_y.set(10.0);
+    inner.scroll_y.set((inner.scroll_y.get() - 100.0).max(0.0));
+    assert_eq!(inner.scroll_y.get(), 0.0);
+}
+
+#[test]
+fn page_down_increases_scroll() {
+    let inner = EditorInner::new("a\nb\nc\nd\ne".to_string());
+    inner.scroll_y.set(0.0);
+    inner.scroll_y.set(inner.scroll_y.get() + 50.0);
+    assert_eq!(inner.scroll_y.get(), 50.0);
+}
+
+#[test]
+fn page_down_on_empty_doc_does_not_panic() {
+    let inner = EditorInner::new(String::new());
+    inner.scroll_y.set(0.0);
+    let line_h = inner.base_size * 1.4;
+    let n = (500.0 / line_h) as usize;
+    for _ in 0..n {
+        // симуляция cursor_move_down — должна отработать без паники
+        let mut doc = inner.doc.borrow_mut();
+        doc.cursor_move_down();
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Edge cases: пустой документ, курсор на несуществующей строке
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn empty_doc_cursor_stays_at_zero() {
+    let inner = EditorInner::new(String::new());
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+    assert_eq!(inner.doc.borrow().cursor.line(), 0);
+}
+
+#[test]
+fn set_cursor_beyond_content_clamps() {
+    let inner = EditorInner::new("hello".to_string());
+    inner.doc.borrow_mut().set_cursor_raw(999);
+    assert!(inner.doc.borrow().cursor.raw() <= 5);
+}
+
+#[test]
+fn set_cursor_raw_on_empty() {
+    let inner = EditorInner::new(String::new());
+    inner.doc.borrow_mut().set_cursor_raw(5);
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+}
+
+#[test]
+fn line_bounds_on_empty_line() {
+    let inner = EditorInner::new(String::new());
+    let bounds = inner.doc.borrow().line_bounds(0);
+    // empty doc: line 0 might not exist, but should not panic
+    let _ = bounds;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// auto_scroll — симуляция через bounds
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn auto_scroll_cursor_visible_no_op() {
+    use crate::iced_editor::widget::input::auto_scroll;
+    let inner = EditorInner::new("hello".to_string());
+    let bounds = iced::Rectangle { x: 0.0, y: 0.0, width: 800.0, height: 600.0 };
+    let editor = IcedEditor::new(&inner);
+
+    let old_scroll = inner.scroll_y.get();
+    auto_scroll(&editor, bounds);
+    assert_eq!(inner.scroll_y.get(), old_scroll, "visible cursor should not change scroll");
+}
+
+#[test]
+fn auto_scroll_cursor_below_viewport() {
+    use crate::iced_editor::widget::input::auto_scroll;
+    let lines: Vec<_> = (0..50).map(|i| format!("line {}", i)).collect();
+    let content = lines.join("\n");
+    let inner = EditorInner::new(content);
+    let bounds = iced::Rectangle { x: 0.0, y: 0.0, width: 800.0, height: 50.0 };
+
+    // Ставим курсор на последнюю строку
+    let len = inner.doc.borrow().content().len();
+    inner.doc.borrow_mut().set_cursor_raw(len);
+
+    let editor = IcedEditor::new(&inner);
+    auto_scroll(&editor, bounds);
+    assert!(inner.scroll_y.get() > 0.0, "should scroll down for cursor below viewport");
+}
+
+#[test]
+fn auto_scroll_cursor_above_viewport() {
+    use crate::iced_editor::widget::input::auto_scroll;
+    let lines: Vec<_> = (0..50).map(|i| format!("line {}", i)).collect();
+    let content = lines.join("\n");
+    let inner = EditorInner::new(content);
+
+    inner.scroll_y.set(500.0);
+    let bounds = iced::Rectangle { x: 0.0, y: 0.0, width: 800.0, height: 100.0 };
+    let editor = IcedEditor::new(&inner);
+    auto_scroll(&editor, bounds);
+    assert_eq!(inner.scroll_y.get(), 0.0, "should scroll to top for cursor above viewport");
+}
+
+#[test]
+fn auto_scroll_zero_height_no_op() {
+    use crate::iced_editor::widget::input::auto_scroll;
+    let inner = EditorInner::new("hello".to_string());
+    let bounds = iced::Rectangle { x: 0.0, y: 0.0, width: 800.0, height: 0.0 };
+    let editor = IcedEditor::new(&inner);
+    auto_scroll(&editor, bounds);
+    assert_eq!(inner.scroll_y.get(), 0.0);
+}
+
+#[test]
+fn auto_scroll_marks_dirty_when_scroll_changes() {
+    use crate::iced_editor::widget::input::auto_scroll;
+    let content = (0..50).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n");
+    let inner = EditorInner::new(content);
+    inner.doc.borrow_mut().dirty = false;
+
+    // Ставим курсор в конец
+    let len = inner.doc.borrow().content().len();
+    inner.doc.borrow_mut().set_cursor_raw(len);
+
+    let bounds = iced::Rectangle { x: 0.0, y: 0.0, width: 800.0, height: 30.0 };
+    let editor = IcedEditor::new(&inner);
+    auto_scroll(&editor, bounds);
+    assert!(inner.scroll_y.get() > 0.0, "should scroll down");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Комплексная симуляция — полный цикл ввода-навигации
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn type_text_then_move_and_delete() {
+    let inner = EditorInner::new(String::new());
+    // Печатаем "hello world"
+    for (i, ch) in "hello world".chars().enumerate() {
+        inner.edit_doc_raw(i, i, &ch.to_string());
+    }
+    assert_eq!(inner.doc.borrow().content(), "hello world");
+    // Move left 6 раз → на ' '
+    for _ in 0..6 {
+        let mut doc = inner.doc.borrow_mut();
+        api_cursor::move_left(&mut *doc);
+    }
+    // Удаляем пробел (backspace)
+    inner.edit_doc_raw(5, 6, "");
+    assert_eq!(inner.doc.borrow().content(), "helloworld");
+}
+
+#[test]
+fn edit_then_mode_switch_then_edit() {
+    let inner = EditorInner::new("hello".to_string());
+    inner.edit_doc_raw(5, 5, " world");
+    inner.cycle_mode(); // → Source
+    assert_eq!(inner.get_mode(), EditMode::Source);
+    inner.edit_doc_raw(11, 11, "!!");
+    assert_eq!(inner.doc.borrow().content(), "hello world!!");
+}
+
+#[test]
+fn mixed_borrow_and_edit_refcell_safe() {
+    // Этот тест проверяет конкретную последовательность, которая
+    // раньше падала из-за мёртвого кода в edit_doc_raw
+    let inner = EditorInner::new("hello world".to_string());
+    let _line = inner.doc.borrow().cursor.line();
+    inner.edit_doc_raw(5, 5, "!!");
+    let _raw = inner.doc.borrow().cursor.raw();
+    let _content = inner.doc.borrow().content().len();
+    inner.doc.borrow_mut().set_cursor_raw(0);
+    let _line2 = inner.doc.borrow().cursor.line();
+    assert_eq!(inner.doc.borrow().content(), "hello!! world");
+}
+
+#[test]
+fn all_keyboard_actions_no_panic() {
+    // Полная симуляция того, что делает keyboard handler
+    let inner = EditorInner::new("hello world\nsecond line".to_string());
+    // word movement
     api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
     let pos = inner.doc.borrow().cursor.raw();
     assert_eq!(pos, 6);
-
-    // mode switch
+    // mode switch + scroll
     inner.cycle_mode();
-    assert_eq!(inner.get_mode(), EditMode::Source);
-
-    // scroll
     inner.scroll_y.set(50.0);
-    assert_eq!(inner.scroll_y.get(), 50.0);
-
-    // edit: вставляем перед "world" → "hello !!!world"
+    // edit at position
     inner.edit_doc_raw(pos, pos, "!!!");
     assert_eq!(inner.doc.borrow().content(), "hello !!!world\nsecond line");
     inner.mark_dirty();

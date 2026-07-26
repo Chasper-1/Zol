@@ -6,7 +6,7 @@ use iced::mouse::ScrollDelta;
 
 use api::cursor as api_cursor;
 
-use super::IcedEditor;
+use crate::iced_editor::widget::editor::IcedEditor;
 use super::auto_scroll;
 
 pub fn handle_mouse<'a, Message>(

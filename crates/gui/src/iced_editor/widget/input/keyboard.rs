@@ -8,7 +8,7 @@ use api::cursor as api_cursor;
 use api::file as api_file;
 use editor::state::EditMode;
 
-use super::IcedEditor;
+use crate::iced_editor::widget::editor::IcedEditor;
 use super::auto_scroll;
 
 pub fn handle_keyboard<'a, Message>(
@@ -63,16 +63,20 @@ pub fn handle_keyboard<'a, Message>(
 
         // Ctrl+← — слово влево
         if matches!(key.as_ref(), keyboard::Key::Named(Named::ArrowLeft)) {
-            let mut doc = this.inner.doc.borrow_mut();
-            api_cursor::move_word_left(&mut *doc);
+            {
+                let mut doc = this.inner.doc.borrow_mut();
+                api_cursor::move_word_left(&mut *doc);
+            }
             auto_scroll(this, bounds);
             shell.request_redraw();
             return;
         }
         // Ctrl+→ — слово вправо
         if matches!(key.as_ref(), keyboard::Key::Named(Named::ArrowRight)) {
-            let mut doc = this.inner.doc.borrow_mut();
-            api_cursor::move_word_right(&mut *doc);
+            {
+                let mut doc = this.inner.doc.borrow_mut();
+                api_cursor::move_word_right(&mut *doc);
+            }
             auto_scroll(this, bounds);
             shell.request_redraw();
             return;
