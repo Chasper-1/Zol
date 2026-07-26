@@ -1,6 +1,7 @@
 //! Позиция курсора, навигация, мигание.
 
 pub mod grapheme;
+pub mod marker_skip;
 pub mod movement;
 pub mod types;
 pub mod word;

@@ -2,13 +2,13 @@ use editor::state::EditMode;
 use super::*;
 
 fn make_mode() -> EditMode {
-    EditMode::LivePreview
+    EditMode::Live
 }
 
 #[test]
 fn mode_set_changes_value() {
     let mut m = make_mode();
-    assert_eq!(m, EditMode::LivePreview);
+    assert_eq!(m, EditMode::Live);
     mode_set(&mut m, EditMode::Preview);
     assert_eq!(m, EditMode::Preview);
 }
@@ -27,7 +27,7 @@ fn mode_name_preview() {
 
 #[test]
 fn mode_name_live_preview() {
-    assert_eq!(mode_name(EditMode::LivePreview), "live_preview");
+    assert_eq!(mode_name(EditMode::Live), "live");
 }
 
 #[test]
@@ -39,12 +39,12 @@ fn mode_name_source() {
 fn mode_cycle_from_preview() {
     let mut m = EditMode::Preview;
     mode_cycle(&mut m);
-    assert_eq!(m, EditMode::LivePreview);
+    assert_eq!(m, EditMode::Live);
 }
 
 #[test]
 fn mode_cycle_from_live_preview() {
-    let mut m = EditMode::LivePreview;
+    let mut m = EditMode::Live;
     mode_cycle(&mut m);
     assert_eq!(m, EditMode::Source);
 }
@@ -72,7 +72,7 @@ fn mode_is_editable_preview_is_false() {
 
 #[test]
 fn mode_is_editable_live_preview_is_true() {
-    assert!(mode_is_editable(EditMode::LivePreview));
+    assert!(mode_is_editable(EditMode::Live));
 }
 
 #[test]

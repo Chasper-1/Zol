@@ -1,11 +1,12 @@
 use std::cell::{Cell, RefCell};
 
-use editor::document::Document;
+use editor::Viewport;
 use editor::cache::DocumentCache;
+use editor::document::Document;
+use editor::layout::reveal::RevealState;
 use editor::render::{self, ShapedDocument};
 use editor::state::EditMode;
 use editor::theme::EditorTheme;
-use editor::Viewport;
 
 /// Имя файла по умолчанию.
 const DEFAULT_FILE: &str = "notes.zoll";
@@ -26,6 +27,8 @@ pub struct EditorInner {
     pub file_path: String,
     /// Последний вычисленный viewport (строки, которые нужно парсить/рендерить).
     pub viewport: Cell<Viewport>,
+    /// Состояние раскрытия маркеров (для Live-режима).
+    pub revealed: RefCell<RevealState>,
 }
 
 impl EditorInner {
@@ -42,19 +45,19 @@ impl EditorInner {
         let mut shaped_doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
 
         editor::font::init();
-        render::build(
-            &mut shaped_doc,
-            doc.content(),
-            &cache,
-            EditMode::LivePreview,
-            0,
-            &theme,
-            base_size,
-            heading_size,
-            0.0,
-            None,
-            None,
-        );
+    render::build(
+        &mut shaped_doc,
+        doc.content(),
+        &cache,
+        EditMode::Live,
+        &theme,
+        base_size,
+        heading_size,
+        0.0,
+        None,
+        None,
+        None,
+    );
 
         let total_lines = doc.incremental.num_lines();
         let initial_vp = Viewport::new(0, total_lines.saturating_sub(1).min(99));
@@ -63,13 +66,14 @@ impl EditorInner {
             doc: RefCell::new(doc),
             shaped_doc: RefCell::new(shaped_doc),
             cache: RefCell::new(cache),
-            mode: Cell::new(EditMode::LivePreview),
+            mode: Cell::new(EditMode::Live),
             base_size,
             heading_size,
             theme,
             scroll_y: Cell::new(0.0),
             file_path: DEFAULT_FILE.to_string(),
             viewport: Cell::new(initial_vp),
+            revealed: RefCell::new(RevealState::default()),
         }
     }
 

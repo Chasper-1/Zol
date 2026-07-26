@@ -13,7 +13,19 @@ fn build_does_not_deadlock() {
     let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
     let cache = DocumentCache::default();
     let theme = EditorTheme::default();
-    build(&mut doc, "hello", &cache, EditMode::LivePreview, 0, &theme, 14.0, 24.0, 0.0, None, None);
+    build(
+        &mut doc,
+        "hello",
+        &cache,
+        EditMode::Live,
+        &theme,
+        14.0,
+        24.0,
+        0.0,
+        None,
+        None,
+        None,
+    );
     assert!(doc.line_count() > 0, "doc should be shaped after build");
 }
 
@@ -24,7 +36,19 @@ fn build_multiline() {
     let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
     let cache = DocumentCache::default();
     let theme = EditorTheme::default();
-    build(&mut doc, "line 1\nline 2\nline 3", &cache, EditMode::Source, 0, &theme, 14.0, 24.0, 0.0, None, None);
+    build(
+        &mut doc,
+        "line 1\nline 2\nline 3",
+        &cache,
+        EditMode::Source,
+        &theme,
+        14.0,
+        24.0,
+        0.0,
+        None,
+        None,
+        None,
+    );
     assert_eq!(doc.line_count(), 3);
 }
 
@@ -35,7 +59,19 @@ fn build_empty_content() {
     let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
     let cache = DocumentCache::default();
     let theme = EditorTheme::default();
-    build(&mut doc, "", &cache, EditMode::LivePreview, 0, &theme, 14.0, 24.0, 0.0, None, None);
+    build(
+        &mut doc,
+        "",
+        &cache,
+        EditMode::Live,
+        &theme,
+        14.0,
+        24.0,
+        0.0,
+        None,
+        None,
+        None,
+    );
     assert_eq!(doc.line_count(), 1);
 }
 
@@ -46,7 +82,19 @@ fn build_with_scroll() {
     let mut doc = ShapedDocument::new(cosmic_text::Buffer::new_empty(metrics), vec![]);
     let cache = DocumentCache::default();
     let theme = EditorTheme::default();
-    build(&mut doc, "hello\nworld", &cache, EditMode::Source, 0, &theme, 14.0, 24.0, 100.0, Some(200.0), None);
+    build(
+        &mut doc,
+        "hello\nworld",
+        &cache,
+        EditMode::Source,
+        &theme,
+        14.0,
+        24.0,
+        100.0,
+        Some(200.0),
+        None,
+        None,
+    );
     assert!(doc.total_height() >= 0.0);
 }
 
@@ -63,7 +111,14 @@ fn make_runs(text: &str, size: f32) -> Vec<TextRun> {
 fn shape_single_line() {
     font::init();
     let doc = font::with_font_system(|fs| {
-        shape::shape_document(&[make_runs("hello", 14.0)], fs, 14.0, "sans-serif", 0.0, None)
+        shape::shape_document(
+            &[make_runs("hello", 14.0)],
+            fs,
+            14.0,
+            "sans-serif",
+            0.0,
+            None,
+        )
     });
     assert!(doc.total_height() > 0.0);
     assert_eq!(doc.line_count(), 1);
@@ -75,7 +130,11 @@ fn shape_multiple_lines() {
     let doc = font::with_font_system(|fs| {
         shape::shape_document(
             &[make_runs("line1", 14.0), make_runs("line2", 14.0)],
-            fs, 14.0, "sans-serif", 0.0, None,
+            fs,
+            14.0,
+            "sans-serif",
+            0.0,
+            None,
         )
     });
     assert_eq!(doc.line_count(), 2);
@@ -95,9 +154,20 @@ fn shape_empty_line() {
 fn glyph_starts_for_mixed_text() {
     font::init();
     let doc = font::with_font_system(|fs| {
-        shape::shape_document(&[make_runs("**текст**", 14.0)], fs, 14.0, "sans-serif", 0.0, None)
+        shape::shape_document(
+            &[make_runs("**текст**", 14.0)],
+            fs,
+            14.0,
+            "sans-serif",
+            0.0,
+            None,
+        )
     });
-    let run = doc.buffer.layout_runs().next().expect("должна быть одна строка");
+    let run = doc
+        .buffer
+        .layout_runs()
+        .next()
+        .expect("должна быть одна строка");
     let glyphs: Vec<_> = run.glyphs.iter().map(|g| (g.start, g.x, g.w)).collect();
     assert_eq!(glyphs.len(), 9, "9 glyph-кластеров: glyphs={:?}", glyphs);
     assert_eq!(glyphs[0].0, 0, "* (первый)");

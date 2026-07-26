@@ -16,7 +16,7 @@ pub fn mode_name(mode: EditMode) -> &'static str {
 }
 
 /// Переключиться на следующий режим по циклу:
-/// Preview → LivePreview → Source → Preview.
+/// Preview → Live → Source → Preview.
 pub fn mode_cycle(mode: &mut EditMode) {
     *mode = mode.next();
 }

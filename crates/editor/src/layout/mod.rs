@@ -4,6 +4,7 @@
 //! - [`compute`] — разбор строки в `TextRun` по сегментам разметки
 
 pub mod compute;
+pub mod reveal;
 pub mod types;
 
 pub use compute::cursor_line_bounds;

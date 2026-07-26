@@ -1,27 +1,28 @@
-use super::shaped_doc::ShapedDocument;
 use super::shape::shape_document;
+use super::shaped_doc::ShapedDocument;
+use crate::Viewport;
 use crate::cache::DocumentCache;
 use crate::layout;
+use crate::layout::reveal::RevealState;
 use crate::state::EditMode;
 use crate::theme::EditorTheme;
-use crate::Viewport;
 
 /// Собрать документ: вычислить TextRun'ы → сшейпить → готово к отрисовке.
 ///
-/// Если передан `viewport`, для строк вне viewport используется
-/// простой (неокрашенный) TextRun — без cache-лукапа и markup-обработки.
+/// `revealed` — состояние раскрытия маркеров (для Live-режима).
+#[allow(clippy::too_many_arguments)]
 pub fn build(
     doc: &mut ShapedDocument,
     content: &str,
     cache: &DocumentCache,
     mode: EditMode,
-    active_line: usize,
     theme: &EditorTheme,
     base_size: f32,
     heading_size: f32,
     scroll_y: f32,
     viewport_height: Option<f32>,
     viewport: Option<&Viewport>,
+    revealed: Option<&RevealState>,
 ) {
     crate::font::init();
 
@@ -46,18 +47,16 @@ pub fn build(
                 base_size,
             )]
         } else if is_visible {
-            let show_markers = match mode {
-                EditMode::Source => true,
-                EditMode::Preview => false,
-                EditMode::LivePreview => i == active_line,
-            };
+            let show_markers = matches!(mode, EditMode::Source);
             layout::compute::compute_line_runs(
                 line,
                 line_start,
+                i,
                 cache.lines.get(i),
                 base_size,
                 heading_size,
                 show_markers,
+                revealed,
                 theme,
             )
         } else {
@@ -73,6 +72,13 @@ pub fn build(
     }
 
     crate::font::with_font_system(|fs| {
-        *doc = shape_document(&all_runs, fs, base_size, font_family, scroll_y, viewport_height);
+        *doc = shape_document(
+            &all_runs,
+            fs,
+            base_size,
+            font_family,
+            scroll_y,
+            viewport_height,
+        );
     });
 }

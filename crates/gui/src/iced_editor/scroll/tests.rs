@@ -20,13 +20,13 @@ fn shaped_doc(text: &str, vp_height: f32) -> ShapedDocument {
         &mut doc,
         text,
         &cache,
-        EditMode::LivePreview,
-        0,
+        EditMode::Live,
         &theme,
         14.0,
         24.0,
         0.0,
         Some(vp_height),
+        None,
         None,
     );
     doc
@@ -42,13 +42,13 @@ fn shaped_multi(text: &str) -> ShapedDocument {
         &mut doc,
         text,
         &cache,
-        EditMode::LivePreview,
-        0,
+        EditMode::Live,
         &theme,
         14.0,
         24.0,
         0.0,
         Some(1000.0),
+        None,
         None,
     );
     doc

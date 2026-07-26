@@ -1,6 +1,7 @@
+pub(crate) mod data;
 pub mod edit_doc;
 pub mod mode;
-pub(crate) mod data;
+pub mod reveal;
 
 pub use data::EditorInner;
 

@@ -60,7 +60,7 @@ fn defaults_are_sane() {
     assert_eq!(inner.base_size, 14.0, "base_size default");
     assert_eq!(inner.heading_size, 24.0, "heading_size default");
     assert_eq!(inner.file_path, "notes.zoll", "file_path default");
-    assert_eq!(inner.mode.get(), EditMode::LivePreview, "mode default");
+    assert_eq!(inner.mode.get(), EditMode::Live, "mode default");
     assert_eq!(inner.scroll_y.get(), 0.0, "scroll_y default");
 }
 
@@ -294,14 +294,14 @@ fn edit_doc_closure_with_mut_borrow_inside() {
 #[test]
 fn mode_default_is_live_preview() {
     let inner = EditorInner::new("test".to_string());
-    assert_eq!(inner.get_mode(), EditMode::LivePreview);
+    assert_eq!(inner.get_mode(), EditMode::Live);
 }
 
 #[test]
 fn mode_set_live_preview() {
     let inner = EditorInner::new("test".to_string());
-    inner.set_mode(EditMode::LivePreview);
-    assert_eq!(inner.get_mode(), EditMode::LivePreview);
+    inner.set_mode(EditMode::Live);
+    assert_eq!(inner.get_mode(), EditMode::Live);
 }
 
 #[test]
@@ -344,10 +344,10 @@ fn mode_cycle_source_to_preview() {
 #[test]
 fn mode_cycle_preview_to_live_preview() {
     let inner = EditorInner::new("test".to_string());
-    inner.cycle_mode(); // LivePreview → Source
+    inner.cycle_mode(); // Live → Source
     inner.cycle_mode(); // Source → Preview
-    inner.cycle_mode(); // Preview → LivePreview
-    assert_eq!(inner.get_mode(), EditMode::LivePreview);
+    inner.cycle_mode(); // Preview → Live
+    assert_eq!(inner.get_mode(), EditMode::Live);
 }
 
 #[test]
@@ -356,8 +356,8 @@ fn mode_cycle_full_loop() {
     for _ in 0..6 {
         inner.cycle_mode();
     }
-    // Чётное число циклов — вернулись в LivePreview
-    assert_eq!(inner.get_mode(), EditMode::LivePreview);
+    // Чётное число циклов — вернулись в Live
+    assert_eq!(inner.get_mode(), EditMode::Live);
 }
 
 #[test]
