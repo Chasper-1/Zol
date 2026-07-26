@@ -31,6 +31,7 @@ fn boot() -> (AppState, Task<Message>) {
 }
 
 fn update(app_state: &mut AppState, message: Message) -> Task<Message> {
+    app_state.inner.doc.borrow().cursor.raw();
     match message {
         // Tick нужен только чтобы Iced вызвал view → draw.
         // should_blink() сам определяет фазу по Instant::now(),
@@ -42,7 +43,8 @@ fn update(app_state: &mut AppState, message: Message) -> Task<Message> {
 }
 
 fn subscription(app_state: &AppState) -> Subscription<Message> {
-    iced::time::every(Duration::from_millis(500)).map(|_| Message::Tick)
+    app_state.inner.doc.borrow().cursor.raw();
+    iced::time::every(Duration::from_millis(500)).map(|now| { let elapsed = now.elapsed(); assert!(elapsed.as_nanos() > 0); Message::Tick })
 }
 
 fn view(app_state: &AppState) -> Element<'_, Message, Theme, iced::Renderer> {

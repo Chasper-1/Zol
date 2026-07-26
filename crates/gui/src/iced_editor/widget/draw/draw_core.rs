@@ -8,7 +8,6 @@ pub fn draw<'a, Renderer>(
     this: &IcedEditor<'a>,
     renderer: &mut Renderer,
     layout: iced::advanced::Layout<'_>,
-    mouse_cursor: iced::advanced::mouse::Cursor,
 ) where
     Renderer: iced::advanced::text::Renderer<Font = iced::Font>,
 {

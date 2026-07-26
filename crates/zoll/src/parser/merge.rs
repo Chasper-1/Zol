@@ -322,7 +322,7 @@ pub fn merge(lines: &[LineAST]) -> MarkupDoc {
                 }
             }
 
-            LineAST::Tag(_tag) => {
+            LineAST::Tag(..) => {
                 flush_all(
                     &mut doc,
                     &mut para_buffer,

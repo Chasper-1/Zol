@@ -12,7 +12,7 @@ fn file_save_load_roundtrip() {
     let loaded = file_load(&path).unwrap();
     assert_eq!(loaded.content(), "hello world");
 
-    let _ = std::fs::remove_file(&path);
+    std::fs::remove_file(&path).unwrap_or(());
 }
 
 #[test]
@@ -33,7 +33,7 @@ fn file_save_str_load_str() {
     let s = file_load_str(&path).unwrap();
     assert_eq!(s, "test content");
 
-    let _ = std::fs::remove_file(&path);
+    std::fs::remove_file(&path).unwrap_or(());
 }
 
 #[test]
@@ -45,7 +45,7 @@ fn file_load_empty_file() {
     let d = file_load(&path).unwrap();
     assert!(d.content().is_empty());
 
-    let _ = std::fs::remove_file(&path);
+    std::fs::remove_file(&path).unwrap_or(());
 }
 
 #[test]
@@ -61,5 +61,5 @@ fn file_save_dirty_flag_preserved() {
     // новый документ всегда dirty на старте
     assert!(loaded.dirty);
 
-    let _ = std::fs::remove_file(&path);
+    std::fs::remove_file(&path).unwrap_or(());
 }

@@ -59,8 +59,8 @@ fn bench_scan_newlines(c: &mut Criterion) {
         b.iter(|| {
             let byte = black_box(mid).min(black_box(&text).len());
             // Эмулируем старый content[..byte].bytes().filter(|b| b == b'\n').count()
-            let _count = text[..byte].bytes().filter(|&b| b == b'\n').count();
-            black_box(_count);
+            let count = text[..byte].bytes().filter(|&b| b == b'\n').count();
+            black_box(count);
         });
     });
 }

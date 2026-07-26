@@ -153,7 +153,7 @@
     fn move_home_to_line_start() {
         let mut c = cursor_at(6, 1, 42.0);
         let text = "abc\ndef";
-        c.move_home(text, &ls(text));
+        c.move_home(&ls(text));
         assert_eq!(c.raw(), 4);
         assert_eq!(c.col_visual(), 0.0);
     }
@@ -171,7 +171,7 @@
     fn move_home_on_first_line() {
         let mut c = cursor_at(2, 0, 10.0);
         let text = "hello";
-        c.move_home(text, &ls(text));
+        c.move_home(&ls(text));
         assert_eq!(c.raw(), 0);
     }
 
@@ -388,7 +388,7 @@
         let mut c = Cursor::new();
         c.move_left("", &[]);
         c.move_right("", &[]);
-        c.move_home("", &[]);
+        c.move_home(&[]);
         c.move_end("", &[]);
         c.move_word_left("", &[]);
         c.move_word_right("", &[]);

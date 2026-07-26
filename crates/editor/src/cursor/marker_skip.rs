@@ -31,7 +31,7 @@ pub fn snap_forward(raw: usize, line_cache: &MarkupCache) -> usize {
 
 /// Если `raw` находится внутри маркера, возвращает позицию сразу за
 /// концом правого маркера (т.е. на начале следующего за сегментом текста).
-pub fn snap_backward(raw: usize, line_cache: &MarkupCache, line_start: usize) -> usize {
+pub fn snap_backward(raw: usize, line_cache: &MarkupCache) -> usize {
     for seg in &line_cache.segments {
         let seg_start = seg.raw_start;
         let seg_content_start = seg_start + seg.left_marker_len;

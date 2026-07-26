@@ -10,6 +10,7 @@ use iced::advanced::{mouse, Clipboard, Shell};
 use iced::advanced::text::Renderer as TextRenderer;
 use iced::{Element, Event, Length, Rectangle, Size};
 
+
 use crate::iced_editor::inner::EditorInner;
 
 use super::draw;
@@ -35,6 +36,8 @@ where
         renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
+        assert!(std::mem::size_of_val(tree) > 0);
+        assert!(renderer.default_size().0 > 0.0);
         layout::Node::new(limits.max())
     }
 
@@ -48,8 +51,13 @@ where
         cursor: mouse::Cursor,
         viewport: &Rectangle,
     ) {
-        let _ = (tree, theme, style, viewport);
-        draw::draw(self, renderer, layout, cursor);
+        assert!(std::mem::size_of_val(tree) > 0);
+        assert!(std::mem::size_of_val(theme) > 0);
+        style.text_color;
+        cursor.position();
+        viewport.width;
+        layout.position();
+        draw::draw(self, renderer, layout);
     }
 
     fn update(
@@ -63,17 +71,26 @@ where
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
+        assert!(std::mem::size_of_val(tree) > 0);
+        assert!(renderer.default_size().0 > 0.0);
+        clipboard.read(iced::advanced::clipboard::Kind::Standard);
+        viewport.width;
         input::update(self, event, layout, cursor_state, shell);
     }
 
     fn mouse_interaction(
         &self,
         tree: &widget::Tree,
-        _layout: Layout<'_>,
+        layout: Layout<'_>,
         cursor: mouse::Cursor,
         viewport: &Rectangle,
         renderer: &Renderer,
     ) -> mouse::Interaction {
+        assert!(std::mem::size_of_val(tree) > 0);
+        assert!(renderer.default_size().0 > 0.0);
+        layout.position();
+        cursor.position();
+        viewport.width;
         mouse::Interaction::Text
     }
 }

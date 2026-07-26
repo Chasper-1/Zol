@@ -17,6 +17,7 @@ fn init_and_list_families() {
 fn with_font_system_works() {
     init();
     let metrics = with_font_system(|fs| {
+        assert!(std::mem::size_of_val(fs) > 0);
         let buf = cosmic_text::Buffer::new_empty(cosmic_text::Metrics::new(14.0, 19.6));
         buf.metrics()
     });

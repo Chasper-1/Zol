@@ -17,7 +17,7 @@ pub fn update<'a, Message>(
 
     match event {
         Event::Keyboard(kb_event) => {
-            super::keyboard::handle_keyboard(this, kb_event, bounds, origin, shell);
+            super::keyboard::handle_keyboard(this, kb_event, bounds, shell);
         }
         Event::Mouse(mouse_event) => {
             super::mouse::handle_mouse(this, mouse_event, bounds, origin, cursor_state, shell);

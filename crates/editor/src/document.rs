@@ -54,7 +54,7 @@ impl Document {
 
     /// В начало строки.
     pub fn cursor_move_home(&mut self) {
-        self.cursor.move_home(&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.move_home(&self.incremental.line_starts);
     }
 
     /// В конец строки.

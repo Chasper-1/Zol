@@ -17,7 +17,7 @@ pub fn lock() -> &'static Mutex<FontGlobal> {
 
 /// Проинициализировать глобальный `FontSystem`.
 pub fn init() {
-    let _ = GLOBAL.get_or_init(|| {
+    GLOBAL.get_or_init(|| {
         let mut db = fontdb::Database::new();
         db.load_system_fonts();
 

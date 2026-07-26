@@ -40,39 +40,18 @@ pub fn incremental_to_cache_visible(inc: &IncrementalDoc, viewport: Option<&View
                 continue;
             }
         }
-        let line_text = get_line_text(inc, i);
         let line_start = inc.line_starts[i];
-        cache.lines[i].segments = line_ast_to_segments(&inc.line_asts[i], line_text, line_start);
+        cache.lines[i].segments = line_ast_to_segments(&inc.line_asts[i], line_start);
     }
 
     cache
-}
-
-/// Получить текст строки из IncrementalDoc (без аллокации).
-fn get_line_text(inc: &IncrementalDoc, idx: usize) -> &str {
-    if idx >= inc.line_starts.len() {
-        return "";
-    }
-    let start = inc.line_starts[idx];
-    let end = if idx + 1 < inc.line_starts.len() {
-        inc.line_starts[idx + 1]
-    } else {
-        inc.source.len()
-    };
-    let line = &inc.source[start..end];
-    // Отрезаем \n и \r\n без аллокации
-    if let Some(stripped) = line.strip_suffix('\n') {
-        stripped.strip_suffix('\r').unwrap_or(stripped)
-    } else {
-        line
-    }
 }
 
 /// Преобразовать `LineAST` одной строки в `Vec<Segment>`.
 ///
 /// Каждый вариант `LineAST` превращается в соответствующие сегменты,
 /// с учётом raw-позиций в исходном тексте.
-fn line_ast_to_segments(line_ast: &LineAST, line_text: &str, line_start: usize) -> Vec<Segment> {
+fn line_ast_to_segments(line_ast: &LineAST, line_start: usize) -> Vec<Segment> {
     match line_ast {
         LineAST::Empty => vec![],
 

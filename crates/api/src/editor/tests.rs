@@ -59,8 +59,10 @@ fn mode_cycle_from_source() {
 #[test]
 fn mode_cycle_three_times_returns_to_start() {
     let mut m = EditMode::Preview;
-    for _ in 0..3 {
+    let mut count = 0;
+    while count < 3 {
         mode_cycle(&mut m);
+        count += 1;
     }
     assert_eq!(m, EditMode::Preview);
 }

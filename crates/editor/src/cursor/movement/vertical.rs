@@ -4,7 +4,7 @@ impl Cursor {
     /// На строку вверх, сохраняя пиксельную X-позицию.
     pub fn move_up(&mut self, content: &str, line_starts: &[usize]) {
         if self.line == 0 {
-            self.move_home(content, line_starts);
+            self.move_home(line_starts);
             return;
         }
         let col_x = self.col_visual;

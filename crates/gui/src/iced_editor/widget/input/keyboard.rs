@@ -2,7 +2,7 @@
 
 use iced::advanced::Shell;
 use iced::keyboard::{self, key::Named};
-use iced::{Point, Rectangle};
+use iced::Rectangle;
 
 use api::cursor as api_cursor;
 use api::file as api_file;
@@ -15,7 +15,6 @@ pub fn handle_keyboard<'a, Message>(
     this: &mut IcedEditor<'a>,
     kb_event: &keyboard::Event,
     bounds: Rectangle,
-    origin: Point,
     shell: &mut Shell<'_, Message>,
 ) {
     let keyboard::Event::KeyPressed {
@@ -165,8 +164,10 @@ pub fn handle_keyboard<'a, Message>(
             let line_h = this.inner.base_size * 1.4;
             let n = (bounds.height / line_h) as usize;
             let mut doc = this.inner.doc.borrow_mut();
-            for _ in 0..n {
+            let mut count = 0;
+            while count < n {
                 doc.cursor_move_up();
+                count += 1;
             }
             drop(doc);
             this.inner.snap_cursor_from_markers();
@@ -175,8 +176,10 @@ pub fn handle_keyboard<'a, Message>(
             let line_h = this.inner.base_size * 1.4;
             let n = (bounds.height / line_h) as usize;
             let mut doc = this.inner.doc.borrow_mut();
-            for _ in 0..n {
+            let mut count = 0;
+            while count < n {
                 doc.cursor_move_down();
+                count += 1;
             }
             drop(doc);
             this.inner.snap_cursor_from_markers();

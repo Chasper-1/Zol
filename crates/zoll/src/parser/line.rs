@@ -43,9 +43,7 @@ pub fn parse_line(line: &str) -> LineAST {
 
     // ── Line-level: %% (комментарий до конца строки с любого места) ──
     if let Some(pos) = trimmed.find("%%") {
-        let before = &trimmed[..pos];
         let after = &trimmed[pos + 2..];
-        let _children = parse_inline(before.trim_end());
         let comment_content = parse_inline(after.trim());
         return LineAST::Comment(comment_content);
     }
@@ -59,7 +57,6 @@ pub fn parse_line(line: &str) -> LineAST {
 
     // ── !! с любого места строки ── (не !!!, проверено выше)
     if let Some(pos) = trimmed.find("!!") {
-        let _before = &trimmed[..pos];
         let after = &trimmed[pos + 2..];
         let rest = after.trim();
         if let Some(title_end) = rest.find(':') {
