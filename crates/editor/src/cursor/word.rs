@@ -91,3 +91,68 @@ pub fn next_word_start(content: &str, from: usize) -> usize {
 
     len
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn prev_word_start_mid_second_word() {
+        assert_eq!(prev_word_start("hello world", 6), 0);
+    }
+
+    #[test]
+    fn prev_word_start_after_first_word() {
+        assert_eq!(prev_word_start("hello world", 5), 0);
+    }
+
+    #[test]
+    fn prev_word_start_mid_first_word() {
+        assert_eq!(prev_word_start("hello", 3), 0);
+    }
+
+    #[test]
+    fn prev_word_start_empty() {
+        assert_eq!(prev_word_start("", 0), 0);
+    }
+
+    #[test]
+    fn prev_word_start_spaced() {
+        assert_eq!(prev_word_start("  spaced  ", 10), 2);
+    }
+
+    #[test]
+    fn prev_word_start_three_words() {
+        assert_eq!(prev_word_start("hello world foo", 15), 12);
+    }
+
+    #[test]
+    fn next_word_start_from_start() {
+        assert_eq!(next_word_start("hello world", 0), 6);
+    }
+
+    #[test]
+    fn next_word_start_single_word() {
+        assert_eq!(next_word_start("hello", 0), 0);
+    }
+
+    #[test]
+    fn next_word_start_from_second_word() {
+        assert_eq!(next_word_start("hello world", 6), 6);
+    }
+
+    #[test]
+    fn next_word_start_empty() {
+        assert_eq!(next_word_start("", 0), 0);
+    }
+
+    #[test]
+    fn next_word_start_multi_spaces() {
+        assert_eq!(next_word_start("a   b", 0), 4);
+    }
+
+    #[test]
+    fn next_word_start_at_end() {
+        assert_eq!(next_word_start("hello", 5), 5);
+    }
+}

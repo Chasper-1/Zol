@@ -11,13 +11,6 @@ pub const MARKERS: &[MarkerDef] = &[
         track_depth: false,
     },
     MarkerDef {
-        open: "$$",
-        close: "$$",
-        style: MarkupStyle::DISPLAY_FORMULA,
-        multiline: true,
-        track_depth: true,
-    },
-    MarkerDef {
         open: "!!!",
         close: "!!!",
         style: MarkupStyle::SPOILER_BLOCK,

@@ -34,9 +34,58 @@ pub fn parse_theme(rhai: Map) -> EditorTheme {
                 Err(e) => {
                     eprintln!("[Zol] Ошибка парсинга цвета «editor.background»: {}", e);
                 }
-            }
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rhai::Map;
+
+    #[test]
+    fn parse_theme_default() {
+        let map = Map::new();
+        let theme = parse_theme(map);
+        assert_eq!(theme.name, "custom");
+        assert!((theme.padding - 10.0).abs() < 0.001);
+        assert!((theme.text.size - 14.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn parse_theme_with_editor() {
+        let mut map = Map::new();
+        let mut editor = Map::new();
+        editor.insert("padding".into(), rhai::Dynamic::from(20.0_f64));
+        editor.insert("radius".into(), rhai::Dynamic::from(8.0_f64));
+        map.insert("editor".into(), rhai::Dynamic::from(editor));
+        let theme = parse_theme(map);
+        assert!((theme.padding - 20.0).abs() < 0.001);
+        assert!((theme.radius - 8.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn parse_theme_with_text() {
+        let mut map = Map::new();
+        let mut text = Map::new();
+        text.insert("size".into(), rhai::Dynamic::from(16.0_f64));
+        text.insert("color".into(), rhai::Dynamic::from("#ff0000".to_string()));
+        map.insert("text".into(), rhai::Dynamic::from(text));
+        let theme = parse_theme(map);
+        assert!((theme.text.size - 16.0).abs() < 0.001);
+        assert!((theme.text.color.r - 1.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn parse_theme_invalid_color() {
+        let mut map = Map::new();
+        let mut editor = Map::new();
+        editor.insert("background".into(), rhai::Dynamic::from("not-a-color".to_string()));
+        map.insert("editor".into(), rhai::Dynamic::from(editor));
+        let theme = parse_theme(map);
+        assert!((theme.background.a - 0.9).abs() < 0.001);
+    }
+}
 
     // Читаем блок "text"
     if let Some(text) = rhai.get("text") {

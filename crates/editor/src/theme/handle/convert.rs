@@ -56,3 +56,36 @@ impl FromHandleValue for String {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::theme::color::Rgba;
+
+    #[test]
+    fn float_to_from_handle() {
+        let v = 42.0f32.into_handle_value();
+        assert_eq!(f32::from_handle_value(&v), Some(42.0));
+    }
+
+    #[test]
+    fn rgba_to_from_handle() {
+        let c = Rgba::new(0.5, 0.3, 0.2);
+        let v = c.into_handle_value();
+        assert_eq!(Rgba::from_handle_value(&v), Some(c));
+    }
+
+    #[test]
+    fn string_to_from_handle() {
+        let s = "hello".to_string();
+        let v = s.into_handle_value();
+        assert_eq!(String::from_handle_value(&v), Some("hello".to_string()));
+    }
+
+    #[test]
+    fn wrong_type_returns_none() {
+        let v = HandleValue::Float(1.0);
+        assert_eq!(Rgba::from_handle_value(&v), None);
+        assert_eq!(String::from_handle_value(&v), None);
+    }
+}

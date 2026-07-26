@@ -15,12 +15,23 @@ pub fn compute_line_runs(
     show_markers: bool,
     theme: &EditorTheme,
 ) -> Vec<TextRun> {
-    if let Some(stripped) = line.strip_prefix("# ") {
-        let mut runs = Vec::new();
-        let color = if show_markers { shared::MARKER_GRAY } else { theme.background };
-        runs.push(TextRun::new("# ", 0, color, heading_size));
-        runs.push(TextRun::new(stripped, 0, shared::TEXT_WHITE, heading_size));
-        return runs;
+    if let Some(rest) = line.strip_prefix('#') {
+        if let Some(level_end) = rest.find('#') {
+            if level_end > 0 {
+                let level_str = &rest[..level_end];
+                if level_str.parse::<u32>().is_ok() {
+                    let mut runs = Vec::new();
+                    let marker_color = if show_markers { shared::MARKER_GRAY } else { theme.background };
+                    // Маркер `#N#` (ведущий '#', цифры, закрывающий '#')
+                    let marker_end = level_end + 2;
+                    let marker_text = &line[..marker_end];
+                    runs.push(TextRun::new(marker_text, 0, marker_color, heading_size));
+                    let content = &line[marker_end..];
+                    runs.push(TextRun::new(content, 0, shared::TEXT_WHITE, heading_size));
+                    return runs;
+                }
+            }
+        }
     }
 
     let Some(cache) = line_cache else {

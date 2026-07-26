@@ -72,3 +72,68 @@ impl Default for ThemeSystem {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::theme::color::Rgba;
+    use crate::theme::registry::handles::{PADDING, BACKGROUND, TEXT_FONT};
+
+    #[test]
+    fn theme_system_set_get_float() {
+        let mut ts = ThemeSystem::new();
+        ts.set(&PADDING, 15.0f32);
+        assert_eq!(ts.get(&PADDING), Some(15.0f32));
+    }
+
+    #[test]
+    fn theme_system_get_default() {
+        let ts = ThemeSystem::new();
+        assert_eq!(ts.get_or_default(&PADDING), 10.0f32);
+    }
+
+    #[test]
+    fn theme_system_set_get_rgba() {
+        let mut ts = ThemeSystem::new();
+        let color = Rgba::new(1.0, 0.0, 0.0);
+        ts.set(&BACKGROUND, color);
+        assert_eq!(ts.get(&BACKGROUND), Some(color));
+    }
+
+    #[test]
+    fn theme_system_set_get_string() {
+        let mut ts = ThemeSystem::new();
+        ts.set(&TEXT_FONT, "monospace".to_string());
+        assert_eq!(ts.get(&TEXT_FONT), Some("monospace".to_string()));
+    }
+
+    #[test]
+    fn theme_system_get_missing() {
+        let ts = ThemeSystem::new();
+        assert_eq!(ts.get::<f32>(&PADDING), None);
+    }
+
+    #[test]
+    fn theme_system_overwrite() {
+        let mut ts = ThemeSystem::new();
+        ts.set(&PADDING, 5.0f32);
+        ts.set(&PADDING, 20.0f32);
+        assert_eq!(ts.get(&PADDING), Some(20.0f32));
+    }
+
+    #[test]
+    fn theme_system_reset() {
+        let mut ts = ThemeSystem::new();
+        ts.set(&PADDING, 15.0f32);
+        ts.reset();
+        assert_eq!(ts.get::<f32>(&PADDING), None);
+    }
+
+    #[test]
+    fn theme_system_set_raw() {
+        let mut ts = ThemeSystem::new();
+        ts.set_raw("editor.padding", HandleValue::Float(12.0));
+        let v = ts.get_raw("editor.padding");
+        assert!(matches!(v, Some(HandleValue::Float(f)) if (f - 12.0).abs() < 0.001));
+    }
+}

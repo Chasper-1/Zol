@@ -50,11 +50,10 @@ pub fn parse_line(line: &str) -> LineAST {
         return LineAST::Comment(comment_content);
     }
 
-    // ── $$ с любого места строки ──
-    if let Some(pos) = trimmed.find("$$") {
-        let _before = &trimmed[..pos];
-        let after = &trimmed[pos + 2..];
-        let children = parse_inline(after.trim());
+    // ── $$ Display formula (только с начала строки) ──
+    if trimmed.starts_with("$$") {
+        let content = trimmed[2..].trim();
+        let children = parse_inline(content);
         return LineAST::Formula(children);
     }
 
@@ -263,7 +262,6 @@ fn match_inline_marker(
         (b'-', b'-') => (MarkupStyle::DELETION, 2),
         (b'\'', b'\'') => (MarkupStyle::SUPERSCRIPT, 2),
         (b',', b',') => (MarkupStyle::SUBSCRIPT, 2),
-        (b'$', b'$') => (MarkupStyle::DISPLAY_FORMULA, 2),
         (b'$', _) => return find_close_for_single(bytes, pos, len),
         _ => return None,
     };

@@ -291,10 +291,8 @@ impl IncrementalDoc {
 
 /// Парсит строку или возвращает Empty для пустой.
 fn parse_line_or_empty(line: &str) -> LineAST {
-    if line.trim().is_empty() && line.is_empty() {
-        if line.is_empty() {
-            return LineAST::Empty;
-        }
+    if line.trim().is_empty() {
+        return LineAST::Empty;
     }
     crate::parser::parse_line(line)
 }
@@ -315,6 +313,7 @@ pub fn build_line_starts(text: &str) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast::LineAST;
     use crate::ast::MarkupNode;
     use crate::ast::MarkupStyle;
 
@@ -409,5 +408,79 @@ mod tests {
             matches!(n, MarkupNode::Formatted { style, .. } if *style == MarkupStyle::BOLD)
         });
         assert!(has_bold, "Bold should be preserved in visible area");
+    }
+
+    #[test]
+    fn build_line_starts_empty() {
+        assert_eq!(build_line_starts(""), vec![0]);
+    }
+
+    #[test]
+    fn build_line_starts_single_line() {
+        assert_eq!(build_line_starts("hello"), vec![0]);
+    }
+
+    #[test]
+    fn build_line_starts_two_lines() {
+        assert_eq!(build_line_starts("ab\ncd"), vec![0, 3]);
+    }
+
+    #[test]
+    fn build_line_starts_newline_only() {
+        assert_eq!(build_line_starts("\n"), vec![0, 1]);
+    }
+
+    #[test]
+    fn build_line_starts_multi_lines() {
+        assert_eq!(build_line_starts("a\nb\nc"), vec![0, 2, 4]);
+    }
+
+    #[test]
+    fn line_number_byte_zero() {
+        let doc = IncrementalDoc::new("hello\nworld");
+        assert_eq!(doc.line_number(0), 0);
+    }
+
+    #[test]
+    fn line_number_byte_in_first_line() {
+        let doc = IncrementalDoc::new("hello\nworld");
+        assert_eq!(doc.line_number(3), 0);
+    }
+
+    #[test]
+    fn line_number_byte_on_newline() {
+        let doc = IncrementalDoc::new("hello\nworld");
+        assert_eq!(doc.line_number(5), 0);
+        assert_eq!(doc.line_number(6), 1);
+    }
+
+    #[test]
+    fn line_number_byte_past_end() {
+        let doc = IncrementalDoc::new("hello");
+        assert_eq!(doc.line_number(100), 0);
+    }
+
+    #[test]
+    fn line_number_empty_doc() {
+        let doc = IncrementalDoc::new("");
+        assert_eq!(doc.line_number(0), 0);
+    }
+
+    #[test]
+    fn parse_line_or_empty_empty_string() {
+        assert_eq!(parse_line_or_empty(""), LineAST::Empty);
+    }
+
+    #[test]
+    fn parse_line_or_empty_whitespace() {
+        assert_eq!(parse_line_or_empty("   \t  "), LineAST::Empty);
+    }
+
+    #[test]
+    fn parse_line_or_empty_paragraph() {
+        match parse_line_or_empty("hello world") {
+            LineAST::Paragraph(_) => {}
+            _ => panic!("expected Paragraph"),
+        }
     }
 }

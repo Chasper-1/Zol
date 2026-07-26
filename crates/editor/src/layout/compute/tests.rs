@@ -47,45 +47,87 @@
     }
 
     #[test]
-    fn heading_no_markers() {
+    fn heading_with_space() {
+        // "#1# hi" — пробел после маркера
         let theme = EditorTheme::default();
-        let runs = compute_line_runs("# hi", 0, None, 14.0, 22.0, false, &theme);
+        let runs = compute_line_runs("#1# hi", 0, None, 14.0, 22.0, false, &theme);
         assert_eq!(runs.len(), 2);
-        // "# " — маркер, цвета фона (невидим)
-        assert_eq!(runs[0].text, "# ");
-        assert_eq!(runs[0].color, theme.background);
+        assert_eq!(runs[0].text, "#1#");
         assert_eq!(runs[0].size, 22.0);
-        assert_eq!(runs[1].text, "hi");
+        assert_eq!(runs[0].color, theme.background);
+        assert_eq!(runs[1].text, " hi");
         assert_eq!(runs[1].size, 22.0);
     }
 
     #[test]
-    fn heading_with_markers() {
-        let theme = EditorTheme::default();
-        let runs = compute_line_runs("# hi", 0, None, 14.0, 22.0, true, &theme);
+    fn heading_without_space() {
+        // "#1#hi" — без пробела после маркера
+        let runs = compute_line_runs("#1#hi", 0, None, 14.0, 22.0, false, &EditorTheme::default());
         assert_eq!(runs.len(), 2);
-        assert_eq!(runs[0].text, "# ");
-        assert_eq!(runs[0].size, 22.0);
-        assert_ne!(runs[0].color, theme.background);
+        assert_eq!(runs[0].text, "#1#");
         assert_eq!(runs[1].text, "hi");
     }
 
     #[test]
-    fn heading_empty_after_prefix() {
+    fn heading_markers_visible() {
         let theme = EditorTheme::default();
-        let runs = compute_line_runs("# ", 0, None, 14.0, 22.0, false, &theme);
+        let runs = compute_line_runs("#1# hi", 0, None, 14.0, 22.0, true, &theme);
         assert_eq!(runs.len(), 2);
-        assert_eq!(runs[0].text, "# ");
-        assert_eq!(runs[0].color, theme.background);
+        assert_eq!(runs[0].text, "#1#");
+        assert_ne!(runs[0].color, theme.background);
+        assert_eq!(runs[1].text, " hi");
     }
 
     #[test]
-    fn not_heading_without_space() {
-        // "#no" — не заголовок (нет пробела после #)
+    fn heading_empty_content() {
+        // "#1#" — контента нет
+        let runs = compute_line_runs("#1#", 0, None, 14.0, 22.0, false, &EditorTheme::default());
+        assert_eq!(runs.len(), 2);
+        assert_eq!(runs[0].text, "#1#");
+        assert_eq!(runs[1].text, "");
+    }
+
+    #[test]
+    fn heading_only_space() {
+        // "#1# " — только пробел после маркера
+        let theme = EditorTheme::default();
+        let runs = compute_line_runs("#1# ", 0, None, 14.0, 22.0, false, &theme);
+        assert_eq!(runs.len(), 2);
+        assert_eq!(runs[0].text, "#1#");
+        assert_eq!(runs[0].color, theme.background);
+        assert_eq!(runs[1].text, " ");
+    }
+
+    #[test]
+    fn heading_level_3() {
+        let runs = compute_line_runs("#3# Section", 0, None, 14.0, 22.0, false, &EditorTheme::default());
+        assert_eq!(runs.len(), 2);
+        assert_eq!(runs[0].text, "#3#");
+        assert_eq!(runs[0].size, 22.0);
+        assert_eq!(runs[1].text, " Section");
+        assert_eq!(runs[1].size, 22.0);
+    }
+
+    #[test]
+    fn not_heading_no_closing_hash() {
+        // "#no" — нет закрывающего '#'
         let runs = compute_line_runs("#no", 0, None, 14.0, 22.0, false, &EditorTheme::default());
         assert_eq!(runs.len(), 1);
         assert_eq!(runs[0].text, "#no");
-        assert_eq!(runs[0].size, 14.0);
+    }
+
+    #[test]
+    fn not_heading_standalone_hash() {
+        // "#" — просто '#'
+        let runs = compute_line_runs("#", 0, None, 14.0, 22.0, false, &EditorTheme::default());
+        assert_eq!(runs.len(), 1);
+    }
+
+    #[test]
+    fn not_heading_level_without_closing() {
+        // "#1" — уровень есть, но нет закрывающего '#'
+        let runs = compute_line_runs("#1", 0, None, 14.0, 22.0, false, &EditorTheme::default());
+        assert_eq!(runs.len(), 1);
     }
 
     #[test]

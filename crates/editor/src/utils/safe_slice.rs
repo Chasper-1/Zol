@@ -27,3 +27,44 @@ fn safe_prev_boundary(content: &str, byte: usize) -> usize {
     }
     b
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn safe_slice_full() {
+        assert_eq!(safe_slice("hello", 0, 5), "hello");
+    }
+
+    #[test]
+    fn safe_slice_prefix() {
+        assert_eq!(safe_slice("hello", 0, 3), "hel");
+    }
+
+    #[test]
+    fn safe_slice_unicode_char_boundary() {
+        assert_eq!(safe_slice("привет", 0, 6), "при");
+    }
+
+    #[test]
+    fn safe_slice_unicode_mid_char() {
+        let s = safe_slice("привет", 1, 5);
+        assert!(s.len() <= 5);
+    }
+
+    #[test]
+    fn safe_slice_zero_range() {
+        assert_eq!(safe_slice("hello", 0, 0), "");
+    }
+
+    #[test]
+    fn safe_slice_same_start_end() {
+        assert_eq!(safe_slice("hello", 3, 3), "");
+    }
+
+    #[test]
+    fn safe_slice_past_end() {
+        assert_eq!(safe_slice("hello", 10, 20), "");
+    }
+}
