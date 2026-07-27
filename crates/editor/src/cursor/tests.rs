@@ -22,6 +22,7 @@
             line,
             col_visual,
             last_blink: Instant::now(),
+            anchor: None,
         }
     }
 

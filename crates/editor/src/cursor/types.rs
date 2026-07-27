@@ -4,9 +4,10 @@ use std::time::Instant;
 ///
 /// `raw` всегда указывает на валидную **grapheme**-границу.
 /// `line` — кешированный номер строки.
+/// `anchor` — фиксированный конец выделения (None = нет выделения).
 #[derive(Debug)]
 pub struct Cursor {
-    /// Байтовый оффсет от начала текста.
+    /// Байтовый оффсет от начала текста (активный конец выделения).
     pub(crate) raw: usize,
     /// Строка, в которой находится `raw`.
     pub(crate) line: usize,
@@ -14,6 +15,8 @@ pub struct Cursor {
     pub(crate) col_visual: f32,
     /// Время последнего изменения видимости курсора.
     pub(crate) last_blink: Instant,
+    /// Фиксированный конец выделения; None = нет выделения.
+    pub(crate) anchor: Option<usize>,
 }
 
 impl Cursor {
@@ -24,14 +27,21 @@ impl Cursor {
             line: 0,
             col_visual: 0.0,
             last_blink: Instant::now(),
+            anchor: None,
         }
     }
 
     // ── Геттеры ──
 
-    pub fn raw(&self) -> usize { self.raw }
-    pub fn line(&self) -> usize { self.line }
-    pub fn col_visual(&self) -> f32 { self.col_visual }
+    pub fn raw(&self) -> usize {
+        self.raw
+    }
+    pub fn line(&self) -> usize {
+        self.line
+    }
+    pub fn col_visual(&self) -> f32 {
+        self.col_visual
+    }
 
     /// Установить `line` напрямую (для move_up/down).
     pub fn set_line(&mut self, line: usize) {
@@ -39,8 +49,36 @@ impl Cursor {
         self.force_blink();
     }
 
-    pub fn set_col_visual(&mut self, x: f32) { self.col_visual = x; }
-    pub fn reset_col_visual(&mut self) { self.col_visual = 0.0; }
+    pub fn set_col_visual(&mut self, x: f32) {
+        self.col_visual = x;
+    }
+    pub fn reset_col_visual(&mut self) {
+        self.col_visual = 0.0;
+    }
+
+    // ── Выделение ──
+
+    /// Диапазон выделения `(start, end)`, если выделение активно.
+    pub fn selection_range(&self) -> Option<(usize, usize)> {
+        self.anchor.map(|a| (a.min(self.raw), a.max(self.raw)))
+    }
+
+    /// Есть ли активное выделение.
+    pub fn has_selection(&self) -> bool {
+        self.anchor.is_some()
+    }
+
+    /// Сбросить выделение.
+    pub fn clear_selection(&mut self) {
+        self.anchor = None;
+    }
+
+    /// Установить anchor в текущую позицию (начало shift-расширения).
+    pub fn begin_selection(&mut self) {
+        if self.anchor.is_none() {
+            self.anchor = Some(self.raw);
+        }
+    }
 
     // ── Мигание ──
 

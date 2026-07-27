@@ -1,3 +1,4 @@
 mod basic;
-mod word;
+mod select;
 mod vertical;
+mod word;

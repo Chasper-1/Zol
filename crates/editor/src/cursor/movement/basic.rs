@@ -11,6 +11,7 @@ impl Cursor {
 
     /// На один grapheme-кластер влево.
     pub fn move_left(&mut self, content: &str, line_starts: &[usize]) {
+        self.clear_selection();
         if self.raw == 0 { return; }
         self.raw = prev_grapheme_boundary(content, self.raw).unwrap_or(0);
         self.line = line_of_byte_impl(line_starts, self.raw);
@@ -19,6 +20,7 @@ impl Cursor {
 
     /// На один grapheme-кластер вправо.
     pub fn move_right(&mut self, content: &str, line_starts: &[usize]) {
+        self.clear_selection();
         if self.raw >= content.len() { return; }
         self.raw = next_grapheme_boundary(content, self.raw).unwrap_or(content.len());
         self.line = line_of_byte_impl(line_starts, self.raw);
@@ -27,6 +29,7 @@ impl Cursor {
 
     /// В начало текущей строки.
     pub fn move_home(&mut self, line_starts: &[usize]) {
+        self.clear_selection();
         self.raw = line_starts.get(self.line).copied().unwrap_or(0);
         self.col_visual = 0.0;
         self.force_blink();
@@ -34,6 +37,7 @@ impl Cursor {
 
     /// В конец текущей строки.
     pub fn move_end(&mut self, content: &str, line_starts: &[usize]) {
+        self.clear_selection();
         self.raw = line_end_byte_impl(content, line_starts, self.line);
         self.col_visual = f32::MAX;
         self.force_blink();

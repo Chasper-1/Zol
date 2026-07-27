@@ -3,6 +3,7 @@ use crate::cursor::types::Cursor;
 impl Cursor {
     /// На строку вверх, сохраняя пиксельную X-позицию.
     pub fn move_up(&mut self, content: &str, line_starts: &[usize]) {
+        self.clear_selection();
         if self.line == 0 {
             self.move_home(line_starts);
             return;
@@ -33,6 +34,7 @@ impl Cursor {
 
     /// На строку вниз, сохраняя пиксельную X-позицию.
     pub fn move_down(&mut self, content: &str, line_starts: &[usize]) {
+        self.clear_selection();
         let total = line_starts.len();
         let next_line = self.line + 1;
         if next_line >= total {
