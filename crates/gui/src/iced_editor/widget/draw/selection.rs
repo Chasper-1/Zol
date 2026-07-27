@@ -1,4 +1,8 @@
-//! Отрисовка выделенного текста (подсветка фона).
+//! Отрисовка выделения текста.
+//!
+//! Проходит по глифам cosmic-text, определяет байтовый диапазон каждого
+//! глифа (от его `glyph.start` до `start` следующего глифа) и рисует
+//! прямоугольник, если глиф попадает в выделение.
 
 use iced::advanced::renderer;
 use iced::{Color, Point, Rectangle, Size};
@@ -13,7 +17,6 @@ where
         let doc = this.inner.doc.borrow();
         doc.cursor.selection_range()
     };
-
     let Some((sel_start, sel_end)) = sel_range else {
         return;
     };
@@ -33,45 +36,22 @@ where
 
     for run in shaped.buffer.layout_runs() {
         let line_top = run.line_top - scroll_y;
+        let mut glyphs = run.glyphs.iter().peekable();
 
-        for glyph in run.glyphs.iter() {
-            // glyph.start — offset within the run's text,
-            // we need absolute byte offset: glyph.start + run.byte_offset (or glyph.info.glyph_id?)
-            // Actually cosmic-text: glyph.start is the byte offset of this glyph
-            // relative to the entire buffer. Let's verify.
+        while let Some(glyph) = glyphs.next() {
+            // Байтовый конец глифа = start следующего глифа (или конец строки, если последний)
+            let glyph_byte_end = glyphs.peek().map(|next| next.start).unwrap_or(sel_end); // за пределами выделения
 
-            // In cosmic-text, Glyph::start is byte offset in the source text.
-            // We can use it directly.
-            let glyph_end = glyph.start + glyph.w as usize; // approximate end
-            if glyph_end <= sel_start || glyph.start >= sel_end {
-                continue;
-            }
-
-            // Glyph overlaps with selection: compute intersection
-            let rect_left = if glyph.start >= sel_start {
-                glyph.x
-            } else {
-                // selection starts in the middle of this glyph
-                glyph.x
-            };
-
-            let rect_right = if glyph_end <= sel_end {
-                glyph.x + glyph.w
-            } else {
-                // selection ends in the middle of this glyph
-                glyph.x + glyph.w
-            };
-
-            let width = rect_right - rect_left;
-            if width <= 0.0 {
+            // Нет пересечения с [sel_start, sel_end)
+            if glyph_byte_end <= sel_start || glyph.start >= sel_end {
                 continue;
             }
 
             renderer.fill_quad(
                 renderer::Quad {
                     bounds: Rectangle::new(
-                        Point::new(origin.x + rect_left, origin.y + line_top),
-                        Size::new(width, run.line_height),
+                        Point::new(origin.x + glyph.x, origin.y + line_top),
+                        Size::new(glyph.w, run.line_height),
                     ),
                     ..renderer::Quad::default()
                 },
