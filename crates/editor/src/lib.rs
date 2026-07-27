@@ -2,6 +2,7 @@ pub mod cache;
 pub mod cursor;
 pub mod document;
 pub mod font;
+pub mod input;
 pub mod layout;
 pub mod markup;
 pub mod render;

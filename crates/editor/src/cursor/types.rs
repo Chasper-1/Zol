@@ -1,5 +1,7 @@
 use std::time::Instant;
 
+use super::grapheme::clamp_to_char_boundary;
+
 /// Позиция курсора в тексте.
 ///
 /// `raw` всегда указывает на валидную **grapheme**-границу.
@@ -43,9 +45,10 @@ impl Cursor {
         self.col_visual
     }
 
-    /// Установить `line` напрямую (для move_up/down).
-    pub fn set_line(&mut self, line: usize) {
-        self.line = line;
+    /// Установить `raw` с проверкой границ и пересчётом строки.
+    pub fn set_raw(&mut self, content: &str, line_starts: &[usize], new_raw: usize) {
+        self.raw = clamp_to_char_boundary(content, new_raw);
+        self.line = line_of_byte(line_starts, self.raw);
         self.force_blink();
     }
 
@@ -102,5 +105,17 @@ impl Cursor {
     #[cfg(test)]
     pub(crate) fn force_blink_at(&mut self, now: Instant) {
         self.last_blink = now;
+    }
+}
+
+/// O(log n) бинарный поиск строки по байтовой позиции.
+pub(crate) fn line_of_byte(line_starts: &[usize], byte: usize) -> usize {
+    if line_starts.is_empty() || byte == 0 {
+        return 0;
+    }
+    match line_starts.binary_search(&byte) {
+        Ok(i) => i,
+        Err(0) => 0,
+        Err(i) => i - 1,
     }
 }

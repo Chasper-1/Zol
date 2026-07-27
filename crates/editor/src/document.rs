@@ -2,8 +2,11 @@
 //!
 //! Единственный модуль, который использует `api/`. Никаких зависимостей
 //! от cosmic-text, ShapedDocument, DocumentCache или GUI-фреймворков.
+//!
+//! Все move/delete-операции делегируются `input::default::InputModel`.
 
-use crate::cursor::{self, Cursor};
+use crate::cursor::Cursor;
+use crate::input::default::InputModel;
 use zoll::incremental::IncrementalDoc;
 
 /// Состояние редактируемого документа.
@@ -18,6 +21,8 @@ pub struct Document {
     pub cursor: Cursor,
     /// Флаг: нужно перестроить ShapedDocument.
     pub dirty: bool,
+    /// Модель управления (Fast, Precise и т.д.).
+    pub input: Box<dyn InputModel>,
 }
 
 impl Document {
@@ -27,6 +32,7 @@ impl Document {
             incremental: IncrementalDoc::new(text),
             cursor: Cursor::new(),
             dirty: true,
+            input: Box::new(crate::input::default::fast::FastInput),
         }
     }
 
@@ -39,55 +45,110 @@ impl Document {
 
     /// Установить курсор на байт (с проверкой границ).
     pub fn set_cursor_raw(&mut self, raw: usize) {
-        self.cursor
-            .set_raw(&self.incremental.source, &self.incremental.line_starts, raw);
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, raw);
     }
+
+    // ─── Move ─────────────────────────────────────────────
 
     /// Двигать курсор влево.
     pub fn cursor_move_left(&mut self) {
-        self.cursor
-            .move_left(&self.incremental.source, &self.incremental.line_starts);
+        let raw = self.cursor.raw();
+        let new = self.input.move_left(self.content(), raw);
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, new);
+        self.cursor.clear_selection();
     }
 
     /// Двигать курсор вправо.
     pub fn cursor_move_right(&mut self) {
-        self.cursor
-            .move_right(&self.incremental.source, &self.incremental.line_starts);
+        let raw = self.cursor.raw();
+        let new = self.input.move_right(self.content(), raw);
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, new);
+        self.cursor.clear_selection();
     }
 
     /// В начало строки.
     pub fn cursor_move_home(&mut self) {
-        self.cursor.move_home(&self.incremental.line_starts);
+        let line = self.cursor.line();
+        let new = self.input.move_home(&self.incremental.line_starts, line);
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, new);
+        self.cursor.reset_col_visual();
+        self.cursor.clear_selection();
     }
 
     /// В конец строки.
     pub fn cursor_move_end(&mut self) {
-        self.cursor
-            .move_end(&self.incremental.source, &self.incremental.line_starts);
+        let raw = self.cursor.raw();
+        let line = self.cursor.line();
+        let new = self
+            .input
+            .move_end(self.content(), &self.incremental.line_starts, line);
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, new);
+        self.cursor.clear_selection();
     }
 
     /// Вверх (с сохранением колонки).
     pub fn cursor_move_up(&mut self) {
-        self.cursor
-            .move_up(&self.incremental.source, &self.incremental.line_starts);
+        let raw = self.cursor.raw();
+        let line = self.cursor.line();
+        let col = self.cursor.col_visual() as f64;
+        let (new_raw, new_col) = self.input.move_up(
+            self.content(),
+            &self.incremental.line_starts,
+            raw,
+            line,
+            col,
+        );
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, new_raw);
+        self.cursor.set_col_visual(new_col as f32);
+        self.cursor.clear_selection();
     }
 
     /// Вниз (с сохранением колонки).
     pub fn cursor_move_down(&mut self) {
-        self.cursor
-            .move_down(&self.incremental.source, &self.incremental.line_starts);
+        let raw = self.cursor.raw();
+        let line = self.cursor.line();
+        let col = self.cursor.col_visual() as f64;
+        let (new_raw, new_col) = self.input.move_down(
+            self.content(),
+            &self.incremental.line_starts,
+            raw,
+            line,
+            col,
+        );
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, new_raw);
+        self.cursor.set_col_visual(new_col as f32);
+        self.cursor.clear_selection();
     }
 
     /// Влево на слово.
     pub fn cursor_move_word_left(&mut self) {
-        self.cursor
-            .move_word_left(&self.incremental.source, &self.incremental.line_starts);
+        let raw = self.cursor.raw();
+        let new = self.input.word_left(self.content(), raw);
+        if new != raw {
+            let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+            self.cursor.set_raw(src, ls, new);
+            self.cursor.reset_col_visual();
+            self.cursor.clear_selection();
+        }
     }
 
     /// Вправо на слово.
     pub fn cursor_move_word_right(&mut self) {
-        self.cursor
-            .move_word_right(&self.incremental.source, &self.incremental.line_starts);
+        let raw = self.cursor.raw();
+        let new = self.input.word_right(self.content(), raw);
+        if new != raw {
+            let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+            self.cursor.set_raw(src, ls, new);
+            self.cursor.reset_col_visual();
+            self.cursor.clear_selection();
+        }
     }
 
     // ─── Выделение ─────────────────────────────────────
@@ -152,15 +213,13 @@ impl Document {
             return;
         }
         let raw = self.cursor.raw();
-        if raw == 0 || self.incremental.source.is_empty() {
-            return;
+        let start = self.input.delete_char_before(self.content(), raw);
+        if start < raw {
+            self.incremental.edit(start, raw, "");
+            let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+            self.cursor.set_raw(src, ls, start);
+            self.dirty = true;
         }
-        let prev =
-            crate::cursor::prev_grapheme_boundary(&self.incremental.source, raw).unwrap_or(0);
-        self.incremental.edit(prev, raw, "");
-        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
-        self.cursor.set_raw(src, ls, prev);
-        self.dirty = true;
     }
 
     /// Удалить grapheme после курсора (Delete).
@@ -170,15 +229,11 @@ impl Document {
             return;
         }
         let raw = self.cursor.raw();
-        if raw >= self.incremental.source.len() || self.incremental.source.is_empty() {
-            return;
+        let end = self.input.delete_char_after(self.content(), raw);
+        if end > raw {
+            self.incremental.edit(raw, end, "");
+            self.dirty = true;
         }
-        let next = crate::cursor::next_grapheme_boundary(&self.incremental.source, raw)
-            .unwrap_or(self.incremental.source.len());
-        self.incremental.edit(raw, next, "");
-        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
-        self.cursor.set_raw(src, ls, raw);
-        self.dirty = true;
     }
 
     /// Удалить слово перед курсором (Ctrl+Backspace).
@@ -187,7 +242,7 @@ impl Document {
             return;
         }
         let raw = self.cursor.raw();
-        let start = cursor::word::prev_word_start(self.content(), raw);
+        let start = self.input.delete_word_before(self.content(), raw);
         if start < raw {
             self.incremental.edit(start, raw, "");
             let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
@@ -202,7 +257,7 @@ impl Document {
             return;
         }
         let raw = self.cursor.raw();
-        let end = cursor::word::next_word_start(self.content(), raw);
+        let end = self.input.delete_word_after(self.content(), raw);
         if end > raw {
             self.incremental.edit(raw, end, "");
             self.dirty = true;
@@ -212,16 +267,10 @@ impl Document {
     /// Удалить всю текущую строку (Ctrl+Shift+Backspace).
     pub fn delete_line(&mut self) {
         let line = self.cursor.line();
-        let (start, end) = self
-            .line_bounds(line)
-            .map(|b| (b.start, b.end))
-            .unwrap_or((0, 0));
-        // Включаем перенос строки, если не последняя строка
-        let end = match self.incremental.line_starts.get(line + 1) {
-            Some(&next) => next,
-            None => end,
-        };
-        if end > start {
+        if let Some((start, end)) =
+            self.input
+                .delete_line(self.content(), &self.incremental.line_starts, line)
+        {
             self.incremental.edit(start, end, "");
             let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
             self.cursor.set_raw(src, ls, start);
@@ -236,9 +285,12 @@ impl Document {
             return;
         }
         let raw = self.cursor.raw();
-        let line_end = self.line_end_byte(self.cursor.line());
-        if line_end > raw {
-            self.incremental.edit(raw, line_end, "");
+        let line = self.cursor.line();
+        if let Some(end) =
+            self.input
+                .delete_to_line_end(self.content(), &self.incremental.line_starts, raw, line)
+        {
+            self.incremental.edit(raw, end, "");
             self.dirty = true;
         }
     }
@@ -397,7 +449,6 @@ mod tests {
         doc.cursor.raw = 11;
         doc.cursor.anchor = Some(6);
         doc.newline_at_cursor();
-        // "world" (6..11) deleted → "hello ", then '\n' inserted → "hello \n"
         assert_eq!(doc.content(), "hello \n");
     }
 
@@ -408,16 +459,16 @@ mod tests {
         let mut doc = Document::new("hello world");
         doc.cursor.raw = 7; // 'o' in 'world'
         doc.delete_word_before();
-        assert_eq!(doc.content(), "hello orld"); // 'w' deleted (word start = 6)
+        assert_eq!(doc.content(), "hello orld");
         assert_eq!(doc.cursor.raw(), 6);
     }
 
     #[test]
     fn delete_word_before_from_end() {
         let mut doc = Document::new("hello world foo");
-        doc.cursor.raw = 15; // past end
+        doc.cursor.raw = 15;
         doc.delete_word_before();
-        assert_eq!(doc.content(), "hello world "); // 'foo' deleted
+        assert_eq!(doc.content(), "hello world ");
         assert_eq!(doc.cursor.raw(), 12);
     }
 
@@ -426,7 +477,7 @@ mod tests {
         let mut doc = Document::new("hello world");
         doc.cursor.raw = 0;
         doc.delete_word_after();
-        assert_eq!(doc.content(), "world"); // 'hello ' deleted (0..6)
+        assert_eq!(doc.content(), "world");
     }
 
     // ─── Удаление строк ───────────────────────────
@@ -434,7 +485,7 @@ mod tests {
     #[test]
     fn delete_line_middle_line() {
         let mut doc = Document::new("a\nb\nc");
-        doc.set_cursor_raw(2); // 'b' on line 1
+        doc.set_cursor_raw(2);
         doc.delete_line();
         assert_eq!(doc.content(), "a\nc");
     }
@@ -442,7 +493,7 @@ mod tests {
     #[test]
     fn delete_line_last_line() {
         let mut doc = Document::new("a\nb\nc");
-        doc.set_cursor_raw(4); // 'c' on line 2
+        doc.set_cursor_raw(4);
         doc.delete_line();
         assert_eq!(doc.content(), "a\nb\n");
     }
@@ -450,7 +501,7 @@ mod tests {
     #[test]
     fn delete_to_line_end() {
         let mut doc = Document::new("hello world");
-        doc.cursor.raw = 5; // after 'hello'
+        doc.cursor.raw = 5;
         doc.delete_to_line_end();
         assert_eq!(doc.content(), "hello");
     }

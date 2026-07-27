@@ -1,10 +1,10 @@
-//! Позиция курсора, навигация, мигание.
+//! Позиция курсора, выделение, мигание.
+//!
+//! Все move/delete-операции централизованы в `input::default::InputModel`.
 
 pub mod grapheme;
 pub mod marker_skip;
-pub mod movement;
 pub mod types;
-pub mod word;
 
 pub use grapheme::{next_grapheme_boundary, prev_grapheme_boundary};
 pub use types::Cursor;
