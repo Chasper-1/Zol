@@ -50,11 +50,11 @@ fn col_visual_returns_stored_value() {
 fn set_raw_clamps_to_char_boundary() {
     let mut c = Cursor::new();
     let text = "héllo";
-    // 'é' is 2 bytes; byte 1 is a continuation byte
-    c.set_raw(text, &ls(text), 1);
-    assert_eq!(c.raw(), 0); // clamped to 0 (start of 'é')
+    // 'é' is 2 bytes at positions 1-2; byte 1 is valid start, byte 2 is continuation
     c.set_raw(text, &ls(text), 2);
-    assert_eq!(c.raw(), 2); // after 'é'
+    assert_eq!(c.raw(), 1); // clamped to 1 (start of 'é')
+    c.set_raw(text, &ls(text), 3);
+    assert_eq!(c.raw(), 3); // after 'é'
 }
 
 #[test]
@@ -175,8 +175,8 @@ fn clamp_to_char_boundary_at_valid_boundary() {
 
 #[test]
 fn clamp_to_char_boundary_at_grapheme_reduces() {
-    // 'é' is 2 bytes
-    assert_eq!(clamp_to_char_boundary("héllo", 1), 0);
+    // 'é' is 2 bytes; byte 2 is a continuation byte → clamp to 1 (start of é)
+    assert_eq!(clamp_to_char_boundary("héllo", 2), 1);
 }
 
 #[test]

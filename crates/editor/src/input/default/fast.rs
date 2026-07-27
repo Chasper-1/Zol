@@ -41,9 +41,10 @@ impl InputModel for FastInput {
         line: usize,
         col_visual: f64,
     ) -> (usize, f64) {
+        let raw = raw.min(content.len());
         if line == 0 {
-            let new_raw = self.move_home(line_starts, line);
-            return (new_raw, 0.0);
+            let home = self.move_home(line_starts, line);
+            return if raw == home { (raw, col_visual) } else { (home, 0.0) };
         }
         let prev_line = line - 1;
         let prev_text = line_text(content, line_starts, prev_line);
@@ -72,11 +73,12 @@ impl InputModel for FastInput {
         line: usize,
         col_visual: f64,
     ) -> (usize, f64) {
+        let raw = raw.min(content.len());
         let total = line_starts.len();
         let next_line = line + 1;
         if next_line >= total {
-            let new_raw = self.move_end(content, line_starts, line);
-            return (new_raw, f64::MAX);
+            let end = self.move_end(content, line_starts, line);
+            return if raw == end { (raw, col_visual) } else { (end, f64::INFINITY) };
         }
         let next_text = line_text(content, line_starts, next_line);
         let target_char = if col_visual.is_infinite() {

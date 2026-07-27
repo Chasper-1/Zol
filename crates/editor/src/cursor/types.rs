@@ -52,6 +52,12 @@ impl Cursor {
         self.force_blink();
     }
 
+    /// Установить номер строки напрямую (используется в api/).
+    pub fn set_line(&mut self, line: usize) {
+        self.line = line;
+        self.force_blink();
+    }
+
     pub fn set_col_visual(&mut self, x: f32) {
         self.col_visual = x;
     }

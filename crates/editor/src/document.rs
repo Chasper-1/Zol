@@ -81,13 +81,13 @@ impl Document {
 
     /// В конец строки.
     pub fn cursor_move_end(&mut self) {
-        let raw = self.cursor.raw();
         let line = self.cursor.line();
         let new = self
             .input
             .move_end(self.content(), &self.incremental.line_starts, line);
         let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
         self.cursor.set_raw(src, ls, new);
+        self.cursor.set_col_visual(f32::MAX);
         self.cursor.clear_selection();
     }
 
