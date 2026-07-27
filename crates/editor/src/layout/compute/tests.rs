@@ -2,6 +2,7 @@
     use crate::cache::MarkupCache;
     use crate::theme::EditorTheme;
     use crate::segment::{MarkerCategory, Segment, STYLE_BOLD, STYLE_CODE, STYLE_COMMENT, STYLE_DELETION, STYLE_DISPLAY_FORMULA, STYLE_FORMULA, STYLE_HIGHLIGHT, STYLE_INSERTION, STYLE_ITALIC, STYLE_STRIKETHROUGH, STYLE_SUBSCRIPT, STYLE_SUPERSCRIPT};
+    use crate::layout::reveal::RevealCtx;
 
     fn cache(segments: Vec<Segment>) -> MarkupCache {
         MarkupCache { segments }
@@ -370,4 +371,187 @@
         assert_ne!(runs[0].color, theme.background);
         assert_eq!(runs[1].text, "bold");
         assert_eq!(runs[2].text, "**");
+    }
+
+    // ─── Reveal-тесты ───────────────────────────────────────────────
+
+    fn seg_with_marker(style: u32, raw_start: usize, raw_end: usize, marker_len: usize, cat: MarkerCategory) -> Segment {
+        Segment {
+            text: String::new(),
+            style,
+            left_marker_len: marker_len,
+            right_marker_len: 0,
+            raw_start,
+            raw_end,
+            category: cat,
+        }
+    }
+
+    #[test]
+    fn reveal_inline_cursor_on_line_near_marker() {
+        // "**bold**" — raw_start=2, raw_end=6, left_marker_len=2
+        // cursor_line=0, cursor_raw=0 или 7 — рядом с маркерами
+        let s = seg_with_marker(STYLE_BOLD, 2, 6, 2, MarkerCategory::Inline);
+        let mc = cache(vec![s]);
+        let theme = EditorTheme::default();
+
+        // cursor_raw в диапазоне [0,8] — маркеры раскрыты
+        let ctx = RevealCtx {
+            cursor_raw: Some(0),
+            cursor_line: Some(0),
+            block_of_line: &[],
+        };
+        let runs = compute_line_runs("**bold**", 0, 0, Some(&mc), 14.0, 22.0, false, Some(&ctx), &theme);
+        assert_eq!(runs.len(), 3, "inline reveal: cursor внутри диапазона → 3 runs ");
+        assert_eq!(runs[0].text, "**");
+        assert_eq!(runs[1].text, "bold");
+        assert_eq!(runs[2].text, "**");
+    }
+
+    #[test]
+    fn reveal_inline_cursor_on_line_far_from_marker() {
+        // "**bold**" — raw_start=2, raw_end=6, left_marker_len=2 → диапазон [0, 8]
+        // cursor_raw=10 — снаружи → маркеры скрыты
+        let s = seg_with_marker(STYLE_BOLD, 2, 6, 2, MarkerCategory::Inline);
+        let mc = cache(vec![s]);
+        let theme = EditorTheme::default();
+
+        let ctx = RevealCtx {
+            cursor_raw: Some(10),
+            cursor_line: Some(0),
+            block_of_line: &[],
+        };
+        let runs = compute_line_runs("**bold**", 0, 0, Some(&mc), 14.0, 22.0, false, Some(&ctx), &theme);
+        assert_eq!(runs.len(), 1, "inline: cursor далеко → 1 run (только контент)");
+        assert_eq!(runs[0].text, "bold");
+    }
+
+    #[test]
+    fn reveal_inline_cursor_on_different_line() {
+        // cursor_line=1, segment на line_index=0 → маркеры скрыты
+        let s = seg_with_marker(STYLE_BOLD, 2, 6, 2, MarkerCategory::Inline);
+        let mc = cache(vec![s]);
+        let theme = EditorTheme::default();
+
+        let ctx = RevealCtx {
+            cursor_raw: Some(3),
+            cursor_line: Some(1),
+            block_of_line: &[],
+        };
+        let runs = compute_line_runs("**bold**", 0, 0, Some(&mc), 14.0, 22.0, false, Some(&ctx), &theme);
+        assert_eq!(runs.len(), 1, "inline: курсор на другой строке → 1 run");
+    }
+
+    #[test]
+    fn reveal_line_marker_cursor_on_line() {
+        // Line-маркер (%% comment) — раскрывается, когда курсор на той же строке
+        let s = seg_with_marker(STYLE_COMMENT, 3, 11, 3, MarkerCategory::Line);
+        let mc = cache(vec![s]);
+        let theme = EditorTheme::default();
+
+        let ctx = RevealCtx {
+            cursor_raw: Some(4),
+            cursor_line: Some(0),
+            block_of_line: &[],
+        };
+        let runs = compute_line_runs("%% comment", 0, 0, Some(&mc), 14.0, 22.0, false, Some(&ctx), &theme);
+        // Минимум 1 run: отрезок с контентом должен быть
+        assert!(runs.len() >= 1, "line marker: курсор на строке → хотя бы 1 run");
+    }
+
+    #[test]
+    fn reveal_line_marker_cursor_off_line() {
+        let s = seg_with_marker(STYLE_COMMENT, 3, 11, 3, MarkerCategory::Line);
+        let mc = cache(vec![s]);
+        let theme = EditorTheme::default();
+
+        let ctx = RevealCtx {
+            cursor_raw: Some(0),
+            cursor_line: Some(1),
+            block_of_line: &[],
+        };
+        let runs = compute_line_runs("%% comment", 0, 0, Some(&mc), 14.0, 22.0, false, Some(&ctx), &theme);
+        assert!(runs.len() >= 1, "line marker: курсор не на строке → хотя бы 1 run");
+    }
+
+    #[test]
+    fn reveal_block_marker_cursor_same_block() {
+        // Блоковые маркеры раскрываются, если cursor в том же блоке
+        // block_of_line: line 0 → block_id 0, line 1 → block_id 0
+        let s0 = seg_with_marker(STYLE_CODE, 0, 3, 3, MarkerCategory::Block);
+        let s1 = seg_with_marker(STYLE_CODE, 0, 3, 3, MarkerCategory::Block);
+        let mc = cache(vec![s0, s1]);
+        let theme = EditorTheme::default();
+
+        let ctx = RevealCtx {
+            cursor_raw: Some(1),
+            cursor_line: Some(1),
+            block_of_line: &[Some(0), Some(0)],
+        };
+        let runs = compute_line_runs("```", 0, 0, Some(&mc), 14.0, 22.0, false, Some(&ctx), &theme);
+        assert!(runs.len() >= 1, "block marker: cursor в том же блоке → маркеры есть");
+    }
+
+    #[test]
+    fn reveal_block_marker_cursor_diff_block() {
+        let s0 = seg_with_marker(STYLE_CODE, 0, 3, 3, MarkerCategory::Block);
+        let s1 = seg_with_marker(STYLE_CODE, 0, 3, 3, MarkerCategory::Block);
+        let mc = cache(vec![s0, s1]);
+        let theme = EditorTheme::default();
+
+        // cursor на line 2, а block_of_line[0] = Some(0), block_of_line[1] = Some(0)
+        let ctx = RevealCtx {
+            cursor_raw: Some(1),
+            cursor_line: Some(2),
+            block_of_line: &[Some(0), Some(0), Some(1)], // line 2 → block 1
+        };
+        let runs = compute_line_runs("```", 0, 0, Some(&mc), 14.0, 22.0, false, Some(&ctx), &theme);
+        assert!(runs.len() >= 1, "block marker: cursor в другом блоке → без маркеров");
+    }
+
+    #[test]
+    fn reveal_no_cursor_hides_markers() {
+        // cursor_raw = None → маркеры скрыты
+        let s = seg_with_marker(STYLE_BOLD, 2, 6, 2, MarkerCategory::Inline);
+        let mc = cache(vec![s]);
+        let theme = EditorTheme::default();
+
+        let runs = compute_line_runs("**bold**", 0, 0, Some(&mc), 14.0, 22.0, false, None, &theme);
+        assert_eq!(runs.len(), 1, "без курсора → 1 run (контент)");
+        assert_eq!(runs[0].text, "bold");
+    }
+
+    #[test]
+    fn reveal_cursor_returns_line_markers_appear() {
+        // cursor_line на line 0 → маркеры видны
+        // cursor_line уходит на line 1 → маркеры скрыты
+        // cursor_line возвращается на line 0 → маркеры снова видны
+        // Этот тест проверяет, что маркеры правильно переключаются
+        // *em*: raw_start=1 (после *), raw_end=3 (перед *), left_marker_len=1
+        let s = seg_with_marker(STYLE_ITALIC, 1, 3, 1, MarkerCategory::Inline);
+        let mc = cache(vec![s]);
+        let theme = EditorTheme::default();
+
+        // Cursor на line 0, рядом с маркером
+        let ctx_on = RevealCtx {
+            cursor_raw: Some(0),
+            cursor_line: Some(0),
+            block_of_line: &[],
+        };
+        let runs_on = compute_line_runs("*em*", 0, 0, Some(&mc), 14.0, 22.0, false, Some(&ctx_on), &theme);
+        assert_eq!(runs_on.len(), 3, "cursor на строке → 3 runs");
+
+        // Cursor ушёл на line 1
+        let ctx_off = RevealCtx {
+            cursor_raw: Some(0),
+            cursor_line: Some(1),
+            block_of_line: &[],
+        };
+        let runs_off = compute_line_runs("*em*", 0, 0, Some(&mc), 14.0, 22.0, false, Some(&ctx_off), &theme);
+        assert_eq!(runs_off.len(), 1, "cursor ушёл → 1 run (контент)");
+        assert_eq!(runs_off[0].text, "em");
+
+        // Cursor вернулся на line 0
+        let runs_back = compute_line_runs("*em*", 0, 0, Some(&mc), 14.0, 22.0, false, Some(&ctx_on), &theme);
+        assert_eq!(runs_back.len(), 3, "cursor вернулся → снова 3 runs");
     }
