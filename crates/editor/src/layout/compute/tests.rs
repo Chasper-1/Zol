@@ -555,3 +555,83 @@
         let runs_back = compute_line_runs("*em*", 0, 0, Some(&mc), 14.0, 22.0, false, Some(&ctx_on), &theme);
         assert_eq!(runs_back.len(), 3, "cursor вернулся → снова 3 runs");
     }
+
+    // ─── Интеграционный тест: реальный парсер + reveal ────────────
+
+    #[test]
+    fn reveal_integration_real_cache_cursor_on_line() {
+        use crate::markup::segmenter::to_document_cache;
+        use zoll::ast::{MarkupDoc, MarkupNode, MarkupStyle};
+
+        // Парсим "**текст**" через реальный билдер
+        let doc = MarkupDoc {
+            children: vec![MarkupNode::Formatted {
+                style: MarkupStyle::BOLD,
+                children: vec![MarkupNode::Text("текст".to_string())],
+            }],
+        };
+        let cache = to_document_cache(&doc);
+        assert_eq!(cache.lines.len(), 1, "должна быть 1 строка");
+        assert_eq!(cache.lines[0].segments.len(), 1, "должен быть 1 сегмент");
+
+        let seg = &cache.lines[0].segments[0];
+        assert_eq!(seg.raw_start, 2, "raw_start должен пропустить **");
+        assert_eq!(seg.raw_end, 12, "raw_end должен быть до закрывающих **");
+        assert_eq!(seg.left_marker_len, 2, "left_marker_len должен быть 2");
+        assert_eq!(seg.text, "текст", "текст сегмента");
+
+        let theme = EditorTheme::default();
+
+        // cursor на строке, рядом
+        let ctx_on = RevealCtx {
+            cursor_raw: Some(2),
+            cursor_line: Some(0),
+            block_of_line: &[],
+        };
+        let runs_on = compute_line_runs("**текст**", 0, 0, Some(&cache.lines[0]), 14.0, 22.0, false, Some(&ctx_on), &theme);
+        assert_eq!(runs_on.len(), 3, "реальный кеш: cursor на строке → 3 runs");
+        assert_eq!(runs_on[0].text, "**", "open marker");
+        assert_eq!(runs_on[1].text, "текст", "content");
+        assert_eq!(runs_on[2].text, "**", "close marker");
+    }
+
+    #[test]
+    fn reveal_integration_cursor_leaves_and_returns() {
+        use crate::markup::segmenter::to_document_cache;
+        use zoll::ast::{MarkupDoc, MarkupNode, MarkupStyle};
+
+        let doc = MarkupDoc {
+            children: vec![MarkupNode::Formatted {
+                style: MarkupStyle::BOLD,
+                children: vec![MarkupNode::Text("текст".to_string())],
+            }],
+        };
+        let cache = to_document_cache(&doc);
+        let theme = EditorTheme::default();
+
+        // 1. cursor на строке → 3 runs
+        let ctx_on = RevealCtx {
+            cursor_raw: Some(2),
+            cursor_line: Some(0),
+            block_of_line: &[],
+        };
+        let runs_on = compute_line_runs("**текст**", 0, 0, Some(&cache.lines[0]), 14.0, 22.0, false, Some(&ctx_on), &theme);
+        assert_eq!(runs_on.len(), 3, "cursor на строке");
+
+        // 2. cursor ушёл на другую строку → 1 run
+        let ctx_off = RevealCtx {
+            cursor_raw: Some(0),
+            cursor_line: Some(1),
+            block_of_line: &[],
+        };
+        let runs_off = compute_line_runs("**текст**", 0, 0, Some(&cache.lines[0]), 14.0, 22.0, false, Some(&ctx_off), &theme);
+        assert_eq!(runs_off.len(), 1, "cursor ушёл");
+        assert_eq!(runs_off[0].text, "текст", "только контент");
+
+        // 3. cursor вернулся на строку → снова 3 runs
+        let runs_back = compute_line_runs("**текст**", 0, 0, Some(&cache.lines[0]), 14.0, 22.0, false, Some(&ctx_on), &theme);
+        assert_eq!(runs_back.len(), 3, "cursor вернулся");
+        assert_eq!(runs_back[0].text, "**", "open marker");
+        assert_eq!(runs_back[1].text, "текст", "content");
+        assert_eq!(runs_back[2].text, "**", "close marker");
+    }
