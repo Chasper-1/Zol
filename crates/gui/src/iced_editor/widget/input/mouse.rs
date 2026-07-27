@@ -40,6 +40,7 @@ pub fn handle_mouse<'a, Message>(
                     api_cursor::cursor_set_line(&mut *doc, cosmic.line);
                     api_cursor::cursor_reset_col(&mut *doc);
                     drop(doc);
+                    this.inner.mark_dirty();
                 }
             }
 

@@ -11,6 +11,14 @@ use editor::state::EditMode;
 use super::auto_scroll;
 use crate::iced_editor::widget::editor::IcedEditor;
 
+/// Переместить курсор и пометить документ как грязный для перешейпа.
+fn move_cursor(this: &mut IcedEditor<'_>, f: impl FnOnce(&mut editor::document::Document)) {
+    let mut doc = this.inner.doc.borrow_mut();
+    f(&mut *doc);
+    drop(doc);
+    this.inner.mark_dirty();
+}
+
 pub fn handle_keyboard<'a, Message>(
     this: &mut IcedEditor<'a>,
     kb_event: &keyboard::Event,
@@ -46,7 +54,7 @@ pub fn handle_keyboard<'a, Message>(
 
         // Ctrl+Home — в начало документа
         if matches!(key.as_ref(), keyboard::Key::Named(Named::Home)) {
-            this.inner.doc.borrow_mut().set_cursor_raw(0);
+            move_cursor(this, |d| d.set_cursor_raw(0));
             auto_scroll(this, bounds);
             shell.request_redraw();
             return;
@@ -54,7 +62,7 @@ pub fn handle_keyboard<'a, Message>(
         // Ctrl+End — в конец документа
         if matches!(key.as_ref(), keyboard::Key::Named(Named::End)) {
             let len = this.inner.doc.borrow().content().len();
-            this.inner.doc.borrow_mut().set_cursor_raw(len);
+            move_cursor(this, |d| d.set_cursor_raw(len));
             auto_scroll(this, bounds);
             shell.request_redraw();
             return;
@@ -62,20 +70,14 @@ pub fn handle_keyboard<'a, Message>(
 
         // Ctrl+← — слово влево
         if matches!(key.as_ref(), keyboard::Key::Named(Named::ArrowLeft)) {
-            {
-                let mut doc = this.inner.doc.borrow_mut();
-                api_cursor::move_word_left(&mut *doc);
-            }
+            move_cursor(this, api_cursor::move_word_left);
             auto_scroll(this, bounds);
             shell.request_redraw();
             return;
         }
         // Ctrl+→ — слово вправо
         if matches!(key.as_ref(), keyboard::Key::Named(Named::ArrowRight)) {
-            {
-                let mut doc = this.inner.doc.borrow_mut();
-                api_cursor::move_word_right(&mut *doc);
-            }
+            move_cursor(this, api_cursor::move_word_right);
             auto_scroll(this, bounds);
             shell.request_redraw();
             return;
@@ -100,36 +102,12 @@ pub fn handle_keyboard<'a, Message>(
 
     // ─── Обычные клавиши (без Ctrl) ────────────────────────────────
     match key.as_ref() {
-        keyboard::Key::Named(Named::ArrowLeft) => {
-            let mut doc = this.inner.doc.borrow_mut();
-            api_cursor::move_left(&mut *doc);
-            drop(doc);
-        }
-        keyboard::Key::Named(Named::ArrowRight) => {
-            let mut doc = this.inner.doc.borrow_mut();
-            api_cursor::move_right(&mut *doc);
-            drop(doc);
-        }
-        keyboard::Key::Named(Named::ArrowUp) => {
-            let mut doc = this.inner.doc.borrow_mut();
-            api_cursor::move_up(&mut *doc);
-            drop(doc);
-        }
-        keyboard::Key::Named(Named::ArrowDown) => {
-            let mut doc = this.inner.doc.borrow_mut();
-            api_cursor::move_down(&mut *doc);
-            drop(doc);
-        }
-        keyboard::Key::Named(Named::Home) => {
-            let mut doc = this.inner.doc.borrow_mut();
-            api_cursor::move_home(&mut *doc);
-            drop(doc);
-        }
-        keyboard::Key::Named(Named::End) => {
-            let mut doc = this.inner.doc.borrow_mut();
-            api_cursor::move_end(&mut *doc);
-            drop(doc);
-        }
+        keyboard::Key::Named(Named::ArrowLeft) => move_cursor(this, api_cursor::move_left),
+        keyboard::Key::Named(Named::ArrowRight) => move_cursor(this, api_cursor::move_right),
+        keyboard::Key::Named(Named::ArrowUp) => move_cursor(this, api_cursor::move_up),
+        keyboard::Key::Named(Named::ArrowDown) => move_cursor(this, api_cursor::move_down),
+        keyboard::Key::Named(Named::Home) => move_cursor(this, api_cursor::move_home),
+        keyboard::Key::Named(Named::End) => move_cursor(this, api_cursor::move_end),
 
         keyboard::Key::Named(Named::Tab) => {
             this.inner.cycle_mode();
@@ -147,23 +125,21 @@ pub fn handle_keyboard<'a, Message>(
             let line_h = this.inner.base_size * 1.4;
             let n = (bounds.height / line_h) as usize;
             let mut doc = this.inner.doc.borrow_mut();
-            let mut count = 0;
-            while count < n {
+            for _ in 0..n {
                 doc.cursor_move_up();
-                count += 1;
             }
             drop(doc);
+            this.inner.mark_dirty();
         }
         keyboard::Key::Named(Named::PageDown) => {
             let line_h = this.inner.base_size * 1.4;
             let n = (bounds.height / line_h) as usize;
             let mut doc = this.inner.doc.borrow_mut();
-            let mut count = 0;
-            while count < n {
+            for _ in 0..n {
                 doc.cursor_move_down();
-                count += 1;
             }
             drop(doc);
+            this.inner.mark_dirty();
         }
 
         keyboard::Key::Named(Named::Backspace) => {
@@ -180,9 +156,7 @@ pub fn handle_keyboard<'a, Message>(
             };
             if from < to {
                 this.inner.edit_doc_raw(from, to, "");
-                let mut doc = this.inner.doc.borrow_mut();
-                doc.set_cursor_raw(from);
-                drop(doc);
+                move_cursor(this, |d| d.set_cursor_raw(from));
             }
         }
         keyboard::Key::Named(Named::Delete) => {
@@ -204,10 +178,10 @@ pub fn handle_keyboard<'a, Message>(
         keyboard::Key::Named(Named::Enter) => {
             let raw = this.inner.doc.borrow().cursor.raw();
             this.inner.edit_doc_raw(raw, raw, "\n");
-            let mut doc = this.inner.doc.borrow_mut();
-            doc.set_cursor_raw(raw + 1);
-            doc.cursor.reset_col_visual();
-            drop(doc);
+            move_cursor(this, |d| {
+                d.set_cursor_raw(raw + 1);
+                d.cursor.reset_col_visual();
+            });
         }
         _ => {
             if let Some(text) = text {
@@ -216,8 +190,7 @@ pub fn handle_keyboard<'a, Message>(
                     if !filtered.is_empty() {
                         let raw = this.inner.doc.borrow().cursor.raw();
                         this.inner.edit_doc_raw(raw, raw, &filtered);
-                        let mut doc = this.inner.doc.borrow_mut();
-                        doc.set_cursor_raw(raw + filtered.len());
+                        move_cursor(this, |d| d.set_cursor_raw(raw + filtered.len()));
                     }
                 }
             }
