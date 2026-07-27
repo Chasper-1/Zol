@@ -10,19 +10,26 @@ use crate::cache::MarkupCache;
 /// Если `raw` находится внутри маркера какого-либо сегмента,
 /// возвращает первый байт содержимого этого сегмента.
 /// Иначе возвращает `raw` без изменений.
+///
+/// Сегмент в MarkupCache:
+///   - raw_start … raw_end — область контента
+///   - left_marker_len — длина левого маркера, который расположен
+///     в промежутке [raw_start - left_marker_len, raw_start)
+///   - right_marker_len — длина правого маркера, расположенного
+///     в промежутке [raw_end - right_marker_len, raw_end)
 pub fn snap_forward(raw: usize, line_cache: &MarkupCache) -> usize {
     for seg in &line_cache.segments {
         let seg_start = seg.raw_start;
-        let seg_content_start = seg_start + seg.left_marker_len;
         let seg_end = seg.raw_end;
-        let seg_content_end = seg_end.saturating_sub(seg.right_marker_len);
 
-        // Если курсор в левом маркере → перескочить на начало контента
-        if raw >= seg_start && raw < seg_content_start {
-            return seg_content_start;
+        // Левый маркер: текст перед seg_start длиной left_marker_len
+        let left_start = seg_start.saturating_sub(seg.left_marker_len);
+        if raw >= left_start && raw < seg_start {
+            return seg_start;
         }
-        // Если курсор в правом маркере → перескочить за конец маркера (конец сегмента)
-        if raw >= seg_content_end && raw < seg_end {
+        // Правый маркер: текст после seg_end длиной right_marker_len
+        let right_start = seg_end.saturating_sub(seg.right_marker_len);
+        if raw >= right_start && raw < seg_end && seg.right_marker_len > 0 {
             return seg_end;
         }
     }
@@ -34,17 +41,15 @@ pub fn snap_forward(raw: usize, line_cache: &MarkupCache) -> usize {
 pub fn snap_backward(raw: usize, line_cache: &MarkupCache) -> usize {
     for seg in &line_cache.segments {
         let seg_start = seg.raw_start;
-        let seg_content_start = seg_start + seg.left_marker_len;
         let seg_end = seg.raw_end;
 
-        if raw >= seg_start && raw < seg_content_start {
-            // В левом маркере → на начало контента ИЛИ на начало сегмента
-            return seg_content_start;
+        let left_start = seg_start.saturating_sub(seg.left_marker_len);
+        if raw >= left_start && raw < seg_start {
+            return seg_start;
         }
-        if raw >= seg_content_start && raw < seg_end {
-            let seg_content_end = seg_end.saturating_sub(seg.right_marker_len);
-            if raw >= seg_content_end {
-                // В правом маркере → за конец сегмента
+        if raw >= seg_start && raw < seg_end {
+            let right_start = seg_end.saturating_sub(seg.right_marker_len);
+            if raw >= right_start && seg.right_marker_len > 0 {
                 return seg_end;
             }
         }
@@ -84,13 +89,14 @@ pub fn snap_forward_line(
 pub fn is_on_marker(raw: usize, line_cache: &MarkupCache) -> bool {
     for seg in &line_cache.segments {
         let seg_start = seg.raw_start;
-        let seg_content_start = seg_start + seg.left_marker_len;
         let seg_end = seg.raw_end;
-        let seg_content_end = seg_end.saturating_sub(seg.right_marker_len);
 
-        if (raw >= seg_start && raw < seg_content_start)
-            || (raw >= seg_content_end && raw < seg_end)
-        {
+        let left_start = seg_start.saturating_sub(seg.left_marker_len);
+        if raw >= left_start && raw < seg_start {
+            return true;
+        }
+        let right_start = seg_end.saturating_sub(seg.right_marker_len);
+        if raw >= right_start && raw < seg_end && seg.right_marker_len > 0 {
             return true;
         }
     }

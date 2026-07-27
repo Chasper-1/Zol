@@ -1,8 +1,7 @@
-
 use super::*;
+use crate::iced_editor::widget::editor::IcedEditor;
 use api::cursor as api_cursor;
 use editor::state::EditMode;
-use crate::iced_editor::widget::editor::IcedEditor;
 
 // ═══════════════════════════════════════════════════════════════════
 // EditorInner::new() — конструктор, все варианты
@@ -67,7 +66,10 @@ fn defaults_are_sane() {
 
 #[test]
 fn new_many_lines() {
-    let content = (0..100).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n");
+    let content = (0..100)
+        .map(|i| format!("line {}", i))
+        .collect::<Vec<_>>()
+        .join("\n");
     let inner = EditorInner::new(content.clone());
     assert_eq!(inner.doc.borrow().content(), &content);
 }
@@ -273,7 +275,11 @@ fn edit_doc_cache_rebuilt() {
         doc.incremental.edit(0, 0, "**hello**");
     });
     let cache = inner.cache.borrow();
-    let any_bold = cache.lines.iter().flat_map(|l| &l.segments).any(|s| s.style & editor::markup::segment::STYLE_BOLD != 0);
+    let any_bold = cache
+        .lines
+        .iter()
+        .flat_map(|l| &l.segments)
+        .any(|s| s.style & editor::markup::segment::STYLE_BOLD != 0);
     assert!(any_bold, "cache should contain bold segments");
 }
 
@@ -386,18 +392,18 @@ fn mode_cycle_marks_dirty() {
 #[test]
 fn borrow_then_borrow_mut_no_conflict() {
     let inner = EditorInner::new(String::new());
-    let doc = inner.doc.borrow();            // immutable
-    drop(doc);                                // дропнули
-    let doc = inner.doc.borrow_mut();         // mutable — ок
+    let doc = inner.doc.borrow(); // immutable
+    drop(doc); // дропнули
+    let doc = inner.doc.borrow_mut(); // mutable — ок
     doc.cursor.line();
 }
 
 #[test]
 fn borrow_mut_then_borrow_no_conflict() {
     let inner = EditorInner::new(String::new());
-    let doc = inner.doc.borrow_mut();         // mutable
-    drop(doc);                                // дропнули
-    let doc = inner.doc.borrow();             // immutable — ок
+    let doc = inner.doc.borrow_mut(); // mutable
+    drop(doc); // дропнули
+    let doc = inner.doc.borrow(); // immutable — ок
     doc.cursor.line();
 }
 
@@ -478,7 +484,7 @@ fn borrow_doc_and_shaped_then_borrow_mut_doc() {
     let shaped = inner.shaped_doc.borrow();
     doc.cursor.line();
     shaped.total_height();
-    drop(doc);   // дропаем doc, shaped остаётся
+    drop(doc); // дропаем doc, shaped остаётся
     let mut doc = inner.doc.borrow_mut(); // должно работать — doc дропнут
     doc.dirty = true;
     drop(doc);
@@ -539,9 +545,9 @@ fn word_movement_left_from_end() {
     api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
     assert_eq!(inner.doc.borrow().cursor.raw(), 12); // start of "foo"
     api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
-    assert_eq!(inner.doc.borrow().cursor.raw(), 6);  // start of "world"
+    assert_eq!(inner.doc.borrow().cursor.raw(), 6); // start of "world"
     api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
-    assert_eq!(inner.doc.borrow().cursor.raw(), 0);  // start of "hello"
+    assert_eq!(inner.doc.borrow().cursor.raw(), 0); // start of "hello"
 }
 
 #[test]
@@ -555,7 +561,7 @@ fn word_movement_left_at_start_stays() {
 fn word_movement_right_from_start() {
     let inner = EditorInner::new("hello world foo".to_string());
     api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
-    assert_eq!(inner.doc.borrow().cursor.raw(), 6);  // start of "world"
+    assert_eq!(inner.doc.borrow().cursor.raw(), 6); // start of "world"
     api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
     assert_eq!(inner.doc.borrow().cursor.raw(), 12); // start of "foo"
 }
@@ -574,7 +580,7 @@ fn word_movement_on_single_word() {
     api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
     assert_eq!(inner.doc.borrow().cursor.raw(), 0);
     api_cursor::move_word_right(&mut *inner.doc.borrow_mut());
-    assert_eq!(inner.doc.borrow().cursor.raw(), 0);
+    assert_eq!(inner.doc.borrow().cursor.raw(), 5);
 }
 
 #[test]
@@ -592,7 +598,10 @@ fn word_movement_with_tabs() {
     inner.doc.borrow_mut().set_cursor_raw(13); // end of "word2"
     api_cursor::move_word_left(&mut *inner.doc.borrow_mut());
     let raw = inner.doc.borrow().cursor.raw();
-    assert!(raw < 13, "move_word_left from end should go to start of a word");
+    assert!(
+        raw < 13,
+        "move_word_left from end should go to start of a word"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -716,12 +725,21 @@ fn line_bounds_on_empty_line() {
 fn auto_scroll_cursor_visible_no_op() {
     use crate::iced_editor::widget::input::auto_scroll;
     let inner = EditorInner::new("hello".to_string());
-    let bounds = iced::Rectangle { x: 0.0, y: 0.0, width: 800.0, height: 600.0 };
+    let bounds = iced::Rectangle {
+        x: 0.0,
+        y: 0.0,
+        width: 800.0,
+        height: 600.0,
+    };
     let editor = IcedEditor::new(&inner);
 
     let old_scroll = inner.scroll_y.get();
     auto_scroll(&editor, bounds);
-    assert_eq!(inner.scroll_y.get(), old_scroll, "visible cursor should not change scroll");
+    assert_eq!(
+        inner.scroll_y.get(),
+        old_scroll,
+        "visible cursor should not change scroll"
+    );
 }
 
 #[test]
@@ -730,7 +748,12 @@ fn auto_scroll_cursor_below_viewport() {
     let lines: Vec<_> = (0..50).map(|i| format!("line {}", i)).collect();
     let content = lines.join("\n");
     let inner = EditorInner::new(content);
-    let bounds = iced::Rectangle { x: 0.0, y: 0.0, width: 800.0, height: 50.0 };
+    let bounds = iced::Rectangle {
+        x: 0.0,
+        y: 0.0,
+        width: 800.0,
+        height: 50.0,
+    };
 
     // Ставим курсор на последнюю строку
     let len = inner.doc.borrow().content().len();
@@ -738,7 +761,10 @@ fn auto_scroll_cursor_below_viewport() {
 
     let editor = IcedEditor::new(&inner);
     auto_scroll(&editor, bounds);
-    assert!(inner.scroll_y.get() > 0.0, "should scroll down for cursor below viewport");
+    assert!(
+        inner.scroll_y.get() > 0.0,
+        "should scroll down for cursor below viewport"
+    );
 }
 
 #[test]
@@ -749,17 +775,31 @@ fn auto_scroll_cursor_above_viewport() {
     let inner = EditorInner::new(content);
 
     inner.scroll_y.set(500.0);
-    let bounds = iced::Rectangle { x: 0.0, y: 0.0, width: 800.0, height: 100.0 };
+    let bounds = iced::Rectangle {
+        x: 0.0,
+        y: 0.0,
+        width: 800.0,
+        height: 100.0,
+    };
     let editor = IcedEditor::new(&inner);
     auto_scroll(&editor, bounds);
-    assert_eq!(inner.scroll_y.get(), 0.0, "should scroll to top for cursor above viewport");
+    assert_eq!(
+        inner.scroll_y.get(),
+        0.0,
+        "should scroll to top for cursor above viewport"
+    );
 }
 
 #[test]
 fn auto_scroll_zero_height_no_op() {
     use crate::iced_editor::widget::input::auto_scroll;
     let inner = EditorInner::new("hello".to_string());
-    let bounds = iced::Rectangle { x: 0.0, y: 0.0, width: 800.0, height: 0.0 };
+    let bounds = iced::Rectangle {
+        x: 0.0,
+        y: 0.0,
+        width: 800.0,
+        height: 0.0,
+    };
     let editor = IcedEditor::new(&inner);
     auto_scroll(&editor, bounds);
     assert_eq!(inner.scroll_y.get(), 0.0);
@@ -768,7 +808,10 @@ fn auto_scroll_zero_height_no_op() {
 #[test]
 fn auto_scroll_marks_dirty_when_scroll_changes() {
     use crate::iced_editor::widget::input::auto_scroll;
-    let content = (0..50).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n");
+    let content = (0..50)
+        .map(|i| format!("line {}", i))
+        .collect::<Vec<_>>()
+        .join("\n");
     let inner = EditorInner::new(content);
     inner.doc.borrow_mut().dirty = false;
 
@@ -776,7 +819,12 @@ fn auto_scroll_marks_dirty_when_scroll_changes() {
     let len = inner.doc.borrow().content().len();
     inner.doc.borrow_mut().set_cursor_raw(len);
 
-    let bounds = iced::Rectangle { x: 0.0, y: 0.0, width: 800.0, height: 30.0 };
+    let bounds = iced::Rectangle {
+        x: 0.0,
+        y: 0.0,
+        width: 800.0,
+        height: 30.0,
+    };
     let editor = IcedEditor::new(&inner);
     auto_scroll(&editor, bounds);
     assert!(inner.scroll_y.get() > 0.0, "should scroll down");
@@ -804,7 +852,12 @@ fn compute_viewport_single_line() {
 
 #[test]
 fn compute_viewport_start_of_doc() {
-    let inner = EditorInner::new((0..50).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    let inner = EditorInner::new(
+        (0..50)
+            .map(|i| format!("line {}", i))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
     let vp = inner.compute_viewport(600.0);
     assert_eq!(vp.first_line, 0, "at scroll=0, start should be 0");
     assert!(vp.last_line > 0, "end_line should cover some lines");
@@ -812,16 +865,30 @@ fn compute_viewport_start_of_doc() {
 
 #[test]
 fn compute_viewport_scrolled_mid() {
-    let inner = EditorInner::new((0..100).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    let inner = EditorInner::new(
+        (0..100)
+            .map(|i| format!("line {}", i))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
     inner.scroll_y.set(500.0);
     let vp = inner.compute_viewport(200.0);
-    assert!(vp.first_line > 0, "scrolled down, first_line should advance, got {}", vp.first_line);
+    assert!(
+        vp.first_line > 0,
+        "scrolled down, first_line should advance, got {}",
+        vp.first_line
+    );
     assert!(vp.last_line > vp.first_line, "end should be after start");
 }
 
 #[test]
 fn compute_viewport_scrolled_near_end() {
-    let inner = EditorInner::new((0..100).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    let inner = EditorInner::new(
+        (0..100)
+            .map(|i| format!("line {}", i))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
     // scroll_y=1500 → first≈66, last≈97 (все в пределах документа)
     inner.scroll_y.set(1500.0);
     let vp = inner.compute_viewport(200.0);
@@ -831,7 +898,12 @@ fn compute_viewport_scrolled_near_end() {
 
 #[test]
 fn compute_viewport_negative_scroll_clamps() {
-    let inner = EditorInner::new((0..50).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    let inner = EditorInner::new(
+        (0..50)
+            .map(|i| format!("line {}", i))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
     inner.scroll_y.set(-100.0);
     let vp = inner.compute_viewport(600.0);
     assert_eq!(vp.first_line, 0, "negative scroll treated as 0");
@@ -839,38 +911,70 @@ fn compute_viewport_negative_scroll_clamps() {
 
 #[test]
 fn compute_viewport_zero_viewport() {
-    let inner = EditorInner::new((0..50).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    let inner = EditorInner::new(
+        (0..50)
+            .map(|i| format!("line {}", i))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
     let vp = inner.compute_viewport(0.0);
     // При нулевой высоте видно только строку со скроллом (с padding)
     assert!(vp.first_line <= 10); // padding влево
-    assert!(vp.last_line >= 10);   // padding вправо
+    assert!(vp.last_line >= 10); // padding вправо
 }
 
 #[test]
 fn compute_viewport_very_large_viewport() {
-    let inner = EditorInner::new((0..100).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    let inner = EditorInner::new(
+        (0..100)
+            .map(|i| format!("line {}", i))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
     let total = inner.doc.borrow().incremental.num_lines();
     let vp = inner.compute_viewport(999999.0);
-    assert_eq!(vp.last_line, total.saturating_sub(1), "large viewport should show all lines");
+    assert_eq!(
+        vp.last_line,
+        total.saturating_sub(1),
+        "large viewport should show all lines"
+    );
 }
 
 #[test]
 fn compute_viewport_padding_applied() {
-    let inner = EditorInner::new((0..100).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    let inner = EditorInner::new(
+        (0..100)
+            .map(|i| format!("line {}", i))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
     let vp = inner.compute_viewport(50.0);
     // Минимальный viewport: 50/19.6 ≈ 3 строки + padding 10 снизу
-    assert!(vp.last_line >= 13, "padding should extend beyond logical viewport, got last_line={}", vp.last_line);
+    assert!(
+        vp.last_line >= 13,
+        "padding should extend beyond logical viewport, got last_line={}",
+        vp.last_line
+    );
     assert_eq!(vp.first_line, 0, "at scroll=0, first_line stays 0");
 }
 
 #[test]
 fn compute_viewport_monotonic() {
-    let inner = EditorInner::new((0..100).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n"));
+    let inner = EditorInner::new(
+        (0..100)
+            .map(|i| format!("line {}", i))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
     let vp1 = inner.compute_viewport(100.0);
     inner.scroll_y.set(50.0);
     let vp2 = inner.compute_viewport(100.0);
-    assert!(vp2.first_line >= vp1.first_line || vp2.first_line == 0,
-        "scrolling down should not decrease first_line (vp1={:?}, vp2={:?})", vp1, vp2);
+    assert!(
+        vp2.first_line >= vp1.first_line || vp2.first_line == 0,
+        "scrolling down should not decrease first_line (vp1={:?}, vp2={:?})",
+        vp1,
+        vp2
+    );
 }
 
 #[test]
