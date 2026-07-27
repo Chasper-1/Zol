@@ -1,17 +1,13 @@
 use super::shared;
 use crate::layout::types::TextRun;
-use crate::markup::segment::{
+use crate::segment::{
     STYLE_BOLD, STYLE_CODE, STYLE_COMMENT, STYLE_DELETION, STYLE_DISPLAY_FORMULA, STYLE_FORMULA,
     STYLE_INSERTION, STYLE_ITALIC, STYLE_SUBSCRIPT, STYLE_SUPERSCRIPT,
 };
 use crate::theme::color::Rgba;
 
 /// Создать `TextRun` по битовым флагам стиля.
-pub fn text_run_for_style(
-    text: &str,
-    style: u32,
-    base_size: f32,
-) -> TextRun {
+pub fn text_run_for_style(text: &str, style: u32, base_size: f32) -> TextRun {
     let mut color = shared::TEXT_DEFAULT;
     let mut size = base_size;
     let mut family: Option<&str> = None;

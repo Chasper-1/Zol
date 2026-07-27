@@ -106,7 +106,7 @@ pub fn is_on_marker(raw: usize, line_cache: &MarkupCache) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::markup::segment::{MarkerCategory, Segment};
+    use crate::segment::{MarkerCategory, Segment};
 
     fn make_cache(segments: Vec<Segment>) -> MarkupCache {
         MarkupCache { segments }

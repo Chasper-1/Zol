@@ -49,7 +49,6 @@ pub fn incremental_to_cache_visible(
     }
 
     // ── Вычисляем block_of_line ──
-    cache.block_of_line = vec![None; num_lines];
     let mut block_id = 0usize;
     let mut in_block = false;
     for (i, ast) in inc.line_asts.iter().enumerate() {

@@ -279,7 +279,7 @@ fn edit_doc_cache_rebuilt() {
         .lines
         .iter()
         .flat_map(|l| &l.segments)
-        .any(|s| s.style & editor::markup::segment::STYLE_BOLD != 0);
+        .any(|s| s.style & editor::segment::STYLE_BOLD != 0);
     assert!(any_bold, "cache should contain bold segments");
 }
 

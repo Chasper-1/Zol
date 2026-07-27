@@ -1,4 +1,4 @@
-use crate::markup::Segment;
+use crate::segment::Segment;
 
 #[derive(Default, Clone, Debug)]
 pub struct MarkupCache {

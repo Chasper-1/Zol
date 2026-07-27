@@ -52,7 +52,7 @@ fn draw_reshape(this: &IcedEditor<'_>, bounds: Rectangle) {
         let mut shaped = this.inner.shaped_doc.borrow_mut();
 
         let vp = this.inner.viewport.get();
-        let reveal = editor::layout::compute::line_runs::RevealCtx {
+        let reveal = editor::layout::reveal::RevealCtx {
             cursor_raw,
             cursor_line,
             block_of_line: &cache.block_of_line,

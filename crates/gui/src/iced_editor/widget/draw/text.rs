@@ -2,19 +2,14 @@
 
 use iced::advanced::text::{self, Renderer as TextRenderer};
 use iced::font::{Style as FontStyle, Weight};
-use iced::{
-    alignment, Color, Pixels, Point, Rectangle, Size,
-};
+use iced::{Color, Pixels, Point, Rectangle, Size, alignment};
 
-use editor::markup::segment::{STYLE_BOLD, STYLE_ITALIC};
+use editor::segment::{STYLE_BOLD, STYLE_ITALIC};
 
 use crate::iced_editor::widget::editor::IcedEditor;
 
-pub fn draw_text<'a, Renderer>(
-    this: &IcedEditor<'a>,
-    renderer: &mut Renderer,
-    origin: Point,
-) where
+pub fn draw_text<'a, Renderer>(this: &IcedEditor<'a>, renderer: &mut Renderer, origin: Point)
+where
     Renderer: TextRenderer<Font = iced::Font>,
 {
     let shaped = this.inner.shaped_doc.borrow();
@@ -40,9 +35,7 @@ pub fn draw_text<'a, Renderer>(
                 let x_offset = run
                     .glyphs
                     .iter()
-                    .find(|g| {
-                        g.start >= byte_offset && g.start < byte_offset + tr.text.len()
-                    })
+                    .find(|g| g.start >= byte_offset && g.start < byte_offset + tr.text.len())
                     .map(|g| g.x)
                     .unwrap_or(0.0);
 

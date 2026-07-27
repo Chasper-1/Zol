@@ -3,7 +3,7 @@ use super::shaped_doc::ShapedDocument;
 use crate::Viewport;
 use crate::cache::DocumentCache;
 use crate::layout;
-use crate::layout::compute::line_runs::RevealCtx;
+use crate::layout::reveal::RevealCtx;
 use crate::state::EditMode;
 use crate::theme::EditorTheme;
 

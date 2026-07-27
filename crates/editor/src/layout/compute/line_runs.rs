@@ -1,49 +1,9 @@
 use super::shared;
 use super::style::text_run_for_style;
 use crate::cache::MarkupCache;
+use crate::layout::reveal::{RevealCtx, segment_is_revealed};
 use crate::layout::types::TextRun;
-use crate::markup::segment::{MarkerCategory, Segment};
 use crate::theme::EditorTheme;
-
-/// Контекст авто-раскрытия маркеров.
-#[derive(Clone, Copy)]
-pub struct RevealCtx<'a> {
-    pub cursor_raw: Option<usize>,
-    pub cursor_line: Option<usize>,
-    pub block_of_line: &'a [Option<usize>],
-}
-
-impl RevealCtx<'_> {
-    pub fn empty() -> &'static Self {
-        static EMPTY: RevealCtx = RevealCtx {
-            cursor_raw: None,
-            cursor_line: None,
-            block_of_line: &[],
-        };
-        &EMPTY
-    }
-}
-
-/// Авто-раскрытие: определена ли позиция курсора рядом с маркерами сегмента.
-fn segment_is_revealed(seg: &Segment, line_index: usize, ctx: &RevealCtx) -> bool {
-    let Some(cursor) = ctx.cursor_raw else {
-        return false;
-    };
-    match seg.category {
-        MarkerCategory::Inline => {
-            let start = seg.raw_start.saturating_sub(seg.left_marker_len);
-            let end = seg.raw_end + seg.left_marker_len; // close len = open len
-            cursor >= start && cursor <= end
-        }
-        MarkerCategory::Line => ctx.cursor_line == Some(line_index),
-        MarkerCategory::Block => match (ctx.cursor_line, ctx.block_of_line.get(line_index)) {
-            (Some(cl), Some(Some(bid))) => {
-                ctx.block_of_line.get(cl).copied().flatten() == Some(*bid)
-            }
-            _ => false,
-        },
-    }
-}
 
 /// Разобрать строку на стилизованные фрагменты.
 ///
