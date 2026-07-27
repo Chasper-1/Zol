@@ -6,7 +6,7 @@
 
 use rhai::Map;
 
-use super::color::{parse_color, Rgba};
+use super::color::{Rgba, parse_color};
 use super::theme::{EditorTheme, TextTheme};
 
 /// Парсит тему из Rhai-отображения.
@@ -34,14 +34,46 @@ pub fn parse_theme(rhai: Map) -> EditorTheme {
                 Err(e) => {
                     eprintln!("[Zol] Ошибка парсинга цвета «editor.background»: {}", e);
                 }
+            }
         }
+    }
+
+    // Читаем блок "text"
+    if let Some(text) = rhai.get("text") {
+        let m = text.clone().cast::<Map>();
+        if let Some(s) = m.get("size") {
+            text_size = s.clone().cast::<f64>() as f32;
+        }
+        if let Some(c) = m.get("color") {
+            let s = c.clone().cast::<String>();
+            match parse_color(&s) {
+                Ok(c) => text_color = c,
+                Err(e) => {
+                    eprintln!("[Zol] Ошибка парсинга цвета «text.color»: {}", e);
+                }
+            }
+        }
+        if let Some(ff) = m.get("font_family") {
+            font_family = Some(ff.clone().cast::<String>());
+        }
+    }
+
+    EditorTheme {
+        name: String::from("custom"),
+        padding,
+        radius,
+        background,
+        text: TextTheme {
+            size: text_size,
+            color: text_color,
+            font_family,
+        },
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rhai::Map;
 
     #[test]
     fn parse_theme_default() {
@@ -80,42 +112,12 @@ mod tests {
     fn parse_theme_invalid_color() {
         let mut map = Map::new();
         let mut editor = Map::new();
-        editor.insert("background".into(), rhai::Dynamic::from("not-a-color".to_string()));
+        editor.insert(
+            "background".into(),
+            rhai::Dynamic::from("not-a-color".to_string()),
+        );
         map.insert("editor".into(), rhai::Dynamic::from(editor));
         let theme = parse_theme(map);
         assert!((theme.background.a - 0.9).abs() < 0.001);
-    }
-}
-
-    // Читаем блок "text"
-    if let Some(text) = rhai.get("text") {
-        let m = text.clone().cast::<Map>();
-        if let Some(s) = m.get("size") {
-            text_size = s.clone().cast::<f64>() as f32;
-        }
-        if let Some(c) = m.get("color") {
-            let s = c.clone().cast::<String>();
-            match parse_color(&s) {
-                Ok(c) => text_color = c,
-                Err(e) => {
-                    eprintln!("[Zol] Ошибка парсинга цвета «text.color»: {}", e);
-                }
-            }
-        }
-        if let Some(ff) = m.get("font_family") {
-            font_family = Some(ff.clone().cast::<String>());
-        }
-    }
-
-    EditorTheme {
-        name: String::from("custom"),
-        padding,
-        radius,
-        background,
-        text: TextTheme {
-            size: text_size,
-            color: text_color,
-            font_family,
-        },
     }
 }
