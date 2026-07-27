@@ -1,6 +1,7 @@
 use super::shared;
 use super::style::text_run_for_style;
 use crate::cache::MarkupCache;
+use crate::layout::compensation::LineRunsResult;
 use crate::layout::reveal::{RevealCtx, segment_is_revealed};
 use crate::layout::types::TextRun;
 use crate::theme::EditorTheme;
@@ -23,6 +24,67 @@ pub fn compute_line_runs(
     reveal: Option<&RevealCtx>,
     theme: &EditorTheme,
 ) -> Vec<TextRun> {
+    compute_line_runs_inner(
+        line,
+        line_start,
+        line_index,
+        line_cache,
+        base_size,
+        heading_size,
+        show_markers,
+        reveal,
+        theme,
+        &mut None,
+    )
+}
+
+/// Разобрать строку + вернуть мета-информацию (скрытые диапазоны).
+#[allow(clippy::too_many_arguments)]
+pub fn compute_line_runs_with_meta(
+    line: &str,
+    line_start: usize,
+    line_index: usize,
+    line_cache: Option<&MarkupCache>,
+    base_size: f32,
+    heading_size: f32,
+    show_markers: bool,
+    reveal: Option<&RevealCtx>,
+    theme: &EditorTheme,
+) -> LineRunsResult {
+    let mut hidden_ranges = Vec::new();
+    let runs = compute_line_runs_inner(
+        line,
+        line_start,
+        line_index,
+        line_cache,
+        base_size,
+        heading_size,
+        show_markers,
+        reveal,
+        theme,
+        &mut Some(&mut hidden_ranges),
+    );
+    LineRunsResult {
+        runs,
+        hidden_ranges,
+    }
+}
+
+/// Внутренняя реализация: если `hidden_out` — Some(&mut Vec), заполняет
+/// его диапазонами скрытых маркеров `[start, end)`.
+#[allow(clippy::too_many_arguments)]
+fn compute_line_runs_inner(
+    line: &str,
+    line_start: usize,
+    line_index: usize,
+    line_cache: Option<&MarkupCache>,
+    base_size: f32,
+    heading_size: f32,
+    show_markers: bool,
+    reveal: Option<&RevealCtx>,
+    theme: &EditorTheme,
+    hidden_out: &mut Option<&mut Vec<(usize, usize)>>,
+) -> Vec<TextRun> {
     let ctx = reveal.unwrap_or(RevealCtx::empty());
 
     // ─── Заголовок #N# ────────────────────────────────────────────────
@@ -40,6 +102,9 @@ pub fn compute_line_runs(
                         let marker_color = shared::MARKER_GRAY;
                         let marker_text = &line[..marker_end];
                         runs.push(TextRun::new(marker_text, 0, marker_color, heading_size));
+                    } else if let Some(hr) = hidden_out {
+                        // Маркеры заголовка скрыты
+                        hr.push((0, marker_end));
                     }
                     runs.push(TextRun::new(content, 0, shared::TEXT_WHITE, heading_size));
                     return runs;
@@ -76,13 +141,15 @@ pub fn compute_line_runs(
                     let mut pushed = false;
 
                     // Проверка 1: открывающий маркер для ТЕКУЩЕГО сегмента
-                    let is_open_marker = seg.left_marker_len > 0
-                        && between.len() <= seg.left_marker_len;
+                    let is_open_marker =
+                        seg.left_marker_len > 0 && between.len() <= seg.left_marker_len;
 
                     if is_open_marker {
                         let show = segment_is_revealed(seg, line_index, ctx);
                         if show {
                             runs.push(TextRun::new(between, 0, shared::MARKER_GRAY, base_size));
+                        } else if let Some(hr) = hidden_out {
+                            hr.push((last_end, seg_start));
                         }
                         pushed = true;
                     }
@@ -90,20 +157,26 @@ pub fn compute_line_runs(
                     // Проверка 2: закрывающий маркер для ПРЕДЫДУЩЕГО сегмента
                     if !pushed && i > 0 {
                         let prev = &cache.segments[i - 1];
-                        let is_close_marker = prev.left_marker_len > 0
-                            && between.len() <= prev.left_marker_len;
+                        let is_close_marker =
+                            prev.left_marker_len > 0 && between.len() <= prev.left_marker_len;
 
                         if is_close_marker {
                             let show = segment_is_revealed(prev, line_index, ctx);
                             if show {
                                 runs.push(TextRun::new(between, 0, shared::MARKER_GRAY, base_size));
+                            } else if let Some(hr) = hidden_out {
+                                hr.push((last_end, seg_start));
                             }
                             pushed = true;
                         }
                     }
 
-                    // Не маркер — не пушим (должен был войти в сегмент)
-                    let _ = pushed;
+                    // Не маркер или скрытый маркер
+                    if !pushed {
+                        if let Some(hr) = hidden_out {
+                            hr.push((last_end, seg_start));
+                        }
+                    }
                 }
             }
         }
@@ -133,6 +206,8 @@ pub fn compute_line_runs(
                     theme.background
                 };
                 runs.push(TextRun::new(remaining, 0, color, base_size));
+            } else if let Some(hr) = hidden_out {
+                hr.push((last_end, line.len()));
             }
         }
     }

@@ -1,5 +1,6 @@
 use cosmic_text::Buffer;
 
+use crate::layout::LineCompensation;
 use crate::layout::TextRun;
 
 /// Сформованный документ — обёртка над cosmic-text `Buffer`.
@@ -7,11 +8,17 @@ use crate::layout::TextRun;
 pub struct ShapedDocument {
     pub buffer: Buffer,
     pub line_runs: Vec<Vec<TextRun>>,
+    /// Компенсация смещения для каждой строки (буфер → shaped).
+    pub compensation: Vec<LineCompensation>,
 }
 
 impl ShapedDocument {
     pub fn new(buffer: Buffer, line_runs: Vec<Vec<TextRun>>) -> Self {
-        Self { buffer, line_runs }
+        Self {
+            buffer,
+            line_runs,
+            compensation: vec![],
+        }
     }
 
     pub fn total_height(&self) -> f32 {

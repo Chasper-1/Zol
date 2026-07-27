@@ -3,6 +3,7 @@ use super::shaped_doc::ShapedDocument;
 use crate::Viewport;
 use crate::cache::DocumentCache;
 use crate::layout;
+use crate::layout::compensation::LineCompensation;
 use crate::layout::reveal::RevealCtx;
 use crate::state::EditMode;
 use crate::theme::EditorTheme;
@@ -29,6 +30,7 @@ pub fn build(
 
     let lines: Vec<&str> = content.split('\n').collect();
     let mut all_runs: Vec<Vec<layout::TextRun>> = Vec::with_capacity(lines.len());
+    let mut all_comp: Vec<LineCompensation> = Vec::with_capacity(lines.len());
 
     // Диапазон строк, которые нужно полноценно обрабатывать.
     let visible_range = viewport.map(|vp| vp.first_line..=vp.last_line);
@@ -37,16 +39,17 @@ pub fn build(
     for (i, line) in lines.iter().enumerate() {
         let is_visible = visible_range.as_ref().is_none_or(|r| r.contains(&i));
 
-        let runs = if line.is_empty() {
-            vec![layout::TextRun::new(
+        if line.is_empty() {
+            all_runs.push(vec![layout::TextRun::new(
                 "\u{200B}",
                 0,
                 crate::theme::color::Rgba::new(0.5, 0.5, 0.5),
                 base_size,
-            )]
+            )]);
+            all_comp.push(LineCompensation::identity(0));
         } else if is_visible {
             let show_markers = matches!(mode, EditMode::Source);
-            layout::compute::compute_line_runs(
+            let result = layout::compute::compute_line_runs_with_meta(
                 line,
                 line_start,
                 i,
@@ -56,13 +59,20 @@ pub fn build(
                 show_markers,
                 reveal,
                 theme,
-            )
+            );
+            all_comp.push(LineCompensation::new(result.hidden_ranges, line.len()));
+            all_runs.push(result.runs);
         } else {
             // Строка вне viewport — только базовый цвет, без семантики
-            vec![layout::TextRun::new(line, 0, default_color, base_size)]
-        };
+            all_runs.push(vec![layout::TextRun::new(
+                line,
+                0,
+                default_color,
+                base_size,
+            )]);
+            all_comp.push(LineCompensation::identity(line.len()));
+        }
 
-        all_runs.push(runs);
         line_start += line.len() + 1;
         if line_start > content.len() {
             line_start = content.len();
@@ -72,6 +82,7 @@ pub fn build(
     crate::font::with_font_system(|fs| {
         *doc = shape_document(
             &all_runs,
+            all_comp,
             fs,
             base_size,
             font_family,

@@ -30,10 +30,18 @@ pub fn handle_mouse<'a, Message>(
                 if let Some(cosmic) = cosmic_cursor {
                     let new_raw = {
                         let doc = this.inner.doc.borrow();
+                        let shaped = this.inner.shaped_doc.borrow();
                         let (line_start, line_end) = doc.line_bounds(cosmic.line).map(|b| (b.start, b.end)).unwrap_or((0, 0));
                         let line_len = line_end.saturating_sub(line_start);
-                        (line_start + cosmic.index).min(line_start + line_len)
-                    }; // doc dropped here
+                        // Компенсация: shaped-оффсет (cosmic.index) → буферный
+                        let buffer_offset = shaped
+                            .compensation
+                            .get(cosmic.line)
+                            .map(|c| c.shaped_to_buffer(cosmic.index))
+                            .unwrap_or(cosmic.index)
+                            .min(line_len);
+                        (line_start + buffer_offset).min(line_start + line_len)
+                    }; // doc + shaped dropped here
 
                     let mut doc = this.inner.doc.borrow_mut();
                     api_cursor::cursor_set_raw(&mut *doc, new_raw);

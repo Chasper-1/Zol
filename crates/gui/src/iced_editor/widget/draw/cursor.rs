@@ -5,13 +5,11 @@ use iced::{Color, Point, Rectangle, Size};
 
 use editor::state::EditMode;
 
+use crate::iced_editor::nav::cursor_x_on_line;
 use crate::iced_editor::widget::editor::IcedEditor;
 
-pub fn draw_cursor<'a, Renderer>(
-    this: &IcedEditor<'a>,
-    renderer: &mut Renderer,
-    origin: Point,
-) where
+pub fn draw_cursor<'a, Renderer>(this: &IcedEditor<'a>, renderer: &mut Renderer, origin: Point)
+where
     Renderer: iced::advanced::text::Renderer<Font = iced::Font>,
 {
     if this.inner.get_mode() == EditMode::Preview {
@@ -20,7 +18,11 @@ pub fn draw_cursor<'a, Renderer>(
 
     let (cursor_line, cursor_raw, should_blink) = {
         let doc = this.inner.doc.borrow();
-        (doc.cursor.line(), doc.cursor.raw(), doc.cursor.should_blink())
+        (
+            doc.cursor.line(),
+            doc.cursor.raw(),
+            doc.cursor.should_blink(),
+        )
     };
 
     if !should_blink {
@@ -29,12 +31,14 @@ pub fn draw_cursor<'a, Renderer>(
 
     let shaped = this.inner.shaped_doc.borrow();
     let doc = this.inner.doc.borrow();
-    let (line_start, _) = doc.line_bounds(cursor_line).map(|b| (b.start, b.end)).unwrap_or((0, 0));
+    let (line_start, _) = doc
+        .line_bounds(cursor_line)
+        .map(|b| (b.start, b.end))
+        .unwrap_or((0, 0));
     let byte_in_line = cursor_raw.saturating_sub(line_start);
     let scroll_y = this.inner.scroll_y.get();
 
     let (cursor_x, cursor_y, line_h) = {
-        let mut cx = 0.0;
         let mut cy = 0.0;
         let mut lh = 12.0;
 
@@ -44,26 +48,10 @@ pub fn draw_cursor<'a, Renderer>(
             }
             cy = run.line_top - scroll_y;
             lh = run.line_height;
-
-            let mut found_glyph = false;
-            for glyph in run.glyphs.iter() {
-                if glyph.start >= byte_in_line {
-                    cx = glyph.x;
-                    found_glyph = true;
-                    break;
-                }
-            }
-            if !found_glyph {
-                cx = run
-                    .glyphs
-                    .last()
-                    .map(|g| g.x + g.w)
-                    .unwrap_or(0.0);
-            }
             break;
         }
 
-        (cx, cy, lh)
+        (cursor_x_on_line(&*shaped, cursor_line, byte_in_line), cy, lh)
     };
 
     renderer.fill_quad(

@@ -4,12 +4,14 @@ use cosmic_text::{
 };
 
 use super::shaped_doc::ShapedDocument;
+use crate::layout::LineCompensation;
 use crate::layout::TextRun;
 use crate::segment::{STYLE_BOLD, STYLE_ITALIC, STYLE_STRIKETHROUGH, STYLE_UNDERLINE};
 
 /// Сшейпить строки документа в Buffer.
 pub fn shape_document(
     line_runs: &[Vec<TextRun>],
+    compensation: Vec<LineCompensation>,
     font_system: &mut cosmic_text::FontSystem,
     base_size: f32,
     default_family: &str,
@@ -86,7 +88,11 @@ pub fn shape_document(
     buffer.set_rich_text(spans, &default_attrs, Shaping::Advanced, Some(Align::Left));
     buffer.set_scroll(Scroll::new(0, scroll_y, 0.0));
     buffer.shape_until_scroll(font_system, false);
-    ShapedDocument::new(buffer, line_runs.to_vec())
+    ShapedDocument {
+        buffer,
+        line_runs: line_runs.to_vec(),
+        compensation,
+    }
 }
 
 fn rgba_to_cosmic(c: &crate::theme::color::Rgba) -> CosmicColor {

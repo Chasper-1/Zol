@@ -6,7 +6,7 @@ mod shared;
 mod style;
 
 pub use bounds::cursor_line_bounds;
-pub use line_runs::compute_line_runs;
+pub use line_runs::{compute_line_runs, compute_line_runs_with_meta};
 
 #[cfg(test)]
 mod tests;

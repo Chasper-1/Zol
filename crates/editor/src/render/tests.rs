@@ -228,6 +228,7 @@ fn build_reveal_inline_markers_appear_disappear() {
 
 // ── shape tests ──
 
+use crate::layout::LineCompensation;
 use crate::layout::TextRun;
 use crate::theme::color::Rgba;
 
@@ -241,6 +242,7 @@ fn shape_single_line() {
     let doc = font::with_font_system(|fs| {
         shape::shape_document(
             &[make_runs("hello", 14.0)],
+            vec![LineCompensation::identity(5)],
             fs,
             14.0,
             "sans-serif",
@@ -258,6 +260,7 @@ fn shape_multiple_lines() {
     let doc = font::with_font_system(|fs| {
         shape::shape_document(
             &[make_runs("line1", 14.0), make_runs("line2", 14.0)],
+            vec![LineCompensation::identity(5), LineCompensation::identity(5)],
             fs,
             14.0,
             "sans-serif",
@@ -272,7 +275,15 @@ fn shape_multiple_lines() {
 fn shape_empty_line() {
     font::init();
     let doc = font::with_font_system(|fs| {
-        shape::shape_document(&[vec![]], fs, 14.0, "sans-serif", 0.0, None)
+        shape::shape_document(
+            &[vec![]],
+            vec![LineCompensation::identity(0)],
+            fs,
+            14.0,
+            "sans-serif",
+            0.0,
+            None,
+        )
     });
     assert_eq!(doc.line_count(), 1);
     assert!(doc.total_height() > 0.0);
@@ -284,6 +295,7 @@ fn glyph_starts_for_mixed_text() {
     let doc = font::with_font_system(|fs| {
         shape::shape_document(
             &[make_runs("**текст**", 14.0)],
+            vec![LineCompensation::identity(14)],
             fs,
             14.0,
             "sans-serif",
