@@ -1,6 +1,6 @@
 use zoll::ast::{MarkupNode, MarkupStyle};
 
-use crate::markup::segment::Segment;
+use crate::markup::segment::{MarkerCategory, Segment};
 use crate::markup::segmenter::helpers::{combine_style, marker_open_len, to_style_flags};
 
 /// Рекурсивно обходит AST и собирает сегменты.
@@ -21,6 +21,7 @@ pub fn build_segments(
                     right_marker_len: 0,
                     raw_start: raw_offset,
                     raw_end: raw_offset + text.len(),
+                    category: MarkerCategory::Inline,
                 });
                 raw_offset += text.len();
             }
@@ -73,6 +74,7 @@ pub fn build_segments(
                     right_marker_len: 0,
                     raw_start: raw_offset,
                     raw_end: raw_offset + content.len(),
+                    category: MarkerCategory::Block,
                 });
                 raw_offset += content.len();
             }
@@ -86,6 +88,7 @@ pub fn build_segments(
                     right_marker_len: 0,
                     raw_start: raw_offset,
                     raw_end: raw_offset,
+                    category: MarkerCategory::Line,
                 });
             }
         }
@@ -98,6 +101,11 @@ pub fn build_segments(
 /// Используется `incremental.rs` для построчной генерации сегментов из LineAST.
 pub fn build_segments_from_nodes(nodes: &[MarkupNode], raw_offset: usize) -> Vec<Segment> {
     let mut segments = Vec::new();
-    build_segments(nodes, zoll::ast::MarkupStyle::PLAIN, &mut segments, raw_offset);
+    build_segments(
+        nodes,
+        zoll::ast::MarkupStyle::PLAIN,
+        &mut segments,
+        raw_offset,
+    );
     segments
 }

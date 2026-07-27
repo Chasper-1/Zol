@@ -1,8 +1,8 @@
 //! Обработка событий клавиатуры.
 
+use iced::Rectangle;
 use iced::advanced::Shell;
 use iced::keyboard::{self, key::Named};
-use iced::Rectangle;
 
 use api::cursor as api_cursor;
 use api::file as api_file;
@@ -47,7 +47,6 @@ pub fn handle_keyboard<'a, Message>(
         // Ctrl+Home — в начало документа
         if matches!(key.as_ref(), keyboard::Key::Named(Named::Home)) {
             this.inner.doc.borrow_mut().set_cursor_raw(0);
-            this.inner.snap_cursor_from_markers();
             auto_scroll(this, bounds);
             shell.request_redraw();
             return;
@@ -56,7 +55,6 @@ pub fn handle_keyboard<'a, Message>(
         if matches!(key.as_ref(), keyboard::Key::Named(Named::End)) {
             let len = this.inner.doc.borrow().content().len();
             this.inner.doc.borrow_mut().set_cursor_raw(len);
-            this.inner.snap_cursor_from_markers();
             auto_scroll(this, bounds);
             shell.request_redraw();
             return;
@@ -68,7 +66,6 @@ pub fn handle_keyboard<'a, Message>(
                 let mut doc = this.inner.doc.borrow_mut();
                 api_cursor::move_word_left(&mut *doc);
             }
-            this.inner.snap_cursor_from_markers();
             auto_scroll(this, bounds);
             shell.request_redraw();
             return;
@@ -79,15 +76,7 @@ pub fn handle_keyboard<'a, Message>(
                 let mut doc = this.inner.doc.borrow_mut();
                 api_cursor::move_word_right(&mut *doc);
             }
-            this.inner.snap_cursor_from_markers();
             auto_scroll(this, bounds);
-            shell.request_redraw();
-            return;
-        }
-
-        // Ctrl+Space — раскрыть/скрыть маркеры под курсором (Live-режим)
-        if key.to_latin(*physical_key).is_some_and(|c| c == ' ') {
-            this.inner.toggle_reveal_at_cursor();
             shell.request_redraw();
             return;
         }
@@ -115,37 +104,31 @@ pub fn handle_keyboard<'a, Message>(
             let mut doc = this.inner.doc.borrow_mut();
             api_cursor::move_left(&mut *doc);
             drop(doc);
-            this.inner.snap_cursor_from_markers();
         }
         keyboard::Key::Named(Named::ArrowRight) => {
             let mut doc = this.inner.doc.borrow_mut();
             api_cursor::move_right(&mut *doc);
             drop(doc);
-            this.inner.snap_cursor_from_markers();
         }
         keyboard::Key::Named(Named::ArrowUp) => {
             let mut doc = this.inner.doc.borrow_mut();
             api_cursor::move_up(&mut *doc);
             drop(doc);
-            this.inner.snap_cursor_from_markers();
         }
         keyboard::Key::Named(Named::ArrowDown) => {
             let mut doc = this.inner.doc.borrow_mut();
             api_cursor::move_down(&mut *doc);
             drop(doc);
-            this.inner.snap_cursor_from_markers();
         }
         keyboard::Key::Named(Named::Home) => {
             let mut doc = this.inner.doc.borrow_mut();
             api_cursor::move_home(&mut *doc);
             drop(doc);
-            this.inner.snap_cursor_from_markers();
         }
         keyboard::Key::Named(Named::End) => {
             let mut doc = this.inner.doc.borrow_mut();
             api_cursor::move_end(&mut *doc);
             drop(doc);
-            this.inner.snap_cursor_from_markers();
         }
 
         keyboard::Key::Named(Named::Tab) => {
@@ -170,7 +153,6 @@ pub fn handle_keyboard<'a, Message>(
                 count += 1;
             }
             drop(doc);
-            this.inner.snap_cursor_from_markers();
         }
         keyboard::Key::Named(Named::PageDown) => {
             let line_h = this.inner.base_size * 1.4;
@@ -182,7 +164,6 @@ pub fn handle_keyboard<'a, Message>(
                 count += 1;
             }
             drop(doc);
-            this.inner.snap_cursor_from_markers();
         }
 
         keyboard::Key::Named(Named::Backspace) => {
@@ -202,7 +183,6 @@ pub fn handle_keyboard<'a, Message>(
                 let mut doc = this.inner.doc.borrow_mut();
                 doc.set_cursor_raw(from);
                 drop(doc);
-                this.inner.snap_cursor_from_markers();
             }
         }
         keyboard::Key::Named(Named::Delete) => {
@@ -219,7 +199,6 @@ pub fn handle_keyboard<'a, Message>(
             };
             if from < to {
                 this.inner.edit_doc_raw(from, to, "");
-                this.inner.snap_cursor_from_markers();
             }
         }
         keyboard::Key::Named(Named::Enter) => {
@@ -229,7 +208,6 @@ pub fn handle_keyboard<'a, Message>(
             doc.set_cursor_raw(raw + 1);
             doc.cursor.reset_col_visual();
             drop(doc);
-            this.inner.snap_cursor_from_markers();
         }
         _ => {
             if let Some(text) = text {
@@ -246,7 +224,6 @@ pub fn handle_keyboard<'a, Message>(
         }
     }
 
-    this.inner.snap_cursor_from_markers();
     auto_scroll(this, bounds);
     shell.request_redraw();
 }

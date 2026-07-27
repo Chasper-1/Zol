@@ -9,7 +9,7 @@ use zoll::incremental::IncrementalDoc;
 use zoll::viewport::Viewport;
 
 use crate::cache::DocumentCache;
-use crate::markup::segment::Segment;
+use crate::markup::segment::{MarkerCategory, Segment};
 use crate::markup::segmenter::build::build_segments_from_nodes;
 use crate::markup::segmenter::helpers::to_style_flags;
 
@@ -21,10 +21,14 @@ pub fn incremental_to_cache(inc: &IncrementalDoc) -> DocumentCache {
 /// Преобразовать `IncrementalDoc` в `DocumentCache`, генерируя сегменты
 /// только для строк в `viewport`. Строки вне viewport получают пустой
 /// `MarkupCache` — при рендеринге они отобразятся как plain-текст.
-pub fn incremental_to_cache_visible(inc: &IncrementalDoc, viewport: Option<&Viewport>) -> DocumentCache {
+pub fn incremental_to_cache_visible(
+    inc: &IncrementalDoc,
+    viewport: Option<&Viewport>,
+) -> DocumentCache {
     let num_lines = inc.line_starts.len();
     let mut cache = DocumentCache {
         lines: vec![Default::default(); num_lines],
+        block_of_line: vec![None; num_lines],
     };
 
     let vp = viewport.map(|v| {
@@ -44,6 +48,32 @@ pub fn incremental_to_cache_visible(inc: &IncrementalDoc, viewport: Option<&View
         cache.lines[i].segments = line_ast_to_segments(&inc.line_asts[i], line_start);
     }
 
+    // ── Вычисляем block_of_line ──
+    cache.block_of_line = vec![None; num_lines];
+    let mut block_id = 0usize;
+    let mut in_block = false;
+    for (i, ast) in inc.line_asts.iter().enumerate() {
+        match ast {
+            LineAST::BlockMarker(_) | LineAST::SpoilerBlockOpen(_) => {
+                if in_block {
+                    // закрывающий маркер
+                    cache.block_of_line[i] = Some(block_id);
+                    in_block = false;
+                    block_id += 1;
+                } else {
+                    // открывающий маркер
+                    cache.block_of_line[i] = Some(block_id);
+                    in_block = true;
+                }
+            }
+            _ => {
+                if in_block {
+                    cache.block_of_line[i] = Some(block_id);
+                }
+            }
+        }
+    }
+
     cache
 }
 
@@ -60,18 +90,14 @@ fn line_ast_to_segments(line_ast: &LineAST, line_start: usize) -> Vec<Segment> {
         | LineAST::ListItem(_, _, children)
         | LineAST::Quote(children)
         | LineAST::SpoilerLine(children)
-        | LineAST::Spoiler(_, children) => {
-            build_segments_from_nodes(children, line_start)
-        }
+        | LineAST::Spoiler(_, children) => build_segments_from_nodes(children, line_start),
 
         LineAST::Comment(children) => {
             // Комментарий — серая маска с текстом
             build_segments_from_nodes(children, line_start)
         }
 
-        LineAST::Formula(children) => {
-            build_segments_from_nodes(children, line_start)
-        }
+        LineAST::Formula(children) => build_segments_from_nodes(children, line_start),
 
         LineAST::Tag(_) | LineAST::ThematicBreak => {
             vec![]
@@ -90,8 +116,7 @@ fn line_ast_to_segments(line_ast: &LineAST, line_start: usize) -> Vec<Segment> {
             segments
         }
 
-        LineAST::BlockMarker(_)
-        | LineAST::SpoilerBlockOpen(_) => {
+        LineAST::BlockMarker(_) | LineAST::SpoilerBlockOpen(_) => {
             // Блок-маркеры — сами не отображаются, их контент обрабатывается
             // внутри соответствующих children
             vec![]
@@ -105,6 +130,7 @@ fn line_ast_to_segments(line_ast: &LineAST, line_start: usize) -> Vec<Segment> {
                 right_marker_len: 0,
                 raw_start: line_start,
                 raw_end: line_start + content.len(),
+                category: MarkerCategory::Block,
             }]
         }
 
@@ -116,6 +142,7 @@ fn line_ast_to_segments(line_ast: &LineAST, line_start: usize) -> Vec<Segment> {
                 right_marker_len: 0,
                 raw_start: line_start,
                 raw_end: line_start + content.len(),
+                category: MarkerCategory::Block,
             }]
         }
 
@@ -127,6 +154,7 @@ fn line_ast_to_segments(line_ast: &LineAST, line_start: usize) -> Vec<Segment> {
                 right_marker_len: 0,
                 raw_start: line_start,
                 raw_end: line_start + content.len(),
+                category: MarkerCategory::Block,
             }]
         }
     }

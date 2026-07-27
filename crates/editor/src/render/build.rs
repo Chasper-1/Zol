@@ -3,13 +3,11 @@ use super::shaped_doc::ShapedDocument;
 use crate::Viewport;
 use crate::cache::DocumentCache;
 use crate::layout;
-use crate::layout::reveal::RevealState;
+use crate::layout::compute::line_runs::RevealCtx;
 use crate::state::EditMode;
 use crate::theme::EditorTheme;
 
 /// Собрать документ: вычислить TextRun'ы → сшейпить → готово к отрисовке.
-///
-/// `revealed` — состояние раскрытия маркеров (для Live-режима).
 #[allow(clippy::too_many_arguments)]
 pub fn build(
     doc: &mut ShapedDocument,
@@ -22,7 +20,7 @@ pub fn build(
     scroll_y: f32,
     viewport_height: Option<f32>,
     viewport: Option<&Viewport>,
-    revealed: Option<&RevealState>,
+    reveal: Option<&RevealCtx>,
 ) {
     crate::font::init();
 
@@ -56,7 +54,7 @@ pub fn build(
                 base_size,
                 heading_size,
                 show_markers,
-                revealed,
+                reveal,
                 theme,
             )
         } else {

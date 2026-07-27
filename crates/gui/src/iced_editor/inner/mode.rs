@@ -11,7 +11,6 @@ impl EditorInner {
         let mut current = self.mode.get();
         api_editor::mode_set(&mut current, new_mode);
         self.mode.set(current);
-        self.revealed.borrow_mut().clear();
         self.mark_dirty();
     }
 
@@ -19,7 +18,6 @@ impl EditorInner {
         let mut current = self.mode.get();
         api_editor::mode_cycle(&mut current);
         self.mode.set(current);
-        self.revealed.borrow_mut().clear();
         self.mark_dirty();
     }
 }

@@ -29,6 +29,7 @@ pub fn to_document_cache(doc: &MarkupDoc) -> DocumentCache {
     let num_lines = line_starts.len();
     let mut doc_cache = DocumentCache {
         lines: vec![Default::default(); num_lines],
+        block_of_line: vec![None; num_lines],
     };
 
     // 3. Функция: номер строки по байтовому offset в документе
@@ -72,6 +73,7 @@ pub fn to_document_cache(doc: &MarkupDoc) -> DocumentCache {
                     },
                     raw_start: raw_offset,
                     raw_end: raw_offset + part.len(),
+                    category: seg.category,
                 });
                 raw_offset += part.len() + 1;
             }

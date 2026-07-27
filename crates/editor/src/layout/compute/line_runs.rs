@@ -1,15 +1,56 @@
 use super::shared;
 use super::style::text_run_for_style;
 use crate::cache::MarkupCache;
-use crate::layout::reveal::RevealState;
 use crate::layout::types::TextRun;
+use crate::markup::segment::{MarkerCategory, Segment};
 use crate::theme::EditorTheme;
+
+/// Контекст авто-раскрытия маркеров.
+#[derive(Clone, Copy)]
+pub struct RevealCtx<'a> {
+    pub cursor_raw: Option<usize>,
+    pub cursor_line: Option<usize>,
+    pub block_of_line: &'a [Option<usize>],
+}
+
+impl RevealCtx<'_> {
+    pub fn empty() -> &'static Self {
+        static EMPTY: RevealCtx = RevealCtx {
+            cursor_raw: None,
+            cursor_line: None,
+            block_of_line: &[],
+        };
+        &EMPTY
+    }
+}
+
+/// Авто-раскрытие: определена ли позиция курсора рядом с маркерами сегмента.
+fn segment_is_revealed(seg: &Segment, line_index: usize, ctx: &RevealCtx) -> bool {
+    let Some(cursor) = ctx.cursor_raw else {
+        return false;
+    };
+    match seg.category {
+        MarkerCategory::Inline => {
+            let start = seg.raw_start.saturating_sub(seg.left_marker_len);
+            let end = seg.raw_end + seg.left_marker_len; // close len = open len
+            cursor >= start && cursor <= end
+        }
+        MarkerCategory::Line => ctx.cursor_line == Some(line_index),
+        MarkerCategory::Block => match (ctx.cursor_line, ctx.block_of_line.get(line_index)) {
+            (Some(cl), Some(Some(bid))) => {
+                ctx.block_of_line.get(cl).copied().flatten() == Some(*bid)
+            }
+            _ => false,
+        },
+    }
+}
 
 /// Разобрать строку на стилизованные фрагменты.
 ///
-/// Если `show_markers == false` и сегмент **не** раскрыт через `revealed`,
-/// текст его маркеров **физически исключается** из результата (не занимает места).
-/// Если раскрыт — маркеры отображаются серым как обычно.
+/// Если `show_markers == false` — маркеры скрыты, но автоматически
+/// раскрываются, если курсор рядом (inline) / на той же строке (line) /
+/// внутри того же блока (block). `reveal` — контекст раскрытия;
+/// `None` — маркеры всегда скрыты.
 #[allow(clippy::too_many_arguments)]
 pub fn compute_line_runs(
     line: &str,
@@ -19,9 +60,11 @@ pub fn compute_line_runs(
     base_size: f32,
     heading_size: f32,
     show_markers: bool,
-    revealed: Option<&RevealState>,
+    reveal: Option<&RevealCtx>,
     theme: &EditorTheme,
 ) -> Vec<TextRun> {
+    let ctx = reveal.unwrap_or(RevealCtx::empty());
+
     // ─── Заголовок #N# ────────────────────────────────────────────────
     if let Some(rest) = line.strip_prefix('#') {
         if let Some(level_end) = rest.find('#') {
@@ -31,13 +74,13 @@ pub fn compute_line_runs(
                     let marker_end = level_end + 2;
                     let content = line[marker_end..].trim_start();
                     let mut runs = Vec::new();
+                    let line_is_active = ctx.cursor_line == Some(line_index);
 
-                    if show_markers {
+                    if show_markers || line_is_active {
                         let marker_color = shared::MARKER_GRAY;
                         let marker_text = &line[..marker_end];
                         runs.push(TextRun::new(marker_text, 0, marker_color, heading_size));
                     }
-                    // Контент всегда показываем
                     runs.push(TextRun::new(content, 0, shared::TEXT_WHITE, heading_size));
                     return runs;
                 }
@@ -65,25 +108,18 @@ pub fn compute_line_runs(
         if seg_start > last_end && seg_start <= line.len() {
             let between = &line[last_end..seg_start];
             if !between.is_empty() {
-                // Это может быть как маркер, так и просто plain text между сегментами.
-                // Показываем только если show_markers или сегмент раскрыт.
-                // Определяем, относится ли этот кусок к маркеру текущего сегмента.
                 let left_marker_len = seg.left_marker_len;
                 let is_marker = left_marker_len > 0 && between.len() <= left_marker_len;
+                let show = segment_is_revealed(seg, line_index, ctx);
 
-                let revealed_for_seg = revealed
-                    .map(|r| r.is_revealed(line_index, seg.raw_start))
-                    .unwrap_or(false);
-
-                if show_markers || (is_marker && revealed_for_seg) {
-                    let color = if show_markers || revealed_for_seg {
+                if show_markers || (is_marker && show) {
+                    let color = if show_markers || show {
                         shared::MARKER_GRAY
                     } else {
                         theme.background
                     };
                     runs.push(TextRun::new(between, 0, color, base_size));
                 }
-                // else: маркер скрыт — не включаем в runs
             }
         }
 
@@ -101,21 +137,12 @@ pub fn compute_line_runs(
     if last_end < line.len() {
         let remaining = &line[last_end..];
         if !remaining.is_empty() {
-            // Остаток всегда является маркером (закрывающим).
-            // Показываем только если show_markers.
-            let is_closing_marker = cache
-                .segments
-                .last()
-                .map(|seg| seg.right_marker_len > 0)
-                .unwrap_or(false);
+            let show = cache.segments.last().map_or(false, |seg| {
+                seg.left_marker_len > 0 && segment_is_revealed(seg, line_index, ctx)
+            });
 
-            let last_seg_raw = cache.segments.last().map(|s| s.raw_start).unwrap_or(0);
-            let revealed_for_last = revealed
-                .map(|r| r.is_revealed(line_index, last_seg_raw))
-                .unwrap_or(false);
-
-            if show_markers || (is_closing_marker && revealed_for_last) {
-                let color = if show_markers || revealed_for_last {
+            if show_markers || show {
+                let color = if show_markers || show {
                     shared::MARKER_GRAY
                 } else {
                     theme.background

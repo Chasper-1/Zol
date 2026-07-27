@@ -1,7 +1,7 @@
 //! Чистая раскладка строки: сегменты → [`crate::layout::TextRun`]ы.
 
 mod bounds;
-mod line_runs;
+pub mod line_runs;
 mod shared;
 mod style;
 
