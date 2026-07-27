@@ -5,11 +5,18 @@ use iced::advanced::Shell;
 use iced::keyboard::{self, key::Named};
 
 use api::cursor as api_cursor;
+use api::doc as api_doc;
 use api::file as api_file;
+use api::text as api_text;
 use editor::state::EditMode;
 
 use super::auto_scroll;
 use crate::iced_editor::widget::editor::IcedEditor;
+
+/// Применить замыкание к документу в `edit_doc` и запросить redraw.
+fn edit(this: &mut IcedEditor<'_>, f: impl FnOnce(&mut editor::document::Document)) {
+    this.inner.edit_doc(f);
+}
 
 /// Переместить курсор и пометить документ как грязный для перешейпа.
 fn move_cursor(this: &mut IcedEditor<'_>, f: impl FnOnce(&mut editor::document::Document)) {
@@ -37,6 +44,7 @@ pub fn handle_keyboard<'a, Message>(
     };
 
     let cmd = modifiers.command();
+    let shift = modifiers.shift();
 
     // ─── Ctrl+ ... ─────────────────────────────────────────────────
     if cmd {
@@ -48,6 +56,13 @@ pub fn handle_keyboard<'a, Message>(
             } else {
                 eprintln!("[Zol] Сохранено в {}", this.inner.file_path);
             }
+            shell.request_redraw();
+            return;
+        }
+
+        // Ctrl+A — выделить всё
+        if key.to_latin(*physical_key).is_some_and(|c| c == 'a') {
+            edit(this, api_doc::select_all);
             shell.request_redraw();
             return;
         }
@@ -70,14 +85,53 @@ pub fn handle_keyboard<'a, Message>(
 
         // Ctrl+← — слово влево
         if matches!(key.as_ref(), keyboard::Key::Named(Named::ArrowLeft)) {
-            move_cursor(this, api_cursor::move_word_left);
+            let f = if shift {
+                api_cursor::move_word_left_select
+            } else {
+                api_cursor::move_word_left
+            };
+            move_cursor(this, f);
             auto_scroll(this, bounds);
             shell.request_redraw();
             return;
         }
         // Ctrl+→ — слово вправо
         if matches!(key.as_ref(), keyboard::Key::Named(Named::ArrowRight)) {
-            move_cursor(this, api_cursor::move_word_right);
+            let f = if shift {
+                api_cursor::move_word_right_select
+            } else {
+                api_cursor::move_word_right
+            };
+            move_cursor(this, f);
+            auto_scroll(this, bounds);
+            shell.request_redraw();
+            return;
+        }
+
+        // Ctrl+Backspace — удалить слово слева
+        if matches!(key.as_ref(), keyboard::Key::Named(Named::Backspace)) {
+            edit(
+                this,
+                if shift {
+                    api_text::delete_line
+                } else {
+                    api_text::delete_word_before
+                },
+            );
+            auto_scroll(this, bounds);
+            shell.request_redraw();
+            return;
+        }
+        // Ctrl+Delete — удалить слово справа / до конца строки
+        if matches!(key.as_ref(), keyboard::Key::Named(Named::Delete)) {
+            edit(
+                this,
+                if shift {
+                    api_text::delete_to_line_end
+                } else {
+                    api_text::delete_word_after
+                },
+            );
             auto_scroll(this, bounds);
             shell.request_redraw();
             return;
@@ -102,6 +156,27 @@ pub fn handle_keyboard<'a, Message>(
 
     // ─── Обычные клавиши (без Ctrl) ────────────────────────────────
     match key.as_ref() {
+        // Shift+движение — расширение выделения
+        keyboard::Key::Named(Named::ArrowLeft) if shift => {
+            move_cursor(this, api_cursor::move_left_select);
+        }
+        keyboard::Key::Named(Named::ArrowRight) if shift => {
+            move_cursor(this, api_cursor::move_right_select);
+        }
+        keyboard::Key::Named(Named::ArrowUp) if shift => {
+            move_cursor(this, api_cursor::move_up_select);
+        }
+        keyboard::Key::Named(Named::ArrowDown) if shift => {
+            move_cursor(this, api_cursor::move_down_select);
+        }
+        keyboard::Key::Named(Named::Home) if shift => {
+            move_cursor(this, api_cursor::move_home_select);
+        }
+        keyboard::Key::Named(Named::End) if shift => {
+            move_cursor(this, api_cursor::move_end_select);
+        }
+
+        // Обычное движение (без Shift) — сбрасывает выделение
         keyboard::Key::Named(Named::ArrowLeft) => move_cursor(this, api_cursor::move_left),
         keyboard::Key::Named(Named::ArrowRight) => move_cursor(this, api_cursor::move_right),
         keyboard::Key::Named(Named::ArrowUp) => move_cursor(this, api_cursor::move_up),
@@ -143,54 +218,21 @@ pub fn handle_keyboard<'a, Message>(
         }
 
         keyboard::Key::Named(Named::Backspace) => {
-            let (from, to) = {
-                let doc = this.inner.doc.borrow();
-                let raw = doc.cursor.raw();
-                if raw == 0 || doc.content().is_empty() {
-                    (0, 0)
-                } else {
-                    let prev =
-                        editor::cursor::prev_grapheme_boundary(doc.content(), raw).unwrap_or(0);
-                    (prev, raw)
-                }
-            };
-            if from < to {
-                this.inner.edit_doc_raw(from, to, "");
-                move_cursor(this, |d| d.set_cursor_raw(from));
-            }
+            edit(this, api_text::delete_before);
         }
         keyboard::Key::Named(Named::Delete) => {
-            let (from, to) = {
-                let doc = this.inner.doc.borrow();
-                let raw = doc.cursor.raw();
-                if raw >= doc.content().len() || doc.content().is_empty() {
-                    (0, 0)
-                } else {
-                    let next = editor::cursor::next_grapheme_boundary(doc.content(), raw)
-                        .unwrap_or(doc.content().len());
-                    (raw, next)
-                }
-            };
-            if from < to {
-                this.inner.edit_doc_raw(from, to, "");
-            }
+            edit(this, api_text::delete_after);
         }
         keyboard::Key::Named(Named::Enter) => {
-            let raw = this.inner.doc.borrow().cursor.raw();
-            this.inner.edit_doc_raw(raw, raw, "\n");
-            move_cursor(this, |d| {
-                d.set_cursor_raw(raw + 1);
-                d.cursor.reset_col_visual();
-            });
+            edit(this, api_text::newline);
         }
         _ => {
             if let Some(text) = text {
                 if !cmd && !modifiers.alt() {
                     let filtered: String = text.chars().filter(|c| !c.is_control()).collect();
                     if !filtered.is_empty() {
-                        let raw = this.inner.doc.borrow().cursor.raw();
-                        this.inner.edit_doc_raw(raw, raw, &filtered);
-                        move_cursor(this, |d| d.set_cursor_raw(raw + filtered.len()));
+                        let text = filtered.clone();
+                        edit(this, |doc| api_text::insert_at_cursor(doc, &text));
                     }
                 }
             }

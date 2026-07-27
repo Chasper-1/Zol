@@ -23,6 +23,8 @@ pub struct EditorTheme {
     pub radius: f32,
     pub background: Rgba,
     pub text: TextTheme,
+    /// Цвет фона выделенного текста.
+    pub selection_bg: Rgba,
 }
 
 impl Default for EditorTheme {
@@ -37,6 +39,7 @@ impl Default for EditorTheme {
                 color: Rgba::new(0.804, 0.839, 0.957),
                 font_family: None,
             },
+            selection_bg: Rgba::new(0.35, 0.45, 0.65).with_alpha(0.4),
         }
     }
 }

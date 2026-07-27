@@ -4,7 +4,7 @@ members = ["crates/zoll", "crates/editor", "crates/api", "crates/gui"]
 
 [package]
 name = "Zol"
-version = "0.3.8"
+version = "0.3.9"
 edition = "2024"
 
 [dependencies]

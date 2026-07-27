@@ -17,6 +17,7 @@ pub fn parse_theme(rhai: Map) -> EditorTheme {
     let mut text_size = 14.0f32;
     let mut text_color = Rgba::new(0.804, 0.839, 0.957);
     let mut font_family = None;
+    let mut selection_bg = Rgba::new(0.35, 0.45, 0.65).with_alpha(0.4);
 
     // Читаем блок "editor"
     if let Some(editor) = rhai.get("editor") {
@@ -33,6 +34,15 @@ pub fn parse_theme(rhai: Map) -> EditorTheme {
                 Ok(c) => background = c,
                 Err(e) => {
                     eprintln!("[Zol] Ошибка парсинга цвета «editor.background»: {}", e);
+                }
+            }
+        }
+        if let Some(s) = m.get("selection_bg") {
+            let s = s.clone().cast::<String>();
+            match parse_color(&s) {
+                Ok(c) => selection_bg = c,
+                Err(e) => {
+                    eprintln!("[Zol] Ошибка парсинга цвета «editor.selection_bg»: {}", e);
                 }
             }
         }
@@ -68,6 +78,7 @@ pub fn parse_theme(rhai: Map) -> EditorTheme {
             color: text_color,
             font_family,
         },
+        selection_bg,
     }
 }
 

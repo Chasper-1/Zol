@@ -1,6 +1,6 @@
 use crate::iced_editor::widget::editor::IcedEditor;
-use iced::advanced::renderer;
 use iced::Color;
+use iced::advanced::renderer;
 use iced::{Point, Rectangle};
 
 /// Точка входа для `Widget::draw()`.
@@ -21,10 +21,13 @@ pub fn draw<'a, Renderer>(
     // ── Фаза 2: фон ───────────────────────────────────────────────────
     draw_background(this, renderer, bounds);
 
-    // ── Фаза 3: текст ────────────────────────────────────────────────
+    // ── Фаза 3: выделение ─────────────────────────────────────────────
+    super::selection::draw_selection(this, renderer, origin);
+
+    // ── Фаза 4: текст ────────────────────────────────────────────────
     super::text::draw_text(this, renderer, origin);
 
-    // ── Фаза 4: курсор ────────────────────────────────────────────────
+    // ── Фаза 5: курсор ────────────────────────────────────────────────
     super::cursor::draw_cursor(this, renderer, origin);
 }
 

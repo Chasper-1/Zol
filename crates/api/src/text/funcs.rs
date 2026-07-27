@@ -31,3 +31,19 @@ pub fn delete_range(doc: &mut Document, start: usize, end: usize) {
     doc.incremental.edit(start, end, "");
     doc.dirty = true;
 }
+
+pub fn delete_word_before(doc: &mut Document) {
+    doc.delete_word_before();
+}
+
+pub fn delete_word_after(doc: &mut Document) {
+    doc.delete_word_after();
+}
+
+pub fn delete_line(doc: &mut Document) {
+    doc.delete_line();
+}
+
+pub fn delete_to_line_end(doc: &mut Document) {
+    doc.delete_to_line_end();
+}

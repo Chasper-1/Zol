@@ -41,3 +41,7 @@ pub fn doc_set_dirty(doc: &mut Document, dirty: bool) {
 pub fn doc_make_dirty(doc: &mut Document) {
     doc.dirty = true;
 }
+
+pub fn select_all(doc: &mut Document) {
+    doc.select_all();
+}
