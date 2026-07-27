@@ -69,27 +69,50 @@ pub fn next_word_start(content: &str, from: usize) -> usize {
         return len;
     }
 
+    // Курсор на '\n' (конец строки) — переходим на следующую,
+    // к концу первого слова.
+    if content.as_bytes()[pos] == b'\n' {
+        let rest = &content[pos..];
+        match rest.char_indices().find(|(_, c)| !c.is_whitespace()) {
+            Some((skip, _)) => {
+                let word_start = pos + skip;
+                match content[word_start..]
+                    .char_indices()
+                    .find(|(_, c)| c.is_whitespace())
+                {
+                    Some((end, _)) => return word_start + end,
+                    None => return len,
+                }
+            }
+            None => return len,
+        }
+    }
+
     // 1. Если на непробельном — пропускаем слово
     if let Some(ch) = content[pos..].chars().next() {
         if !ch.is_whitespace() {
-            for (i, c) in content[pos..].char_indices() {
-                if c.is_whitespace() {
-                    pos += i;
-                    break;
-                }
+            match content[pos..]
+                .char_indices()
+                .find(|(_, c)| c.is_whitespace())
+            {
+                Some((i, _)) => pos += i,
+                None => pos = len,
             }
         }
     }
 
-    // 2. Пропускаем пробелы к началу следующего слова
+    // 2. Пропускаем пробелы к началу следующего слова (не переходим строку)
     for (i, c) in content[pos..].char_indices() {
+        if c == '\n' {
+            break;
+        }
         if !c.is_whitespace() {
             pos += i;
             return pos;
         }
     }
 
-    len
+    pos
 }
 
 #[cfg(test)]
@@ -133,12 +156,14 @@ mod tests {
 
     #[test]
     fn next_word_start_single_word() {
-        assert_eq!(next_word_start("hello", 0), 0);
+        // Одно слово — прыгаем к его концу
+        assert_eq!(next_word_start("hello", 0), 5);
     }
 
     #[test]
     fn next_word_start_from_second_word() {
-        assert_eq!(next_word_start("hello world", 6), 6);
+        // Начало последнего слова — прыгаем к его концу
+        assert_eq!(next_word_start("hello world", 6), 11);
     }
 
     #[test]
