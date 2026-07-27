@@ -5,7 +5,10 @@
 mod build;
 mod helpers;
 mod incremental;
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod simulate_test;
+#[cfg(test)]
+mod tests;
 mod to_doc;
 
 pub use incremental::{incremental_to_cache, incremental_to_cache_visible};

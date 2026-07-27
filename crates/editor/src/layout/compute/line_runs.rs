@@ -60,7 +60,7 @@ pub fn compute_line_runs(
     let mut runs = Vec::new();
     let mut last_end = 0usize;
 
-    for seg in &cache.segments {
+    for (i, seg) in cache.segments.iter().enumerate() {
         let seg_start = seg.raw_start.saturating_sub(line_start);
         let seg_end = seg.raw_end.saturating_sub(line_start);
 
@@ -68,17 +68,42 @@ pub fn compute_line_runs(
         if seg_start > last_end && seg_start <= line.len() {
             let between = &line[last_end..seg_start];
             if !between.is_empty() {
-                let left_marker_len = seg.left_marker_len;
-                let is_marker = left_marker_len > 0 && between.len() <= left_marker_len;
-                let show = segment_is_revealed(seg, line_index, ctx);
+                // Source mode: ВСЁ между сегментами — маркеры (показываем всегда)
+                if show_markers {
+                    runs.push(TextRun::new(between, 0, shared::MARKER_GRAY, base_size));
+                } else {
+                    // Live Preview: определяем, маркер это или нет
+                    let mut pushed = false;
 
-                if show_markers || (is_marker && show) {
-                    let color = if show_markers || show {
-                        shared::MARKER_GRAY
-                    } else {
-                        theme.background
-                    };
-                    runs.push(TextRun::new(between, 0, color, base_size));
+                    // Проверка 1: открывающий маркер для ТЕКУЩЕГО сегмента
+                    let is_open_marker = seg.left_marker_len > 0
+                        && between.len() <= seg.left_marker_len;
+
+                    if is_open_marker {
+                        let show = segment_is_revealed(seg, line_index, ctx);
+                        if show {
+                            runs.push(TextRun::new(between, 0, shared::MARKER_GRAY, base_size));
+                        }
+                        pushed = true;
+                    }
+
+                    // Проверка 2: закрывающий маркер для ПРЕДЫДУЩЕГО сегмента
+                    if !pushed && i > 0 {
+                        let prev = &cache.segments[i - 1];
+                        let is_close_marker = prev.left_marker_len > 0
+                            && between.len() <= prev.left_marker_len;
+
+                        if is_close_marker {
+                            let show = segment_is_revealed(prev, line_index, ctx);
+                            if show {
+                                runs.push(TextRun::new(between, 0, shared::MARKER_GRAY, base_size));
+                            }
+                            pushed = true;
+                        }
+                    }
+
+                    // Не маркер — не пушим (должен был войти в сегмент)
+                    let _ = pushed;
                 }
             }
         }
