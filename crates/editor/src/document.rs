@@ -52,7 +52,7 @@ impl Document {
     // ─── Move ─────────────────────────────────────────────
 
     /// Двигать курсор влево.
-    pub fn cursor_move_left(&mut self) {
+    pub fn move_left(&mut self) {
         let raw = self.cursor.raw();
         let new = self.input.move_left(self.content(), raw);
         let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
@@ -61,7 +61,7 @@ impl Document {
     }
 
     /// Двигать курсор вправо.
-    pub fn cursor_move_right(&mut self) {
+    pub fn move_right(&mut self) {
         let raw = self.cursor.raw();
         let new = self.input.move_right(self.content(), raw);
         let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
@@ -70,7 +70,7 @@ impl Document {
     }
 
     /// В начало строки.
-    pub fn cursor_move_home(&mut self) {
+    pub fn move_home(&mut self) {
         let line = self.cursor.line();
         let new = self.input.move_home(&self.incremental.line_starts, line);
         let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
@@ -80,7 +80,7 @@ impl Document {
     }
 
     /// В конец строки.
-    pub fn cursor_move_end(&mut self) {
+    pub fn move_end(&mut self) {
         let line = self.cursor.line();
         let new = self
             .input
@@ -92,7 +92,7 @@ impl Document {
     }
 
     /// Вверх (с сохранением колонки).
-    pub fn cursor_move_up(&mut self) {
+    pub fn move_up(&mut self) {
         let raw = self.cursor.raw();
         let line = self.cursor.line();
         let col = self.cursor.col_visual() as f64;
@@ -110,7 +110,7 @@ impl Document {
     }
 
     /// Вниз (с сохранением колонки).
-    pub fn cursor_move_down(&mut self) {
+    pub fn move_down(&mut self) {
         let raw = self.cursor.raw();
         let line = self.cursor.line();
         let col = self.cursor.col_visual() as f64;
@@ -128,7 +128,7 @@ impl Document {
     }
 
     /// Влево на слово.
-    pub fn cursor_move_word_left(&mut self) {
+    pub fn move_word_left(&mut self) {
         let raw = self.cursor.raw();
         let new = self.input.word_left(self.content(), raw);
         if new != raw {
@@ -140,7 +140,7 @@ impl Document {
     }
 
     /// Вправо на слово.
-    pub fn cursor_move_word_right(&mut self) {
+    pub fn move_word_right(&mut self) {
         let raw = self.cursor.raw();
         let new = self.input.word_right(self.content(), raw);
         if new != raw {
@@ -149,6 +149,140 @@ impl Document {
             self.cursor.reset_col_visual();
             self.cursor.clear_selection();
         }
+    }
+
+    // ─── Selection-aware movement ──────────────────────
+
+    pub fn move_left_select(&mut self) {
+        self.cursor.begin_selection();
+        let raw = self.cursor.raw();
+        let new = self.input.move_left(self.content(), raw);
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, new);
+    }
+
+    pub fn move_right_select(&mut self) {
+        self.cursor.begin_selection();
+        let raw = self.cursor.raw();
+        let new = self.input.move_right(self.content(), raw);
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, new);
+    }
+
+    pub fn move_home_select(&mut self) {
+        self.cursor.begin_selection();
+        let line = self.cursor.line();
+        let new = self.input.move_home(&self.incremental.line_starts, line);
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, new);
+        self.cursor.reset_col_visual();
+    }
+
+    pub fn move_end_select(&mut self) {
+        self.cursor.begin_selection();
+        let line = self.cursor.line();
+        let new = self.input.move_end(self.content(), &self.incremental.line_starts, line);
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, new);
+        self.cursor.set_col_visual(f32::MAX);
+    }
+
+    pub fn move_up_select(&mut self) {
+        self.cursor.begin_selection();
+        let raw = self.cursor.raw();
+        let line = self.cursor.line();
+        let col = self.cursor.col_visual() as f64;
+        let (new_raw, new_col) = self.input.move_up(
+            self.content(), &self.incremental.line_starts, raw, line, col,
+        );
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, new_raw);
+        self.cursor.set_col_visual(new_col as f32);
+    }
+
+    pub fn move_down_select(&mut self) {
+        self.cursor.begin_selection();
+        let raw = self.cursor.raw();
+        let line = self.cursor.line();
+        let col = self.cursor.col_visual() as f64;
+        let (new_raw, new_col) = self.input.move_down(
+            self.content(), &self.incremental.line_starts, raw, line, col,
+        );
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, new_raw);
+        self.cursor.set_col_visual(new_col as f32);
+    }
+
+    pub fn move_word_left_select(&mut self) {
+        self.cursor.begin_selection();
+        let raw = self.cursor.raw();
+        let new = self.input.word_left(self.content(), raw);
+        if new != raw {
+            let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+            self.cursor.set_raw(src, ls, new);
+            self.cursor.reset_col_visual();
+        }
+    }
+
+    pub fn move_word_right_select(&mut self) {
+        self.cursor.begin_selection();
+        let raw = self.cursor.raw();
+        let new = self.input.word_right(self.content(), raw);
+        if new != raw {
+            let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+            self.cursor.set_raw(src, ls, new);
+            self.cursor.reset_col_visual();
+        }
+    }
+
+    // ─── Document-level movement ──────────────────────
+
+    pub fn move_to_document_start(&mut self) {
+        let new = self.input.move_to_document_start();
+        self.set_cursor_raw(new);
+        self.cursor.clear_selection();
+    }
+
+    pub fn move_to_document_end(&mut self) {
+        let new = self.input.move_to_document_end(self.content());
+        self.set_cursor_raw(new);
+        self.cursor.clear_selection();
+    }
+
+    pub fn page_up(&mut self, lines: usize) {
+        let raw = self.cursor.raw();
+        let line = self.cursor.line();
+        let col = self.cursor.col_visual() as f64;
+        let (new_raw, new_col) = self.input.move_page_up(
+            self.content(),
+            &self.incremental.line_starts,
+            raw,
+            line,
+            col,
+            lines,
+        );
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, new_raw);
+        self.cursor.set_col_visual(new_col as f32);
+        self.cursor.clear_selection();
+    }
+
+    pub fn page_down(&mut self, lines: usize) {
+        let raw = self.cursor.raw();
+        let line = self.cursor.line();
+        let col = self.cursor.col_visual() as f64;
+        let (new_raw, new_col) = self.input.move_page_down(
+            self.content(),
+            &self.incremental.line_starts,
+            raw,
+            line,
+            col,
+            lines,
+        );
+        let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
+        self.cursor.set_raw(src, ls, new_raw);
+        self.cursor.set_col_visual(new_col as f32);
+        self.cursor.clear_selection();
     }
 
     // ─── Выделение ─────────────────────────────────────
@@ -184,7 +318,7 @@ impl Document {
 
     /// Вставить текст в позицию курсора.
     /// Если есть выделение — заменяет его.
-    pub fn insert_at_cursor(&mut self, text: &str) {
+    pub fn insert_text(&mut self, text: &str) {
         self.delete_selection();
         let raw = self.cursor.raw();
         self.incremental.edit(raw, raw, text);
@@ -194,7 +328,7 @@ impl Document {
     }
 
     /// Вставить `\n` в позицию курсора (selection-aware).
-    pub fn newline_at_cursor(&mut self) {
+    pub fn insert_newline(&mut self) {
         self.delete_selection();
         let raw = self.cursor.raw();
         self.incremental.edit(raw, raw, "\n");
@@ -417,11 +551,11 @@ mod tests {
     }
 
     #[test]
-    fn insert_at_cursor_replaces_selection() {
+    fn insert_text_replaces_selection() {
         let mut doc = Document::new("hello world");
         doc.cursor.raw = 11;
         doc.cursor.anchor = Some(6);
-        doc.insert_at_cursor("there");
+        doc.insert_text("there");
         assert_eq!(doc.content(), "hello there");
     }
 
@@ -444,11 +578,11 @@ mod tests {
     }
 
     #[test]
-    fn newline_replaces_selection() {
+    fn insert_newline_replaces_selection() {
         let mut doc = Document::new("hello world");
         doc.cursor.raw = 11;
         doc.cursor.anchor = Some(6);
-        doc.newline_at_cursor();
+        doc.insert_newline();
         assert_eq!(doc.content(), "hello \n");
     }
 

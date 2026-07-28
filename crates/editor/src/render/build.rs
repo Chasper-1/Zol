@@ -1,3 +1,17 @@
+// ═══════════════════════════════════════════════════════════════════════
+// ⚠  ВАЖНО: НИКОГДА НЕ ДЕЛАЙ СЛЕДУЮЩЕГО:
+// ⚠
+// ⚠  - Не передавай all_runs по ссылке в shape_document — это вынудит
+// ⚠    клонирование line_runs внутри.
+// ⚠  - Не вызывай render::build() на каждый кадр — только когда
+// ⚠    doc.dirty == true.
+// ⚠  - Не создавай новый ShapedDocument каждый раз — переиспользуй
+// ⚠    существующий (как сейчас).
+// ⚠
+// ⚠  Причина: render::build() — тяжёлая операция, вызывать её без
+// ⚠  необходимости = убийство производительности и памяти.
+// ═══════════════════════════════════════════════════════════════════════
+
 use super::shape::shape_document;
 use super::shaped_doc::ShapedDocument;
 use crate::Viewport;
@@ -79,9 +93,11 @@ pub fn build(
         }
     }
 
+    // ⚠ with_font_system() держит Mutex на FontSystem.
+    // shape_document НЕ вызывает after_shape() — это был бы deadlock!
     crate::font::with_font_system(|fs| {
         *doc = shape_document(
-            &all_runs,
+            all_runs, // было &all_runs, теперь move
             all_comp,
             fs,
             base_size,
@@ -90,4 +106,7 @@ pub fn build(
             viewport_height,
         );
     });
+
+    // ⚠ Очистка SwashCache ПОСЛЕ освобождения мьютекса.
+    crate::font::after_shape();
 }

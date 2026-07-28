@@ -1,6 +1,17 @@
+// ═══════════════════════════════════════════════════════════════════════
+// ⚠  ВАЖНО: НИКОГДА НЕ ДЕЛАЙ СЛЕДУЮЩЕГО:
+// ⚠
+// ⚠  - Не клонируй FontSystem — он содержит базу всех шрифтов.
+// ⚠  - Не создавай новый FontSystem в каждом вызове — init() один раз.
+// ⚠  - Не храни MutexGuard (результат lock()) дольше одного вызова —
+// ⚠    это заблокирует все остальные потоки.
+// ⚠
+// ⚠  Причина: каждая копия FontSystem = дублирование всей базы шрифтов.
+// ═══════════════════════════════════════════════════════════════════════
+
 use std::sync::PoisonError;
 
-use super::global::{lock, FontGlobal};
+use super::global::{FontGlobal, lock};
 
 /// Доступ к `FontSystem` для шейпинга.
 pub fn with_font_system<F, T>(f: F) -> T
@@ -26,6 +37,13 @@ where
     F: FnOnce(&mut cosmic_text::FontSystem, &mut cosmic_text::SwashCache) -> T,
 {
     let mut guard = lock().lock().unwrap_or_else(PoisonError::into_inner);
-    let FontGlobal { font_system, swash_cache } = &mut *guard;
-    f(font_system, swash_cache)
+    let FontGlobal {
+        font_system,
+        swash_cache,
+        ..
+    } = &mut *guard;
+    let result = f(font_system, swash_cache);
+    drop(guard);
+    crate::font::after_shape();
+    result
 }

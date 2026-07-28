@@ -1,3 +1,22 @@
+// ═══════════════════════════════════════════════════════════════════════
+// ⚠  ВАЖНО: НИКОГОДА НЕ ДЕЛАЙ СЛЕДУЮЩЕГО:
+// ⚠
+// ⚠  1. НЕ вызывай line_runs.to_vec() — это клонирует ВСЕ TextRun'ы
+// ⚠     со всеми строками. Вместо этого передавай line_runs по владению
+// ⚠     (move) и сохраняй в ShapedDocument как есть.
+// ⚠
+// ⚠  2. НЕ создавай временную full_text String путём конкатенации всех
+// ⚠     TextRun.text — это дублирует весь текст документа при каждом
+// ⚠     reshape. (Текущий код пока это делает, TODO: исправить)
+// ⚠
+// ⚠  3. НЕ используй Shaping::Advanced если достаточно Basic —
+// ⚠     Advanced шейпинг в 5-10x дороже по памяти.
+// ⚠
+// ⚠  Причина: line_runs.to_vec() при каждом редактировании создаёт
+// ⚠  полную копию структуры документа, что на 100KB+ тексте →
+// ⚠  десятки MB лишних аллокаций в секунду.
+// ═══════════════════════════════════════════════════════════════════════
+
 use cosmic_text::{
     Align, Attrs, Buffer, Color as CosmicColor, Metrics, Scroll, Shaping, Style, UnderlineStyle,
     Weight,
@@ -10,7 +29,7 @@ use crate::segment::{STYLE_BOLD, STYLE_ITALIC, STYLE_STRIKETHROUGH, STYLE_UNDERL
 
 /// Сшейпить строки документа в Buffer.
 pub fn shape_document(
-    line_runs: &[Vec<TextRun>],
+    line_runs: Vec<Vec<TextRun>>,  // ⚠ Принимаем по владению, НЕ клонируем
     compensation: Vec<LineCompensation>,
     font_system: &mut cosmic_text::FontSystem,
     base_size: f32,
@@ -88,9 +107,14 @@ pub fn shape_document(
     buffer.set_rich_text(spans, &default_attrs, Shaping::Advanced, Some(Align::Left));
     buffer.set_scroll(Scroll::new(0, scroll_y, 0.0));
     buffer.shape_until_scroll(font_system, false);
+
+    // ⚠ after_shape() НЕ вызываем здесь — это deadlock!
+    // ⚠ Она вызывается в render::build() после выхода из with_font_system().
+    // ⚠ (with_font_system держит Mutex, after_shape пытается взять его же)
+
     ShapedDocument {
         buffer,
-        line_runs: line_runs.to_vec(),
+        line_runs,        // ⚠ БЕЗ .to_vec() — передаём владение
         compensation,
     }
 }

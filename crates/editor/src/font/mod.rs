@@ -5,6 +5,7 @@ mod list;
 mod system;
 
 pub use global::init;
+pub use global::after_shape;
 pub use list::{list_families, reload_system_fonts};
 pub use system::{with_font_and_cache, with_font_system, with_swash_cache};
 

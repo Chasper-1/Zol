@@ -1,7 +1,7 @@
 use editor::document::Document;
 
-pub fn insert_at_cursor(doc: &mut Document, text: &str) {
-    doc.insert_at_cursor(text);
+pub fn insert_text(doc: &mut Document, text: &str) {
+    doc.insert_text(text);
 }
 
 pub fn delete_before(doc: &mut Document) {
@@ -12,8 +12,8 @@ pub fn delete_after(doc: &mut Document) {
     doc.delete_after_cursor();
 }
 
-pub fn newline(doc: &mut Document) {
-    doc.newline_at_cursor();
+pub fn insert_newline(doc: &mut Document) {
+    doc.insert_newline();
 }
 
 pub fn insert_at(doc: &mut Document, byte: usize, text: &str) {

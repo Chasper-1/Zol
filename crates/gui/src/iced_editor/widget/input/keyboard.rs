@@ -69,15 +69,14 @@ pub fn handle_keyboard<'a, Message>(
 
         // Ctrl+Home — в начало документа
         if matches!(key.as_ref(), keyboard::Key::Named(Named::Home)) {
-            move_cursor(this, |d| d.set_cursor_raw(0));
+            move_cursor(this, api_cursor::move_to_document_start);
             auto_scroll(this, bounds);
             shell.request_redraw();
             return;
         }
         // Ctrl+End — в конец документа
         if matches!(key.as_ref(), keyboard::Key::Named(Named::End)) {
-            let len = this.inner.doc.borrow().content().len();
-            move_cursor(this, |d| d.set_cursor_raw(len));
+            move_cursor(this, api_cursor::move_to_document_end);
             auto_scroll(this, bounds);
             shell.request_redraw();
             return;
@@ -199,22 +198,12 @@ pub fn handle_keyboard<'a, Message>(
         keyboard::Key::Named(Named::PageUp) => {
             let line_h = this.inner.base_size * 1.4;
             let n = (bounds.height / line_h) as usize;
-            let mut doc = this.inner.doc.borrow_mut();
-            for _ in 0..n {
-                doc.cursor_move_up();
-            }
-            drop(doc);
-            this.inner.mark_dirty();
+            move_cursor(this, |doc| api_cursor::page_up(doc, n));
         }
         keyboard::Key::Named(Named::PageDown) => {
             let line_h = this.inner.base_size * 1.4;
             let n = (bounds.height / line_h) as usize;
-            let mut doc = this.inner.doc.borrow_mut();
-            for _ in 0..n {
-                doc.cursor_move_down();
-            }
-            drop(doc);
-            this.inner.mark_dirty();
+            move_cursor(this, |doc| api_cursor::page_down(doc, n));
         }
 
         keyboard::Key::Named(Named::Backspace) => {
@@ -224,7 +213,7 @@ pub fn handle_keyboard<'a, Message>(
             edit(this, api_text::delete_after);
         }
         keyboard::Key::Named(Named::Enter) => {
-            edit(this, api_text::newline);
+            edit(this, api_text::insert_newline);
         }
         _ => {
             if let Some(text) = text {
@@ -232,7 +221,7 @@ pub fn handle_keyboard<'a, Message>(
                     let filtered: String = text.chars().filter(|c| !c.is_control()).collect();
                     if !filtered.is_empty() {
                         let text = filtered.clone();
-                        edit(this, |doc| api_text::insert_at_cursor(doc, &text));
+                        edit(this, |doc| api_text::insert_text(doc, &text));
                     }
                 }
             }

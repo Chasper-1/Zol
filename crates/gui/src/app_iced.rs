@@ -1,6 +1,5 @@
 //! Iced-приложение Zol (v0.14).
 //!
-//! Постепенно заменяет egui-версию в `app.rs` / `run.rs`.
 
 use std::time::Duration;
 

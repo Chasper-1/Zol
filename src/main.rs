@@ -18,7 +18,7 @@ fn main() {
 
         let start = std::time::Instant::now();
         std::thread::spawn(move || loop {
-            std::thread::sleep(std::time::Duration::from_millis(200));
+            std::thread::sleep(std::time::Duration::from_millis(1));
             let t = start.elapsed();
             let rss = current_rss_kb().map(|k| format!("{:>8} kB", k)).unwrap_or_else(|| "  неизвестно".into());
             eprintln!("[mem] {:>4}.{:03}s: {rss}", t.as_secs(), t.subsec_millis());

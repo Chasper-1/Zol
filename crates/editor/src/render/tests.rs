@@ -241,7 +241,7 @@ fn shape_single_line() {
     font::init();
     let doc = font::with_font_system(|fs| {
         shape::shape_document(
-            &[make_runs("hello", 14.0)],
+            vec![make_runs("hello", 14.0)],
             vec![LineCompensation::identity(5)],
             fs,
             14.0,
@@ -259,7 +259,7 @@ fn shape_multiple_lines() {
     font::init();
     let doc = font::with_font_system(|fs| {
         shape::shape_document(
-            &[make_runs("line1", 14.0), make_runs("line2", 14.0)],
+            vec![make_runs("line1", 14.0), make_runs("line2", 14.0)],
             vec![LineCompensation::identity(5), LineCompensation::identity(5)],
             fs,
             14.0,
@@ -276,7 +276,7 @@ fn shape_empty_line() {
     font::init();
     let doc = font::with_font_system(|fs| {
         shape::shape_document(
-            &[vec![]],
+            vec![vec![]],
             vec![LineCompensation::identity(0)],
             fs,
             14.0,
@@ -294,7 +294,7 @@ fn glyph_starts_for_mixed_text() {
     font::init();
     let doc = font::with_font_system(|fs| {
         shape::shape_document(
-            &[make_runs("**текст**", 14.0)],
+            vec![make_runs("**текст**", 14.0)],
             vec![LineCompensation::identity(14)],
             fs,
             14.0,

@@ -6,38 +6,38 @@ fn make_doc(text: &str) -> Document {
     Document::new(text)
 }
 
-// ── insert_at_cursor ─────────────────────────────────────────────────
+// ── insert_text ─────────────────────────────────────────────────
 
 #[test]
-fn insert_at_cursor_end() {
+fn insert_text_end() {
     let mut d = make_doc("hello");
     d.set_cursor_raw( 5);
-    insert_at_cursor(&mut d, " world");
+    insert_text(&mut d, " world");
     assert_eq!(d.content(), "hello world");
     assert_eq!(d.cursor.raw(), "hello world".len());
 }
 
 #[test]
-fn insert_at_cursor_mid() {
+fn insert_text_mid() {
     let mut d = make_doc("helo");
     d.set_cursor_raw( 3);
-    insert_at_cursor(&mut d, "l");
+    insert_text(&mut d, "l");
     assert_eq!(d.content(), "hello");
 }
 
 #[test]
-fn insert_at_cursor_empty() {
+fn insert_text_empty() {
     let mut d = make_doc("");
-    insert_at_cursor(&mut d, "abc");
+    insert_text(&mut d, "abc");
     assert_eq!(d.content(), "abc");
     assert_eq!(d.cursor.raw(), 3);
 }
 
 #[test]
-fn insert_at_cursor_sets_dirty() {
+fn insert_text_sets_dirty() {
     let mut d = make_doc("x");
     d.dirty = false;
-    insert_at_cursor(&mut d, "y");
+    insert_text(&mut d, "y");
     assert!(d.dirty);
 }
 
@@ -123,32 +123,32 @@ fn delete_after_grapheme() {
     assert_eq!(d.content(), "x");
 }
 
-// ── newline ──────────────────────────────────────────────────────────
+// ── insert_newline ──────────────────────────────────────────
 
 #[test]
-fn newline_inserts_break() {
+fn insert_newline_inserts_break() {
     let mut d = make_doc("ab");
     d.set_cursor_raw( 1);
-    newline(&mut d);
+    insert_newline(&mut d);
     assert_eq!(d.content(), "a\nb");
     assert_eq!(d.cursor.raw(), 2);
 }
 
 #[test]
-fn newline_sets_dirty() {
+fn insert_newline_sets_dirty() {
     let mut d = make_doc("x");
     d.set_cursor_raw( 1);
     d.dirty = false;
-    newline(&mut d);
+    insert_newline(&mut d);
     assert!(d.dirty);
 }
 
 #[test]
-fn newline_resets_col_visual() {
+fn insert_newline_resets_col_visual() {
     let mut d = make_doc("abc");
     d.cursor.set_col_visual(42.0);
     d.set_cursor_raw( 3);
-    newline(&mut d);
+    insert_newline(&mut d);
     assert_eq!(d.cursor.col_visual(), 0.0);
 }
 
@@ -184,7 +184,7 @@ fn insert_at_sets_dirty() {
 }
 
 #[test]
-fn insert_at_cursor_unchanged() {
+fn insert_at_does_not_move_cursor() {
     let mut d = make_doc("abc");
     d.set_cursor_raw( 1);
     insert_at(&mut d, 2, "X");
@@ -233,10 +233,10 @@ fn delete_range_cursor_unchanged() {
 // ── unicode ──────────────────────────────────────────────────────────
 
 #[test]
-fn unicode_insert() {
+fn unicode_insert_text() {
     let mut d = make_doc("Приве");
     d.set_cursor_raw( 10);
-    insert_at_cursor(&mut d, "т");
+    insert_text(&mut d, "т");
     assert_eq!(d.content(), "Привет");
     assert_eq!(d.cursor.raw(), 12);
 }

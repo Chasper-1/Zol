@@ -676,10 +676,10 @@ fn page_down_on_empty_doc_does_not_panic() {
     let n = (500.0 / line_h) as usize;
     let mut count = 0;
     while count < n {
-        // симуляция cursor_move_down — должна отработать без паники
+        // симуляция move_down — должна отработать без паники
         let mut doc = inner.doc.borrow_mut();
-        doc.cursor_move_down();
-        doc.cursor_move_down();
+        doc.move_down();
+        doc.move_down();
         count += 1;
     }
 }

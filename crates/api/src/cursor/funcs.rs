@@ -1,35 +1,35 @@
 use editor::document::Document;
 
 pub fn move_left(doc: &mut Document) {
-    doc.cursor_move_left();
+    doc.move_left();
 }
 
 pub fn move_right(doc: &mut Document) {
-    doc.cursor_move_right();
+    doc.move_right();
 }
 
 pub fn move_home(doc: &mut Document) {
-    doc.cursor_move_home();
+    doc.move_home();
 }
 
 pub fn move_end(doc: &mut Document) {
-    doc.cursor_move_end();
+    doc.move_end();
 }
 
 pub fn move_up(doc: &mut Document) {
-    doc.cursor_move_up();
+    doc.move_up();
 }
 
 pub fn move_down(doc: &mut Document) {
-    doc.cursor_move_down();
+    doc.move_down();
 }
 
 pub fn move_word_left(doc: &mut Document) {
-    doc.cursor_move_word_left();
+    doc.move_word_left();
 }
 
 pub fn move_word_right(doc: &mut Document) {
-    doc.cursor_move_word_right();
+    doc.move_word_right();
 }
 
 pub fn cursor_raw(doc: &Document) -> usize {
@@ -63,41 +63,51 @@ pub fn cursor_reset_col(doc: &mut Document) {
 // ─── Selection-extended movement ──────────────────────
 
 pub fn move_left_select(doc: &mut Document) {
-    doc.cursor.begin_selection();
-    doc.cursor_move_left();
+    doc.move_left_select();
 }
 
 pub fn move_right_select(doc: &mut Document) {
-    doc.cursor.begin_selection();
-    doc.cursor_move_right();
+    doc.move_right_select();
 }
 
 pub fn move_home_select(doc: &mut Document) {
-    doc.cursor.begin_selection();
-    doc.cursor_move_home();
+    doc.move_home_select();
 }
 
 pub fn move_end_select(doc: &mut Document) {
-    doc.cursor.begin_selection();
-    doc.cursor_move_end();
+    doc.move_end_select();
 }
 
 pub fn move_up_select(doc: &mut Document) {
-    doc.cursor.begin_selection();
-    doc.cursor_move_up();
+    doc.move_up_select();
 }
 
 pub fn move_down_select(doc: &mut Document) {
-    doc.cursor.begin_selection();
-    doc.cursor_move_down();
+    doc.move_down_select();
 }
 
 pub fn move_word_left_select(doc: &mut Document) {
-    doc.cursor.begin_selection();
-    doc.cursor_move_word_left();
+    doc.move_word_left_select();
 }
 
 pub fn move_word_right_select(doc: &mut Document) {
-    doc.cursor.begin_selection();
-    doc.cursor_move_word_right();
+    doc.move_word_right_select();
+}
+
+// ─── Document-level movement ─────────────────────────
+
+pub fn move_to_document_start(doc: &mut Document) {
+    doc.move_to_document_start();
+}
+
+pub fn move_to_document_end(doc: &mut Document) {
+    doc.move_to_document_end();
+}
+
+pub fn page_up(doc: &mut Document, lines: usize) {
+    doc.page_up(lines);
+}
+
+pub fn page_down(doc: &mut Document, lines: usize) {
+    doc.page_down(lines);
 }
