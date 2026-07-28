@@ -1,10 +1,8 @@
 //! Строчный парсер zoll.
 //!
-//! - `parse_line()` — парсит одну строку в `LineAST`
-//! - `merge()` — собирает `Vec<LineAST>` в `MarkupDoc`
+//! Единственная функция: `parse_line(&str) → ParsedLine`.
+//! Никакого merge, никаких деревьев — парсер сразу пишет в кеш-модель.
 
 mod line;
-mod merge;
 
 pub use line::parse_line;
-pub use merge::{merge, parse_full};

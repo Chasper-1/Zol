@@ -1,0 +1,12 @@
+[package]
+name = "zol-editor"
+version = "0.2.0"
+edition = "2024"
+description = "Zol editor engine — Rope buffer, cursor, undo/redo, cosmic-text shaping, Live Preview"
+
+[dependencies]
+cosmic-text = "0.19"
+ropey = "1.6"
+bitflags = "2"
+unicode-segmentation = "1"
+zoll = { path = "../zoll" }

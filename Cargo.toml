@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/zoll", "crates/editor", "crates/api", "crates/gui"]
+members = ["crates/zoll", "crates/editor", "crates/api", "crates/gui", "crates/zol-editor"]
 
 [package]
 name = "Zol"
