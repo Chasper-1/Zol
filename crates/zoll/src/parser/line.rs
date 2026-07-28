@@ -16,34 +16,32 @@ pub fn parse_line(line: &str) -> ParsedLine {
     }
 
     // ── Block-level: %%% / $$$ / !!! ──
-    if let Some(rest) = trimmed.strip_prefix("%%%") {
-        let title = if rest.trim().is_empty() { None } else { None };
+    if trimmed.starts_with("%%%") {
         let role = BlockRole::Open;
-        return empty_block(line, BlockContainer::Comment, title, role);
+        return empty_block(line, BlockContainer::Comment, None, role);
     }
-    if let Some(rest) = trimmed.strip_prefix("$$$") {
-        let title = None;
-        let role = BlockRole::Open;
-        return empty_block(line, BlockContainer::Formula, title, role);
+    if trimmed.strip_prefix("$$$").is_some() {
+        return empty_block(line, BlockContainer::Formula, None, BlockRole::Open);
     }
     if let Some(rest) = trimmed.strip_prefix("!!!") {
         let title = parse_spoiler_title(rest);
-        let role = BlockRole::Open;
-        return empty_block(line, BlockContainer::Spoiler, title, role);
+        return empty_block(line, BlockContainer::Spoiler, title, BlockRole::Open);
     }
 
     // ── %% комментарий с любого места ──
     if let Some(pos) = trimmed.find("%%") {
         let after = &trimmed[pos + 2..];
         let content = after.trim();
-        let segments = parse_inline_to_segments(content, 0);
+        let base = base_offset(line, content);
+        let segments = parse_inline_to_segments(content, base);
         return ParsedLine::new(line, BlockKind::CommentLine, segments);
     }
 
     // ── $$ Display formula (только с начала строки) ──
     if trimmed.starts_with("$$") {
         let content = trimmed[2..].trim();
-        let segments = parse_inline_to_segments(content, 0);
+        let base = base_offset(line, content);
+        let segments = parse_inline_to_segments(content, base);
         return ParsedLine::new(line, BlockKind::FormulaLine, segments);
     }
 
@@ -57,16 +55,15 @@ pub fn parse_line(line: &str) -> ParsedLine {
             None
         };
         let content = if title.is_some() {
-            let rest2 = &trimmed[pos + 2..];
-            let rest_trimmed = rest2.trim();
-            if let Some(end) = rest_trimmed.find(':') {
-                rest_trimmed[end + 1..].trim().to_string()
+            if let Some(end) = rest.find(':') {
+                rest[end + 1..].trim().to_string()
             } else {
                 String::new()
             }
         } else {
             rest.to_string()
         };
+        // content — owned String, не подстрока line → base=0, неважно
         let segments = parse_inline_to_segments(&content, 0);
         return ParsedLine::new(line, BlockKind::SpoilerLine(title), segments);
     }
@@ -79,7 +76,8 @@ pub fn parse_line(line: &str) -> ParsedLine {
                 let level_str = &rest[..end];
                 if let Ok(level) = level_str.parse::<u32>() {
                     let content = rest[end + 1..].trim();
-                    let segments = parse_inline_to_segments(content, 0);
+                    let base = base_offset(line, content);
+                    let segments = parse_inline_to_segments(content, base);
                     return ParsedLine::new(line, BlockKind::Header(level), segments);
                 }
             }
@@ -101,7 +99,8 @@ pub fn parse_line(line: &str) -> ParsedLine {
         if let Some(rest) = trimmed.strip_prefix(*delim) {
             if rest.is_empty() || rest.starts_with(' ') {
                 let content = rest.trim();
-                let segments = parse_inline_to_segments(content, 0);
+                let base = base_offset(line, content);
+                let segments = parse_inline_to_segments(content, base);
                 return ParsedLine::new(line, BlockKind::Bullet, segments);
             }
         }
@@ -113,7 +112,8 @@ pub fn parse_line(line: &str) -> ParsedLine {
             let num = trimmed[..end].parse::<u32>().unwrap_or(1);
             if trimmed.as_bytes().get(end + 1).map_or(true, |&b| b == b' ') {
                 let content = trimmed[end + 1..].trim();
-                let segments = parse_inline_to_segments(content, 0);
+                let base = base_offset(line, content);
+                let segments = parse_inline_to_segments(content, base);
                 return ParsedLine::new(line, BlockKind::Ordered(num), segments);
             }
         }
@@ -122,7 +122,8 @@ pub fn parse_line(line: &str) -> ParsedLine {
     // ── Цитата: > ──
     if let Some(rest) = trimmed.strip_prefix('>') {
         let content = rest.trim();
-        let segments = parse_inline_to_segments(content, 0);
+        let base = base_offset(line, content);
+        let segments = parse_inline_to_segments(content, base);
         return ParsedLine::new(line, BlockKind::Quote, segments);
     }
 
@@ -141,7 +142,8 @@ pub fn parse_line(line: &str) -> ParsedLine {
     }
 
     // ── Ничего не подошло → обычный параграф ──
-    let segments = parse_inline_to_segments(trimmed, 0);
+    let base = line.len() - trimmed.len();
+    let segments = parse_inline_to_segments(trimmed, base);
     ParsedLine::new(line, BlockKind::Paragraph, segments)
 }
 
@@ -281,6 +283,22 @@ fn find_close_for_single(bytes: &[u8], open_pos: usize, len: usize) -> Option<(u
         }
     }
     None
+}
+
+/// Вычислить байтовое смещение подстроки `child` внутри `parent`.
+/// `child` должен быть подстрокой `parent` (возвращает 0 если нет).
+#[inline]
+fn base_offset(parent: &str, child: &str) -> usize {
+    if child.is_empty() || parent.is_empty() {
+        return 0;
+    }
+    let parent_ptr = parent.as_ptr() as usize;
+    let child_ptr = child.as_ptr() as usize;
+    if child_ptr >= parent_ptr && child_ptr < parent_ptr + parent.len() {
+        child_ptr - parent_ptr
+    } else {
+        0
+    }
 }
 
 /// Распарсить заголовок спойлера `!!!title:` или `!!!`

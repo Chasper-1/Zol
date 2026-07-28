@@ -181,6 +181,7 @@ pub fn build_line_starts(text: &str) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::BlockKind;
 
     #[test]
     fn new_doc_creates_lines() {
@@ -230,7 +231,7 @@ mod tests {
     fn empty_source() {
         let doc = IncrementalDoc::new("");
         assert_eq!(doc.line_starts.len(), 1);
-        assert_eq!(doc.doc.lines.len(), 1);
+        assert!(doc.doc.lines.is_empty());
     }
 
     #[test]
