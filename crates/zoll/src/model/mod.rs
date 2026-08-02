@@ -13,7 +13,7 @@ mod line;
 mod markers;
 mod seg;
 
-pub use doc::ParsedDoc;
+pub use doc::{ParsedDoc, assign_block_roles};
 pub use line::{BlockContainer, BlockKind, BlockRole, ParsedLine};
 pub use markers::{MARKERS, MarkerCategory, MarkerDef};
 pub use seg::{MarkStyle, Segment};

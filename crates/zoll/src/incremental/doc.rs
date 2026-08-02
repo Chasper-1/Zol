@@ -5,6 +5,7 @@
 //! merge-фазы нет — каждая строка уже знает свой тип.
 
 use crate::ParsedDoc;
+use crate::model::assign_block_roles;
 use crate::viewport::Viewport;
 
 // Инкрементальный документ.
@@ -72,6 +73,7 @@ impl IncrementalDoc {
             let line_text = self.get_line_text(i);
             self.doc.lines[i] = crate::parser::parse_line(line_text);
         }
+        assign_block_roles(&mut self.doc.lines);
 
         &self.doc
     }

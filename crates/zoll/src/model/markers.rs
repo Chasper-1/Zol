@@ -62,9 +62,39 @@ pub const MARKERS: &[MarkerDef] = &[
         multiline: true,
         track_depth: true,
     },
-    // ── Line-маркеры (inline по длине, но line по смыслу) ─────
-    // %%, !!, $$ — line-level, но парсятся как inline-маркеры до конца строки.
-    // Они определяются парсером parse_line() по первой колонке/позиции.
+    MarkerDef {
+        open: "```",
+        close: "```",
+        style: MarkStyle::CODE,
+        category: MarkerCategory::Block,
+        multiline: true,
+        track_depth: false,
+    },
+    // ── Line-маркеры (вся строка: `%%`, `$$`, `!!`) ──────────────
+    MarkerDef {
+        open: "%%",
+        close: "%%",
+        style: MarkStyle::COMMENT,
+        category: MarkerCategory::Line,
+        multiline: true,
+        track_depth: false,
+    },
+    MarkerDef {
+        open: "$$",
+        close: "$$",
+        style: MarkStyle::FORMULA,
+        category: MarkerCategory::Line,
+        multiline: true,
+        track_depth: false,
+    },
+    MarkerDef {
+        open: "!!",
+        close: "!!",
+        style: MarkStyle::SPOILER,
+        category: MarkerCategory::Line,
+        multiline: false,
+        track_depth: false,
+    },
     // ── Inline-маркеры ─────────────────────────────────────────
     MarkerDef {
         open: "**",

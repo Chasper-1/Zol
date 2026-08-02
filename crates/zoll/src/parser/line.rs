@@ -15,58 +15,65 @@ pub fn parse_line(line: &str) -> ParsedLine {
         return ParsedLine::empty();
     }
 
-    // ── Block-level: %%% / $$$ / !!! ──
-    if trimmed.starts_with("%%%") {
-        let role = BlockRole::Open;
-        return empty_block(line, BlockContainer::Comment, None, role);
-    }
-    if trimmed.strip_prefix("$$$").is_some() {
-        return empty_block(line, BlockContainer::Formula, None, BlockRole::Open);
-    }
-    if let Some(rest) = trimmed.strip_prefix("!!!") {
-        let title = parse_spoiler_title(rest);
-        return empty_block(line, BlockContainer::Spoiler, title, BlockRole::Open);
-    }
-
-    // ── %% комментарий с любого места ──
-    if let Some(pos) = trimmed.find("%%") {
-        let after = &trimmed[pos + 2..];
-        let content = after.trim();
-        let base = base_offset(line, content);
-        let segments = parse_inline_to_segments(content, base);
-        return ParsedLine::new(line, BlockKind::CommentLine, segments);
-    }
-
-    // ── $$ Display formula (только с начала строки) ──
-    if trimmed.starts_with("$$") {
-        let content = trimmed[2..].trim();
-        let base = base_offset(line, content);
-        let segments = parse_inline_to_segments(content, base);
-        return ParsedLine::new(line, BlockKind::FormulaLine, segments);
-    }
-
-    // ── !! с любого места ── (не !!!, проверено выше)
-    if let Some(pos) = trimmed.find("!!") {
-        let after = &trimmed[pos + 2..];
-        let rest = after.trim();
-        // rest — подслайс строки: считаем реальное смещение для сегментов.
-        // (Раньше контент был owned String с base=0 — сегменты указывали
-        //  не в то место исходной строки.)
-        let (title, content) = if let Some(end) = rest.find(':') {
-            let title = rest[..end].trim();
-            let content = rest[end + 1..].trim();
-            let title = if title.is_empty() {
-                None
-            } else {
-                Some(title.to_string())
+    // ── Block-level: %%% / $$$ / !!! / ``` ──
+    // Маркеры берутся из `MARKERS` (категория Block), по длине от длинных к коротким.
+    for def in MARKERS {
+        if def.category != MarkerCategory::Block {
+            continue;
+        }
+        if let Some(rest) = trimmed.strip_prefix(def.open) {
+            let container = match def.style {
+                MarkStyle::COMMENT => BlockContainer::Comment,
+                MarkStyle::FORMULA => BlockContainer::Formula,
+                MarkStyle::SPOILER => BlockContainer::Spoiler,
+                MarkStyle::CODE => BlockContainer::Code,
+                _ => unreachable!("блок-маркер должен иметь свой стиль"),
             };
-            (title, content)
+            let title = match container {
+                BlockContainer::Spoiler => parse_spoiler_title(rest),
+                BlockContainer::Code => parse_code_lang(rest),
+                _ => None,
+            };
+            return empty_block(line, container, title, BlockRole::Open);
+        }
+    }
+
+    // ── Line-level: %% / $$ / !! ──
+    // `%%` и `!!` с любого места, `$$` только с начала строки.
+    for def in MARKERS {
+        if def.category != MarkerCategory::Line {
+            continue;
+        }
+        // Позиция маркера в строке.
+        let pos = if def.style == MarkStyle::FORMULA {
+            // $$ — display formula только с начала строки.
+            match trimmed.strip_prefix(def.open) {
+                Some(_) => 0,
+                None => continue,
+            }
         } else {
-            (None, rest)
+            match trimmed.find(def.open) {
+                Some(p) => p,
+                None => continue,
+            }
         };
-        let base = base_offset(line, content);
-        let segments = parse_inline_to_segments(content, base);
-        return ParsedLine::new(line, BlockKind::SpoilerLine(title), segments);
+        let after = &trimmed[pos + def.open.len()..];
+        let rest = after.trim();
+        let kind = match def.style {
+            MarkStyle::COMMENT => BlockKind::CommentLine,
+            MarkStyle::FORMULA => BlockKind::FormulaLine,
+            MarkStyle::SPOILER => {
+                // !!title: hidden → заголовок в SpoilerLine, тело в сегментах.
+                let (title, body) = split_spoiler(rest);
+                let base = base_offset(line, body);
+                let segments = parse_inline_to_segments(body, base);
+                return ParsedLine::new(line, BlockKind::SpoilerLine(title), segments);
+            }
+            _ => unreachable!("line-маркер должен иметь свой стиль"),
+        };
+        let base = base_offset(line, rest);
+        let segments = parse_inline_to_segments(rest, base);
+        return ParsedLine::new(line, kind, segments);
     }
 
     // ── #N# Заголовок ──
@@ -128,9 +135,9 @@ pub fn parse_line(line: &str) -> ParsedLine {
         return ParsedLine::new(line, BlockKind::Quote, segments);
     }
 
-    // ── Строка таблицы: | ... | ──
+    // ── Строка таблицы: | a | b | ──
     if trimmed.starts_with('|') {
-        return ParsedLine::new(line, BlockKind::TableRow, Vec::new());
+        return parse_table_row(line, trimmed);
     }
 
     // ── Тэг: #:tag ──
@@ -281,6 +288,94 @@ fn base_offset(parent: &str, child: &str) -> usize {
     }
 }
 
+// Распарсить строку таблицы `| a | b | c |`.
+//
+// Ячейки — обрезанные тексты без `:` выравнивания. Сегменты — PLAIN-диапазоны
+// каждой ячейки внутри исходной строки (от первого `|` до конца).
+fn parse_table_row(line: &str, trimmed: &str) -> ParsedLine {
+    // Байтовое смещение trimmed внутри line.
+    let line_base = line.len() - trimmed.len();
+
+    let mut cells = Vec::new();
+    let mut segments = Vec::new();
+    // Диапазон ячеек: от первого `|` (включительно) до конца строки.
+    let body_start = trimmed.find('|').unwrap_or(0);
+    let body = &trimmed[body_start..];
+    let mut prev = 1usize; // начало ячейки после разделителя `|`
+    let mut idx = prev;
+    let bs = body.as_bytes();
+    while idx < bs.len() {
+        if bs[idx] == b'|' {
+            push_cell(
+                &mut cells,
+                &mut segments,
+                body,
+                prev,
+                idx,
+                line_base + body_start,
+            );
+            prev = idx + 1;
+        }
+        idx += 1;
+    }
+    push_cell(
+        &mut cells,
+        &mut segments,
+        body,
+        prev,
+        body.len(),
+        line_base + body_start,
+    );
+
+    // Срезаем пустые ячейки-обманки: `| a | b |` не должен давать `""` в конце.
+    while cells.last().map_or(false, |c| c.is_empty()) {
+        cells.pop();
+        segments.pop();
+    }
+
+    ParsedLine::new(line, BlockKind::TableRow(cells), segments)
+}
+
+// Разобрать одну ячейку `body[from..to]`: обрезать, снять `:`, добавить сегмент.
+fn push_cell(
+    cells: &mut Vec<String>,
+    segments: &mut Vec<Segment>,
+    body: &str,
+    from: usize,
+    to: usize,
+    base: usize,
+) {
+    let raw = &body[from..to];
+    let cell = strip_align(raw.trim());
+    cells.push(cell);
+    if to > from {
+        segments.push(Segment::new(base + from, base + to, MarkStyle::PLAIN));
+    }
+}
+
+// Снять `:` выравнивания с краёв ячейки (`:left:` → `left`).
+fn strip_align(cell: &str) -> String {
+    let s = cell.strip_prefix(':').unwrap_or(cell);
+    s.strip_suffix(':').unwrap_or(s).to_string()
+}
+
+// Распарсить спойлер-строку `!!title: hidden` → (заголовок, тело).
+// Без `:` — (None, весь текст).
+fn split_spoiler(rest: &str) -> (Option<String>, &str) {
+    if let Some(end) = rest.find(':') {
+        let title = rest[..end].trim();
+        let title = if title.is_empty() {
+            None
+        } else {
+            Some(title.to_string())
+        };
+        let body = rest[end + 1..].trim();
+        (title, body)
+    } else {
+        (None, rest)
+    }
+}
+
 // Распарсить заголовок спойлера `!!!title:` или `!!!`
 fn parse_spoiler_title(rest: &str) -> Option<String> {
     let s = rest.trim();
@@ -291,6 +386,17 @@ fn parse_spoiler_title(rest: &str) -> Option<String> {
         }
     }
     None
+}
+
+// Язык код-блока после ``` (например, ` ```rust ` → "rust").
+// Пустой/невалидный остаток → None.
+fn parse_code_lang(rest: &str) -> Option<String> {
+    let s = rest.trim();
+    if s.is_empty() {
+        None
+    } else {
+        Some(s.to_string())
+    }
 }
 
 // Создать пустую блок-строку (только маркер, без контента).
@@ -527,7 +633,23 @@ mod tests {
     #[test]
     fn table_row() {
         let pl = parse_line("| a | b | c |");
-        assert_eq!(pl.kind, BlockKind::TableRow);
+        assert_eq!(
+            pl.kind,
+            BlockKind::TableRow(vec!["a".to_string(), "b".to_string(), "c".to_string()])
+        );
+    }
+
+    #[test]
+    fn table_row_align_colons() {
+        let pl = parse_line("|:left: | :center: | right:|");
+        assert_eq!(
+            pl.kind,
+            BlockKind::TableRow(vec![
+                "left".to_string(),
+                "center".to_string(),
+                "right".to_string()
+            ])
+        );
     }
 
     #[test]
