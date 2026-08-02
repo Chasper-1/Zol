@@ -1,6 +1,6 @@
-/// Номер строки, содержащей указанный байтовый индекс.
-///
-/// Использует `line_starts` для O(log n) бинарного поиска (вместо O(n) сканирования).
+// Номер строки, содержащей указанный байтовый индекс.
+//
+// Использует `line_starts` для O(log n) бинарного поиска (вместо O(n) сканирования).
 pub fn line_of_byte(content: &str, line_starts: &[usize], byte: usize) -> usize {
     if content.is_empty() || line_starts.is_empty() {
         return 0;

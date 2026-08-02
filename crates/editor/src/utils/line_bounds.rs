@@ -1,9 +1,9 @@
 use super::bounds::LineBounds;
 
-/// Границы строки по индексу (0-based).
-///
-/// Использует `line_starts` для O(1) доступа (вместо O(n) сканирования).
-/// `content` нужен только для определения конца последней строки.
+// Границы строки по индексу (0-based).
+//
+// Использует `line_starts` для O(1) доступа (вместо O(n) сканирования).
+// `content` нужен только для определения конца последней строки.
 pub fn line_bounds(content: &str, line_starts: &[usize], line: usize) -> Option<LineBounds> {
     // Для пустого контента с пустым line_starts — особая обработка
     if line_starts.is_empty() {

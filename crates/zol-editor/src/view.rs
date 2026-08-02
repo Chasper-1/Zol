@@ -16,11 +16,11 @@ use std::ops::Range;
 
 use crate::model::{Format, MarkSet};
 
-/// Per-line syntax-highlight colors for fenced code blocks, keyed by line index
-/// (char-column ranges → RGBA). Empty unless the `syntax-highlight` feature is on.
+// Per-line syntax-highlight colors for fenced code blocks, keyed by line index
+// (char-column ranges → RGBA). Empty unless the `syntax-highlight` feature is on.
 type CodeHighlights = HashMap<usize, Vec<(usize, usize, [u8; 4])>>;
 
-/// A contiguous run of identically-styled text for layout.
+// A contiguous run of identically-styled text for layout.
 #[derive(Clone)]
 pub struct Span {
     pub text: String,
@@ -29,40 +29,40 @@ pub struct Span {
     pub size: f32,
 }
 
-/// A line decoration drawn by the rasterizer (cosmic-text renders neither).
+// A line decoration drawn by the rasterizer (cosmic-text renders neither).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Decoration {
     Strike,
     Underline,
-    /// A filled chip background (RGBA) behind a token range — drawn before glyphs.
+    // A filled chip background (RGBA) behind a token range — drawn before glyphs.
     Chip([u8; 4]),
-    /// A colored under-line marking a misspelling (spellcheck).
+    // A colored under-line marking a misspelling (spellcheck).
     Squiggle([u8; 4]),
 }
 
-/// Build styled layout runs + per-line prefix bytes (always 0 here — markers are
-/// real text, nothing is injected).
-/// One match of a host-registered token within a line (char offsets + the value
-/// the host cares about, e.g. the project/person/tag name or the URL).
+// Build styled layout runs + per-line prefix bytes (always 0 here — markers are
+// real text, nothing is injected).
+// One match of a host-registered token within a line (char offsets + the value
+// the host cares about, e.g. the project/person/tag name or the URL).
 pub struct TokenMatch {
     pub start: usize,
     pub end: usize,
     pub value: String,
 }
 
-/// A host-registered inline token kind (e.g. `[[wikilink]]`, `#tag`, url). The
-/// matcher finds occurrences in a line; matched chars render in `fg`.
+// A host-registered inline token kind (e.g. `[[wikilink]]`, `#tag`, url). The
+// matcher finds occurrences in a line; matched chars render in `fg`.
 pub struct TokenSpec {
     pub id: String,
     pub fg: [u8; 4],
-    /// Optional chip background (RGBA) behind the matched text.
+    // Optional chip background (RGBA) behind the matched text.
     pub bg: Option<[u8; 4]>,
     pub matcher: Box<dyn Fn(&str) -> Vec<TokenMatch>>,
 }
 
-/// A syntax-highlight category for per-token coloring (Step D). The *category* is
-/// theme-independent (so it lives in the text-keyed analysis cache); the concrete
-/// RGBA is resolved at projection time via a host-supplied [`SynPalette`].
+// A syntax-highlight category for per-token coloring (Step D). The *category* is
+// theme-independent (so it lives in the text-keyed analysis cache); the concrete
+// RGBA is resolved at projection time via a host-supplied [`SynPalette`].
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SynCat {
     Keyword,
@@ -73,9 +73,9 @@ pub enum SynCat {
     Operator,
 }
 
-/// Host palette mapping each [`SynCat`] to an RGBA color, so per-token syntax
-/// colors are themeable. Build one from your editor theme; [`SynPalette::DEFAULT`]
-/// is a light-background default.
+// Host palette mapping each [`SynCat`] to an RGBA color, so per-token syntax
+// colors are themeable. Build one from your editor theme; [`SynPalette::DEFAULT`]
+// is a light-background default.
 #[derive(Clone, Copy)]
 pub struct SynPalette {
     pub keyword: [u8; 4],
@@ -87,7 +87,7 @@ pub struct SynPalette {
 }
 
 impl SynPalette {
-    /// Light-background defaults (used when a host hasn't supplied a palette).
+    // Light-background defaults (used when a host hasn't supplied a palette).
     pub const DEFAULT: SynPalette = SynPalette {
         keyword: [167, 29, 93, 255],   // magenta
         function: [0, 92, 197, 255],   // blue
@@ -125,29 +125,29 @@ impl Default for SynPalette {
 // in `project()` from the marker byte range that `analyze()` records, so it stays
 // correct by construction.
 
-/// A line's hideable block marker. Off the caret line, `src[start..start+len]` is
-/// replaced by `repl` (the leading `src[..start]` indentation is always shown);
-/// on the caret line the marker is shown verbatim. The byte delta is therefore
-/// `repl.len() − len`, independent of indentation.
+// A line's hideable block marker. Off the caret line, `src[start..start+len]` is
+// replaced by `repl` (the leading `src[..start]` indentation is always shown);
+// on the caret line the marker is shown verbatim. The byte delta is therefore
+// `repl.len() − len`, independent of indentation.
 #[derive(Clone, Copy)]
 struct Marker {
-    /// Byte offset where the hideable marker begins (indentation before it stays).
+    // Byte offset where the hideable marker begins (indentation before it stays).
     start: usize,
-    /// Byte length of the hideable marker (`"## "`, `"- "`, `"> "`, `"- [ ] "`, or
-    /// a whole ```` ``` ```` fence / setext-underline line).
+    // Byte length of the hideable marker (`"## "`, `"- "`, `"> "`, `"- [ ] "`, or
+    // a whole ```` ``` ```` fence / setext-underline line).
     len: usize,
-    /// Substitute shown when hidden: `""` to drop it, `"• "`/checkbox to replace.
+    // Substitute shown when hidden: `""` to drop it, `"• "`/checkbox to replace.
     repl: &'static str,
 }
 
 impl Marker {
-    /// No hideable marker (paragraphs, numbered lists, code interiors, tables).
+    // No hideable marker (paragraphs, numbered lists, code interiors, tables).
     const NONE: Marker = Marker {
         start: 0,
         len: 0,
         repl: "",
     };
-    /// A leading marker (no indentation) of `len` bytes shown as `repl` when hidden.
+    // A leading marker (no indentation) of `len` bytes shown as `repl` when hidden.
     fn lead(len: usize, repl: &'static str) -> Marker {
         Marker {
             start: 0,
@@ -157,33 +157,33 @@ impl Marker {
     }
 }
 
-/// Caret-independent per-line facts produced by [`analyze`]. Everything a full
-/// parse determines that does NOT depend on where the caret is.
+// Caret-independent per-line facts produced by [`analyze`]. Everything a full
+// parse determines that does NOT depend on where the caret is.
 #[derive(Clone)]
 struct LineInfo {
-    /// The hideable block marker (Live Preview), or [`Marker::NONE`].
+    // The hideable block marker (Live Preview), or [`Marker::NONE`].
     marker: Marker,
-    /// Whole-line font-size multiplier (headings scale up); `1.0` otherwise. Kept
-    /// base-independent so the analysis cache survives a font-size change.
+    // Whole-line font-size multiplier (headings scale up); `1.0` otherwise. Kept
+    // base-independent so the analysis cache survives a font-size change.
     scale: f32,
-    /// Marks applied to every char of the line (heading `BOLD`; code `CODE`).
+    // Marks applied to every char of the line (heading `BOLD`; code `CODE`).
     extra: MarkSet,
-    /// Code line (fence delimiter or interior): colors come from the syntax
-    /// highlighter, inline markup isn't parsed, and host tokens aren't matched.
+    // Code line (fence delimiter or interior): colors come from the syntax
+    // highlighter, inline markup isn't parsed, and host tokens aren't matched.
     is_code: bool,
-    /// Per-SOURCE-char inline marks (markup-parser output). `CODE`-only for code.
+    // Per-SOURCE-char inline marks (markup-parser output). `CODE`-only for code.
     inline: Vec<MarkSet>,
-    /// Per-SOURCE-char concrete colors (syntect for fenced code). `None` where
-    /// uncolored; prose syntax coloring goes through `syn` instead so it stays
-    /// themeable.
+    // Per-SOURCE-char concrete colors (syntect for fenced code). `None` where
+    // uncolored; prose syntax coloring goes through `syn` instead so it stays
+    // themeable.
     colors: Vec<Option<[u8; 4]>>,
-    /// Per-SOURCE-char syntax category (Step D), resolved to a color via the
-    /// host [`SynPalette`] at projection time. `None` where uncategorized.
+    // Per-SOURCE-char syntax category (Step D), resolved to a color via the
+    // host [`SynPalette`] at projection time. `None` where uncategorized.
     syn: Vec<Option<SynCat>>,
-    /// Hash of all of the above + the source text: the [`project`] cache seed.
-    /// Captures every cross-line dependency (fence state, setext, refs) so a
-    /// per-line project cache stays correct even when a line's rendering depends
-    /// on its neighbors.
+    // Hash of all of the above + the source text: the [`project`] cache seed.
+    // Captures every cross-line dependency (fence state, setext, refs) so a
+    // per-line project cache stays correct even when a line's rendering depends
+    // on its neighbors.
     digest: u64,
 }
 
@@ -247,17 +247,17 @@ impl LineInfo {
     }
 }
 
-/// Whole-document analysis: one [`LineInfo`] per source line.
+// Whole-document analysis: one [`LineInfo`] per source line.
 struct DocAnalysis {
     lines: Vec<LineInfo>,
 }
 
-/// A FIFO-bounded cache: at most `cap` entries; inserting a new key past the cap
-/// evicts the oldest-inserted one. Replaces the previous per-cache "clear the
-/// whole map when full" policy, which left memory only loosely bounded and caused
-/// a periodic full-recompute latency cliff. FIFO (not LRU) keeps it simple; for
-/// our access patterns — the current document for the analysis cache, the
-/// viewport-local lines for the per-line caches — the hot set stays resident.
+// A FIFO-bounded cache: at most `cap` entries; inserting a new key past the cap
+// evicts the oldest-inserted one. Replaces the previous per-cache "clear the
+// whole map when full" policy, which left memory only loosely bounded and caused
+// a periodic full-recompute latency cliff. FIFO (not LRU) keeps it simple; for
+// our access patterns — the current document for the analysis cache, the
+// viewport-local lines for the per-line caches — the hot set stays resident.
 struct BoundedCache<K, V> {
     map: HashMap<K, V>,
     order: std::collections::VecDeque<K>,
@@ -297,12 +297,12 @@ impl<K: std::hash::Hash + Eq + Clone, V> BoundedCache<K, V> {
     }
 }
 
-/// Whole-document analyses are large (a `LineInfo` per line, three vecs each), so
-/// keep only a few — the current document, plus headroom for undo/format-toggle
-/// or a couple of editors sharing this thread. (Was 64 → tens of MB on big docs.)
+// Whole-document analyses are large (a `LineInfo` per line, three vecs each), so
+// keep only a few — the current document, plus headroom for undo/format-toggle
+// or a couple of editors sharing this thread. (Was 64 → tens of MB on big docs.)
 const ANALYSIS_CAP: usize = 8;
-/// Per-line caches: generous (covers ~thousands of lines × caret-state variants)
-/// but still hard-bounded.
+// Per-line caches: generous (covers ~thousands of lines × caret-state variants)
+// but still hard-bounded.
 const LINE_CAP: usize = 16384;
 
 thread_local! {
@@ -329,9 +329,9 @@ fn analysis_key(format: Format, text: &str, code_dark: bool) -> u64 {
     h.finish()
 }
 
-/// Cache key for one line's projection: its analysis `digest` (which already
-/// folds in the source text + every cross-line dependency) plus the caret-state,
-/// base font size, token generation and syntax palette that `project` also reads.
+// Cache key for one line's projection: its analysis `digest` (which already
+// folds in the source text + every cross-line dependency) plus the caret-state,
+// base font size, token generation and syntax palette that `project` also reads.
 fn project_key(digest: u64, on_caret: bool, base: f32, tokens_gen: u64, syn: &SynPalette) -> u64 {
     use std::hash::{Hash, Hasher};
     let mut h = std::collections::hash_map::DefaultHasher::new();
@@ -364,12 +364,12 @@ fn analyze_cached(text: &str, format: Format, code_dark: bool) -> std::rc::Rc<Do
     })
 }
 
-/// One whole-document parse → per-line caret-independent facts. Tracks fenced
-/// code across lines (so a code line's classification depends on context, which
-/// is why this is doc-level), highlights code once, and — for Markdown — runs a
-/// single whole-document `pulldown-cmark` pass ([`scan_md`]) so cross-line
-/// constructs (setext headings, indented code, reference links, tables) and all
-/// inline marks come from the reference parser.
+// One whole-document parse → per-line caret-independent facts. Tracks fenced
+// code across lines (so a code line's classification depends on context, which
+// is why this is doc-level), highlights code once, and — for Markdown — runs a
+// single whole-document `pulldown-cmark` pass ([`scan_md`]) so cross-line
+// constructs (setext headings, indented code, reference links, tables) and all
+// inline marks come from the reference parser.
 fn analyze(text: &str, format: Format, code_dark: bool) -> DocAnalysis {
     let perf = std::env::var_os("SRED_PERF").is_some();
     let t0 = std::time::Instant::now();
@@ -445,10 +445,10 @@ fn analyze(text: &str, format: Format, code_dark: bool) -> DocAnalysis {
     DocAnalysis { lines }
 }
 
-/// Build a prose Markdown line's [`LineInfo`] from its parser-derived facts:
-/// setext headings/underlines and indented code override the per-line block
-/// classification; everything else uses [`classify_block_md`] for the marker and
-/// the whole-document inline marks for styling.
+// Build a prose Markdown line's [`LineInfo`] from its parser-derived facts:
+// setext headings/underlines and indented code override the per-line block
+// classification; everything else uses [`classify_block_md`] for the marker and
+// the whole-document inline marks for styling.
 fn analyze_prose_md(line: &str, f: MdLineFacts) -> LineInfo {
     let n = line.chars().count();
     if f.setext_underline {
@@ -511,27 +511,27 @@ fn analyze_prose_typst(line: &str, f: TypstLineFacts) -> LineInfo {
     )
 }
 
-/// Per-line output of the whole-document Typst scan ([`scan_typst`]).
+// Per-line output of the whole-document Typst scan ([`scan_typst`]).
 #[derive(Clone)]
 struct TypstLineFacts {
-    /// Per-SOURCE-char inline marks (from the typst-syntax highlighter).
+    // Per-SOURCE-char inline marks (from the typst-syntax highlighter).
     inline: Vec<MarkSet>,
-    /// Per-SOURCE-char syntax category for code-mode coloring (Step D).
+    // Per-SOURCE-char syntax category for code-mode coloring (Step D).
     syn: Vec<Option<SynCat>>,
-    /// The line's hideable block marker (heading `=`-run, `- ` list, `/ ` term),
-    /// or [`Marker::NONE`] (paragraphs, `+ ` enums kept visible).
+    // The line's hideable block marker (heading `=`-run, `- ` list, `/ ` term),
+    // or [`Marker::NONE`] (paragraphs, `+ ` enums kept visible).
     marker: Marker,
-    /// Heading font-size multiplier; `1.0` otherwise.
+    // Heading font-size multiplier; `1.0` otherwise.
     scale: f32,
-    /// Whole-line marks (heading `BOLD`).
+    // Whole-line marks (heading `BOLD`).
     extra: MarkSet,
 }
 
-/// One whole-document `typst-syntax` parse → per-line inline marks + block
-/// markers, read from the real grammar tree (Step C). Heading depth comes from
-/// the `HeadingMarker` length; `ListItem`/`EnumItem`/`TermItem` are recognised by
-/// their marker nodes; marker byte ranges (and thus deltas) come from node
-/// ranges, so nested/indented markers keep their indentation.
+// One whole-document `typst-syntax` parse → per-line inline marks + block
+// markers, read from the real grammar tree (Step C). Heading depth comes from
+// the `HeadingMarker` length; `ListItem`/`EnumItem`/`TermItem` are recognised by
+// their marker nodes; marker byte ranges (and thus deltas) come from node
+// ranges, so nested/indented markers keep their indentation.
 fn scan_typst(text: &str, lines: &[&str]) -> Vec<TypstLineFacts> {
     use typst_syntax::{parse, LinkedNode};
 
@@ -663,42 +663,42 @@ fn walk_typst(
     }
 }
 
-/// True when the bytes between the line start and `pos` are only spaces (so the
-/// marker is genuinely the line's leading construct, not mid-line content).
+// True when the bytes between the line start and `pos` are only spaces (so the
+// marker is genuinely the line's leading construct, not mid-line content).
 fn col_is_leading(text: &str, line_start: usize, pos: usize) -> bool {
     text[line_start..pos].bytes().all(|b| b == b' ')
 }
 
-/// Byte length of the line starting at `line_start` (up to the next '\n' or EOF).
+// Byte length of the line starting at `line_start` (up to the next '\n' or EOF).
 fn facts_line_len(text: &str, line_start: usize) -> usize {
     text[line_start..].split('\n').next().map_or(0, str::len)
 }
 
-/// Per-line output of the whole-document Markdown scan ([`scan_md`]).
+// Per-line output of the whole-document Markdown scan ([`scan_md`]).
 #[derive(Clone)]
 struct MdLineFacts {
-    /// Per-SOURCE-char inline marks (strong/emph/code/strike/link incl. reference
-    /// links), plus table styling (header bold, pipes code).
+    // Per-SOURCE-char inline marks (strong/emph/code/strike/link incl. reference
+    // links), plus table styling (header bold, pipes code).
     inline: Vec<MarkSet>,
-    /// `Some(level)` when this line is the *title* of a setext heading.
+    // `Some(level)` when this line is the *title* of a setext heading.
     setext_level: Option<u8>,
-    /// This line is a setext `===`/`---` underline (hidden off-caret).
+    // This line is a setext `===`/`---` underline (hidden off-caret).
     setext_underline: bool,
-    /// This line renders as code (indented code block or raw HTML block): CODE
-    /// mark, no marker hiding, source kept verbatim.
+    // This line renders as code (indented code block or raw HTML block): CODE
+    // mark, no marker hiding, source kept verbatim.
     indented_code: bool,
 }
 
-/// One whole-document `pulldown-cmark` pass (the CommonMark reference parser, with
-/// GFM strikethrough/tables/task-lists). Produces per-line inline marks and the
-/// cross-line block facts (setext, indented code, tables) that a per-line scan
-/// can't see. Reference links resolve here for free — the parser sees the whole
-/// document, so `[text][ref]` against a `[ref]: url` defined elsewhere is a LINK.
-///
-/// Fenced-code lines (tracked separately, authoritatively, by [`analyze`]) are
-/// left blank here; the marker hiding + deltas for ATX headings, quotes and lists
-/// stay in [`classify_block_md`]. This pass only contributes inline marks and the
-/// setext/indented-code/table classifications.
+// One whole-document `pulldown-cmark` pass (the CommonMark reference parser, with
+// GFM strikethrough/tables/task-lists). Produces per-line inline marks and the
+// cross-line block facts (setext, indented code, tables) that a per-line scan
+// can't see. Reference links resolve here for free — the parser sees the whole
+// document, so `[text][ref]` against a `[ref]: url` defined elsewhere is a LINK.
+//
+// Fenced-code lines (tracked separately, authoritatively, by [`analyze`]) are
+// left blank here; the marker hiding + deltas for ATX headings, quotes and lists
+// stay in [`classify_block_md`]. This pass only contributes inline marks and the
+// setext/indented-code/table classifications.
 fn scan_md(text: &str, lines: &[&str], is_fence: &[bool], interior: &[bool]) -> Vec<MdLineFacts> {
     use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag};
 
@@ -810,10 +810,10 @@ fn scan_md(text: &str, lines: &[&str], is_fence: &[bool], interior: &[bool]) -> 
     facts
 }
 
-/// Project one line for display (caret-DEPENDENT, cheap): hide/substitute its
-/// block marker unless it's the caret line, map the caret-independent inline
-/// marks + colors into display-char space, overlay host token colors, and emit
-/// spans. Returns the spans and the byte delta `display_leading − source_leading`.
+// Project one line for display (caret-DEPENDENT, cheap): hide/substitute its
+// block marker unless it's the caret line, map the caret-independent inline
+// marks + colors into display-char space, overlay host token colors, and emit
+// spans. Returns the spans and the byte delta `display_leading − source_leading`.
 fn project_line(
     info: &LineInfo,
     line: &str,
@@ -938,8 +938,8 @@ fn project_cached(
     })
 }
 
-/// Style the document with the default syntax palette. See [`styled_runs_with`]
-/// to supply a host palette for themeable per-token colors.
+// Style the document with the default syntax palette. See [`styled_runs_with`]
+// to supply a host palette for themeable per-token colors.
 pub fn styled_runs(
     text: &str,
     format: Format,
@@ -960,9 +960,9 @@ pub fn styled_runs(
     )
 }
 
-/// As [`styled_runs`], but with a host-supplied [`SynPalette`] for per-token
-/// syntax colors (Step D) and `code_dark` selecting the fenced-code highlight
-/// theme to match the host background (#21).
+// As [`styled_runs`], but with a host-supplied [`SynPalette`] for per-token
+// syntax colors (Step D) and `code_dark` selecting the fenced-code highlight
+// theme to match the host background (#21).
 #[allow(clippy::too_many_arguments)]
 pub fn styled_runs_with(
     text: &str,
@@ -1000,8 +1000,8 @@ pub fn styled_runs_with(
     (spans, deltas)
 }
 
-/// Test/maintenance hook: drop the styling caches (so a fresh computation can be
-/// compared against the incremental one).
+// Test/maintenance hook: drop the styling caches (so a fresh computation can be
+// compared against the incremental one).
 #[cfg(test)]
 pub(crate) fn clear_style_cache() {
     ANALYSIS_CACHE.with(|c| c.borrow_mut().clear());
@@ -1009,8 +1009,8 @@ pub(crate) fn clear_style_cache() {
     DECO_CACHE.with(|c| c.borrow_mut().clear());
 }
 
-/// Test hook: current `(analysis, project, deco)` cache entry counts, to assert
-/// the caches stay hard-bounded (memory regression guard).
+// Test hook: current `(analysis, project, deco)` cache entry counts, to assert
+// the caches stay hard-bounded (memory regression guard).
 #[cfg(test)]
 pub(crate) fn cache_sizes() -> (usize, usize, usize) {
     (
@@ -1020,28 +1020,28 @@ pub(crate) fn cache_sizes() -> (usize, usize, usize) {
     )
 }
 
-/// Test hook: the analysis-cache cap (so the bound test can assert against it).
+// Test hook: the analysis-cache cap (so the bound test can assert against it).
 #[cfg(test)]
 pub(crate) fn analysis_cap() -> usize {
     ANALYSIS_CAP
 }
 
-/// Bullet substitution glyph: U+2022 + space (4 bytes, 2 chars). Replaces a
-/// 2-byte `"- "`/`"* "`/`"+ "` marker, so the byte delta is `+2`.
+// Bullet substitution glyph: U+2022 + space (4 bytes, 2 chars). Replaces a
+// 2-byte `"- "`/`"* "`/`"+ "` marker, so the byte delta is `+2`.
 const BULLET: &str = "• ";
-/// Task-list checkbox glyphs (each + a trailing space = 4 bytes, 2 chars).
-/// Replace the 6-byte `"- [ ] "` / `"- [x] "` marker (byte delta `−2`).
+// Task-list checkbox glyphs (each + a trailing space = 4 bytes, 2 chars).
+// Replace the 6-byte `"- [ ] "` / `"- [x] "` marker (byte delta `−2`).
 const TASK_OPEN: &str = "☐ "; // U+2610 BALLOT BOX
 const TASK_DONE: &str = "☑ "; // U+2611 BALLOT BOX WITH CHECK
 
-/// Leading-space indentation of a line, in bytes (= chars, spaces are ASCII).
+// Leading-space indentation of a line, in bytes (= chars, spaces are ASCII).
 fn indent_width(line: &str) -> usize {
     line.len() - line.trim_start_matches(' ').len()
 }
 
-/// Classify a prose Markdown line's hideable block marker → `(marker, scale,
-/// extra)`. Indentation before the marker is preserved (nested lists/quotes);
-/// numbered markers stay visible. Setext/indented-code are decided in [`scan_md`].
+// Classify a prose Markdown line's hideable block marker → `(marker, scale,
+// extra)`. Indentation before the marker is preserved (nested lists/quotes);
+// numbered markers stay visible. Setext/indented-code are decided in [`scan_md`].
 fn classify_block_md(line: &str) -> (Marker, f32, MarkSet) {
     let indent = indent_width(line);
     let body = &line[indent..];
@@ -1110,7 +1110,7 @@ fn classify_block_md(line: &str) -> (Marker, f32, MarkSet) {
     (Marker::NONE, 1.0, MarkSet::empty())
 }
 
-/// Heading font-size multiplier by level (1 = largest).
+// Heading font-size multiplier by level (1 = largest).
 fn heading_scale(level: usize) -> f32 {
     match level {
         1 => 1.9,
@@ -1152,9 +1152,9 @@ fn deco_key(format: Format, line: &str) -> u64 {
     h.finish()
 }
 
-/// Strike (`~~…~~`) and underline (links) ranges in global char offsets.
-/// (Typst markup carries neither in Level-1 projection, so this yields nothing
-/// for Typst.)
+// Strike (`~~…~~`) and underline (links) ranges in global char offsets.
+// (Typst markup carries neither in Level-1 projection, so this yields nothing
+// for Typst.)
 pub fn decorations(text: &str, format: Format) -> Vec<(usize, usize, Decoration)> {
     let mut out = Vec::new();
     let mut global = 0usize;
@@ -1189,8 +1189,8 @@ pub fn decorations(text: &str, format: Format) -> Vec<(usize, usize, Decoration)
     out
 }
 
-/// If the caret is inside a `[text](url)` link, return the URL's char range and
-/// the URL string.
+// If the caret is inside a `[text](url)` link, return the URL's char range and
+// the URL string.
 pub fn link_at(text: &str, cursor: usize) -> Option<(Range<usize>, String)> {
     let mut global = 0usize;
     for line in text.split('\n') {
@@ -1210,9 +1210,9 @@ pub fn link_at(text: &str, cursor: usize) -> Option<(Range<usize>, String)> {
 
 // ---- math fragments (rendered-fragment architecture, #15) ------------------
 
-/// A math span detected in the source: its char range, the delimited source
-/// (`$…$` / `$$…$$`), and whether it is display (block) math. A host renders it
-/// to an image via [`crate::Editor::set_fragment_renderer`] and overlays it.
+// A math span detected in the source: its char range, the delimited source
+// (`$…$` / `$$…$$`), and whether it is display (block) math. A host renders it
+// to an image via [`crate::Editor::set_fragment_renderer`] and overlays it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MathFragment {
     pub start: usize,
@@ -1221,9 +1221,9 @@ pub struct MathFragment {
     pub display: bool,
 }
 
-/// Detect math fragments in the document (Markdown `$…$`/`$$…$$` via the parser's
-/// math extension; Typst `$…$` equations via the syntax tree, with the block flag
-/// from the grammar). Char ranges, left to right.
+// Detect math fragments in the document (Markdown `$…$`/`$$…$$` via the parser's
+// math extension; Typst `$…$` equations via the syntax tree, with the block flag
+// from the grammar). Char ranges, left to right.
 pub fn math_fragments(text: &str, format: Format) -> Vec<MathFragment> {
     match format {
         Format::Typst => math_fragments_typst(text),
@@ -1287,7 +1287,7 @@ fn math_fragments_typst(text: &str) -> Vec<MathFragment> {
 
 // ---- inline scanner --------------------------------------------------------
 
-/// Per-character inline marks for one line, dispatched by format.
+// Per-character inline marks for one line, dispatched by format.
 fn line_marks(format: Format, line: &str) -> Vec<MarkSet> {
     match format {
         Format::Typst => line_marks_typst(line),
@@ -1295,14 +1295,14 @@ fn line_marks(format: Format, line: &str) -> Vec<MarkSet> {
     }
 }
 
-/// Markdown inline marks, parsed by `pulldown-cmark` (the CommonMark reference
-/// parser, + GFM strikethrough) rather than a hand-rolled scanner — so nesting,
-/// mismatched delimiters, code-span protection, and links follow the spec.
-///
-/// Operates on the line's *display* text (block markers already projected away),
-/// so emphasis/strong/code/strike/link spans line up with the rendered glyphs.
-/// Inline parsing is intra-line; cross-line constructs (reference-link
-/// definitions, setext headings) are a block-level / Phase-2 concern.
+// Markdown inline marks, parsed by `pulldown-cmark` (the CommonMark reference
+// parser, + GFM strikethrough) rather than a hand-rolled scanner — so nesting,
+// mismatched delimiters, code-span protection, and links follow the spec.
+//
+// Operates on the line's *display* text (block markers already projected away),
+// so emphasis/strong/code/strike/link spans line up with the rendered glyphs.
+// Inline parsing is intra-line; cross-line constructs (reference-link
+// definitions, setext headings) are a block-level / Phase-2 concern.
 fn line_marks_md(line: &str) -> Vec<MarkSet> {
     use pulldown_cmark::{Event, Options, Parser, Tag};
     let n = line.chars().count();
@@ -1339,14 +1339,14 @@ fn line_marks_md(line: &str) -> Vec<MarkSet> {
     marks
 }
 
-/// Typst inline marks (MF2), driven by `typst-syntax`'s own highlighter — the
-/// official Typst parser + `highlight()` categorizer — so strong/emph/raw/math,
-/// references/labels, and code-mode constructs (`#let`, function calls, numbers,
-/// strings, keywords) all follow the real grammar.
-///
-/// Operates on the line's *display* text. Block-level marker hiding + deltas stay
-/// in `project_line_typst`; this only assigns inline styling, so it can't affect
-/// the byte-delta/cursor mapping.
+// Typst inline marks (MF2), driven by `typst-syntax`'s own highlighter — the
+// official Typst parser + `highlight()` categorizer — so strong/emph/raw/math,
+// references/labels, and code-mode constructs (`#let`, function calls, numbers,
+// strings, keywords) all follow the real grammar.
+//
+// Operates on the line's *display* text. Block-level marker hiding + deltas stay
+// in `project_line_typst`; this only assigns inline styling, so it can't affect
+// the byte-delta/cursor mapping.
 fn line_marks_typst(line: &str) -> Vec<MarkSet> {
     use typst_syntax::{parse, LinkedNode};
     let n = line.chars().count();
@@ -1364,9 +1364,9 @@ fn line_marks_typst(line: &str) -> Vec<MarkSet> {
     marks
 }
 
-/// Inline mark for one typst node, from the crate's own `highlight()` categorizer
-/// (plus the `Equation` special case). Shared by the per-line decorator pass
-/// ([`typst_marks_walk`]) and the whole-document [`scan_typst`] pass.
+// Inline mark for one typst node, from the crate's own `highlight()` categorizer
+// (plus the `Equation` special case). Shared by the per-line decorator pass
+// ([`typst_marks_walk`]) and the whole-document [`scan_typst`] pass.
 fn typst_inline_bit(node: &typst_syntax::LinkedNode) -> Option<MarkSet> {
     use typst_syntax::{highlight, SyntaxKind, Tag};
     // `highlight()` returns None for the `Equation` node (its `$` + inner tokens
@@ -1392,10 +1392,10 @@ fn typst_inline_bit(node: &typst_syntax::LinkedNode) -> Option<MarkSet> {
     }
 }
 
-/// Per-token syntax *category* for one typst node (Step D), from the crate's
-/// `highlight()` categorizer. Theme-independent — the concrete color is resolved
-/// later via [`SynPalette`]. Only code-mode/math tokens get a category; markup
-/// (strong/emph/links) is styled by marks instead.
+// Per-token syntax *category* for one typst node (Step D), from the crate's
+// `highlight()` categorizer. Theme-independent — the concrete color is resolved
+// later via [`SynPalette`]. Only code-mode/math tokens get a category; markup
+// (strong/emph/links) is styled by marks instead.
 fn typst_syn_cat(node: &typst_syntax::LinkedNode) -> Option<SynCat> {
     use typst_syntax::{highlight, Tag};
     match highlight(node)? {
@@ -1467,8 +1467,8 @@ fn links_in_line(line: &str) -> Vec<LinkSpan> {
 
 // ---- syntax highlighting (syntect, feature-gated) -------------------------
 
-/// Scan fenced code blocks (```lang … ```) and return per-line highlight colors.
-/// No-op (empty) unless the `syntax-highlight` feature is enabled.
+// Scan fenced code blocks (```lang … ```) and return per-line highlight colors.
+// No-op (empty) unless the `syntax-highlight` feature is enabled.
 #[cfg(not(feature = "syntax-highlight"))]
 fn code_highlights(_text: &str, _dark: bool) -> CodeHighlights {
     CodeHighlights::new()
@@ -1523,9 +1523,9 @@ fn code_highlights(text: &str, dark: bool) -> CodeHighlights {
     out
 }
 
-/// Syntax-highlight one fenced code block → per-line column ranges (relative to
-/// the block start), memoized by `(lang, body)` content hash so re-rendering an
-/// unchanged block is free.
+// Syntax-highlight one fenced code block → per-line column ranges (relative to
+// the block start), memoized by `(lang, body)` content hash so re-rendering an
+// unchanged block is free.
 #[cfg(feature = "syntax-highlight")]
 fn highlight_block(
     ps: &syntect::parsing::SyntaxSet,

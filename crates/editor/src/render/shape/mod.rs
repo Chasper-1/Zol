@@ -27,7 +27,7 @@ use crate::layout::LineCompensation;
 use crate::layout::TextRun;
 use crate::segment::{STYLE_BOLD, STYLE_ITALIC, STYLE_STRIKETHROUGH, STYLE_UNDERLINE};
 
-/// Сшейпить строки документа в Buffer.
+// Сшейпить строки документа в Buffer.
 pub fn shape_document(
     line_runs: Vec<Vec<TextRun>>,  // ⚠ Принимаем по владению, НЕ клонируем
     compensation: Vec<LineCompensation>,

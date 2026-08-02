@@ -1,7 +1,7 @@
 use super::named::NAMED_COLORS;
 use super::parse::ColorFormat;
 
-/// Определяет формат цвета по строке.
+// Определяет формат цвета по строке.
 pub fn detect_format(s: &str) -> Option<ColorFormat> {
     let s = s.trim();
     if s.starts_with('#') {

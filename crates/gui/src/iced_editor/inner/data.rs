@@ -7,13 +7,13 @@ use editor::render::{self, ShapedDocument};
 use editor::state::EditMode;
 use editor::theme::EditorTheme;
 
-/// Имя файла по умолчанию.
+// Имя файла по умолчанию.
 const DEFAULT_FILE: &str = "notes.zoll";
 
-/// Количество строк буфера над и под viewport (чтобы не мерцало при скролле).
+// Количество строк буфера над и под viewport (чтобы не мерцало при скролле).
 const VIEWPORT_PADDING: usize = 10;
 
-/// Состояние редактора.
+// Состояние редактора.
 pub struct EditorInner {
     pub doc: RefCell<Document>,
     pub shaped_doc: RefCell<ShapedDocument>,
@@ -24,7 +24,7 @@ pub struct EditorInner {
     pub theme: EditorTheme,
     pub scroll_y: Cell<f32>,
     pub file_path: String,
-    /// Последний вычисленный viewport (строки, которые нужно парсить/рендерить).
+    // Последний вычисленный viewport (строки, которые нужно парсить/рендерить).
     pub viewport: Cell<Viewport>,
 }
 
@@ -73,11 +73,11 @@ impl EditorInner {
         }
     }
 
-    /// Вычислить viewport из scroll_y и высоты виджета.
-    ///
-    /// Использует `base_size * 1.4` как приблизительную высоту строки.
-    /// Точное вычисление требует shaped buffer (chicken-and-egg),
-    /// поэтому на первом проходе — приближение.
+    // Вычислить viewport из scroll_y и высоты виджета.
+    //
+    // Использует `base_size * 1.4` как приблизительную высоту строки.
+    // Точное вычисление требует shaped buffer (chicken-and-egg),
+    // поэтому на первом проходе — приближение.
     pub fn compute_viewport(&self, viewport_px: f32) -> Viewport {
         let line_h = self.base_size * 1.4;
         let total = self.doc.borrow().incremental.num_lines();

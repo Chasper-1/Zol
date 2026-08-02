@@ -13,7 +13,7 @@ use std::sync::PoisonError;
 
 use super::global::{FontGlobal, lock};
 
-/// Доступ к `FontSystem` для шейпинга.
+// Доступ к `FontSystem` для шейпинга.
 pub fn with_font_system<F, T>(f: F) -> T
 where
     F: FnOnce(&mut cosmic_text::FontSystem) -> T,
@@ -22,7 +22,7 @@ where
     f(&mut guard.font_system)
 }
 
-/// Доступ к `SwashCache` для растрирования.
+// Доступ к `SwashCache` для растрирования.
 pub fn with_swash_cache<F, T>(f: F) -> T
 where
     F: FnOnce(&mut cosmic_text::SwashCache) -> T,
@@ -31,7 +31,7 @@ where
     f(&mut guard.swash_cache)
 }
 
-/// Доступ к `FontSystem` и `SwashCache` одновременно.
+// Доступ к `FontSystem` и `SwashCache` одновременно.
 pub fn with_font_and_cache<F, T>(f: F) -> T
 where
     F: FnOnce(&mut cosmic_text::FontSystem, &mut cosmic_text::SwashCache) -> T,

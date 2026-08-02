@@ -16,23 +16,23 @@ use crate::model::{Format, MarkSet};
 
 pub use crate::view::{Decoration, Span};
 
-/// A host-agnostic accessibility snapshot of the editor (a multi-line text
-/// field). Character offsets index into `value`. Produced by [`EditorCore::a11y`]
-/// / [`crate::Editor::a11y`]; hosts attach it to their a11y backend.
+// A host-agnostic accessibility snapshot of the editor (a multi-line text
+// field). Character offsets index into `value`. Produced by [`EditorCore::a11y`]
+// / [`crate::Editor::a11y`]; hosts attach it to their a11y backend.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct A11ySnapshot {
-    /// The full document text (the accessible value).
+    // The full document text (the accessible value).
     pub value: String,
-    /// Caret position, in characters.
+    // Caret position, in characters.
     pub caret: usize,
-    /// Selection start/end, in characters (`start == end` ⇒ no selection).
+    // Selection start/end, in characters (`start == end` ⇒ no selection).
     pub selection_start: usize,
     pub selection_end: usize,
-    /// Always true here — sred is a multi-line editor.
+    // Always true here — sred is a multi-line editor.
     pub multiline: bool,
 }
 
-/// Options for [`EditorCore::find_all`] and friends.
+// Options for [`EditorCore::find_all`] and friends.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SearchOpts {
     pub case_sensitive: bool,
@@ -47,18 +47,18 @@ pub enum Motion {
     Down,
     LineStart,
     LineEnd,
-    /// Previous word boundary (Ctrl+Left).
+    // Previous word boundary (Ctrl+Left).
     WordLeft,
-    /// Next word boundary (Ctrl+Right).
+    // Next word boundary (Ctrl+Right).
     WordRight,
-    /// Start of the document (Ctrl+Home).
+    // Start of the document (Ctrl+Home).
     DocStart,
-    /// End of the document (Ctrl+End).
+    // End of the document (Ctrl+End).
     DocEnd,
 }
 
-/// Paragraph-level kind, used by `SetBlock`/`ToggleBlock` to choose which marker
-/// to write into the source line.
+// Paragraph-level kind, used by `SetBlock`/`ToggleBlock` to choose which marker
+// to write into the source line.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlockKind {
     Paragraph,
@@ -76,33 +76,33 @@ pub enum Command {
     DeleteBackward,
     DeleteForward,
     DeleteSelection,
-    /// Delete from the caret to the previous word boundary (Ctrl+Backspace).
+    // Delete from the caret to the previous word boundary (Ctrl+Backspace).
     DeleteWordBackward,
-    /// Delete from the caret to the next word boundary (Ctrl+Delete).
+    // Delete from the caret to the next word boundary (Ctrl+Delete).
     DeleteWordForward,
     Move(Motion),
     Select(Motion),
     SelectAll,
     ToggleMark(MarkSet),
-    /// View-only text color is not representable in markdown; kept as a no-op in
-    /// the source-anchored model (color is not persisted).
+    // View-only text color is not representable in markdown; kept as a no-op in
+    // the source-anchored model (color is not persisted).
     SetColor(Option<u32>),
     Link(String),
     SetBlock(BlockKind),
     ToggleBlock(BlockKind),
-    /// Indent the selected lines (or caret line) by one level (Tab). Nests list
-    /// items; indents plain lines.
+    // Indent the selected lines (or caret line) by one level (Tab). Nests list
+    // items; indents plain lines.
     Indent,
-    /// Outdent the selected lines by one level (Shift+Tab).
+    // Outdent the selected lines by one level (Shift+Tab).
     Outdent,
-    /// Add a caret at the next occurrence of the selection (Ctrl+D); with no
-    /// selection, first select the word under the caret.
+    // Add a caret at the next occurrence of the selection (Ctrl+D); with no
+    // selection, first select the word under the caret.
     AddCaretNextMatch,
     Undo,
     Redo,
 }
 
-/// One indent level (CommonMark/Typst sub-list indentation).
+// One indent level (CommonMark/Typst sub-list indentation).
 const INDENT: &str = "  ";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -121,10 +121,10 @@ struct Snapshot {
     anchor: Option<usize>,
 }
 
-/// In-flight IME composition. The preedit text is **never** stored in the rope
-/// (so `text()` round-trips byte-for-byte mid-composition); it is injected only
-/// into the rendered [`display_text`](EditorCore::display_text). `pos` is the rope
-/// char index where it sits; `caret` is the caret offset within the preedit.
+// In-flight IME composition. The preedit text is **never** stored in the rope
+// (so `text()` round-trips byte-for-byte mid-composition); it is injected only
+// into the rendered [`display_text`](EditorCore::display_text). `pos` is the rope
+// char index where it sits; `caret` is the caret offset within the preedit.
 #[derive(Clone)]
 struct Preedit {
     pos: usize,
@@ -142,14 +142,14 @@ pub struct EditorCore {
     last_kind: EditKind,
     preedit: Option<Preedit>,
     auto_pairs: bool,
-    /// Secondary carets as `(cursor, anchor)` (the primary is `cursor`/`anchor`).
-    /// `cursor == anchor` is a point caret; otherwise it carries a selection.
-    /// Insert / backspace apply at every caret (replacing each selection) in one
-    /// transaction; any other command (except add-caret) collapses them.
+    // Secondary carets as `(cursor, anchor)` (the primary is `cursor`/`anchor`).
+    // `cursor == anchor` is a point caret; otherwise it carries a selection.
+    // Insert / backspace apply at every caret (replacing each selection) in one
+    // transaction; any other command (except add-caret) collapses them.
     extra_carets: Vec<(usize, usize)>,
 }
 
-/// Auto-pair table: opener → closer. Same-char entries (quotes/backtick) pair too.
+// Auto-pair table: opener → closer. Same-char entries (quotes/backtick) pair too.
 const PAIRS: &[(char, char)] = &[('(', ')'), ('[', ']'), ('{', '}'), ('`', '`'), ('"', '"')];
 
 impl EditorCore {
@@ -168,14 +168,14 @@ impl EditorCore {
         }
     }
 
-    /// Toggle automatic bracket/quote pairing (on by default).
+    // Toggle automatic bracket/quote pairing (on by default).
     pub fn set_auto_pairs(&mut self, on: bool) {
         self.auto_pairs = on;
     }
 
     // ---- multiple cursors ---------------------------------------------------
 
-    /// Add a secondary point caret at `idx` (no-op if it coincides with one).
+    // Add a secondary point caret at `idx` (no-op if it coincides with one).
     pub fn add_caret(&mut self, idx: usize) {
         let idx = idx.min(self.len());
         if idx != self.cursor && !self.extra_carets.iter().any(|&(c, _)| c == idx) {
@@ -183,7 +183,7 @@ impl EditorCore {
         }
     }
 
-    /// Collapse back to the single primary caret.
+    // Collapse back to the single primary caret.
     pub fn clear_extra_carets(&mut self) {
         self.extra_carets.clear();
     }
@@ -192,7 +192,7 @@ impl EditorCore {
         !self.extra_carets.is_empty()
     }
 
-    /// All caret positions (primary + secondaries), sorted — for the host to draw.
+    // All caret positions (primary + secondaries), sorted — for the host to draw.
     pub fn carets(&self) -> Vec<usize> {
         let mut v: Vec<usize> = self.extra_carets.iter().map(|&(c, _)| c).collect();
         v.push(self.cursor);
@@ -201,8 +201,8 @@ impl EditorCore {
         v
     }
 
-    /// Non-empty selections of the *secondary* carets (normalized `(start, end)`),
-    /// for the host to highlight. The primary selection is drawn via `selection()`.
+    // Non-empty selections of the *secondary* carets (normalized `(start, end)`),
+    // for the host to highlight. The primary selection is drawn via `selection()`.
     pub fn extra_selections(&self) -> Vec<(usize, usize)> {
         self.extra_carets
             .iter()
@@ -211,8 +211,8 @@ impl EditorCore {
             .collect()
     }
 
-    /// Normalized `(start, end)` edit regions for every caret (primary + extras),
-    /// sorted by start. A point caret yields an empty `(p, p)` region.
+    // Normalized `(start, end)` edit regions for every caret (primary + extras),
+    // sorted by start. A point caret yields an empty `(p, p)` region.
     fn caret_regions(&self) -> Vec<(usize, usize)> {
         let mut r = Vec::with_capacity(self.extra_carets.len() + 1);
         let (ps, pe) = self.selection_range().unwrap_or((self.cursor, self.cursor));
@@ -225,10 +225,10 @@ impl EditorCore {
         r
     }
 
-    /// Apply one multi-caret edit transaction: at every caret region, remove it
-    /// (its selection, or `back` chars before a point caret) and insert `clean`.
-    /// Left-to-right with a running offset shift keeps positions valid. Carets
-    /// collapse to point carets at each edit's end.
+    // Apply one multi-caret edit transaction: at every caret region, remove it
+    // (its selection, or `back` chars before a point caret) and insert `clean`.
+    // Left-to-right with a running offset shift keeps positions valid. Carets
+    // collapse to point carets at each edit's end.
     fn multi_edit(&mut self, clean: &str, back: usize) {
         let tlen = clean.chars().count();
         let regions = self.caret_regions();
@@ -254,8 +254,8 @@ impl EditorCore {
         self.anchor = None;
     }
 
-    /// Add a caret at the next occurrence of the current selection (à la Ctrl+D).
-    /// With no selection, first select the word under the caret.
+    // Add a caret at the next occurrence of the current selection (à la Ctrl+D).
+    // With no selection, first select the word under the caret.
     fn add_caret_next_match(&mut self) {
         let term = match self.selection_range() {
             None => {
@@ -301,7 +301,7 @@ impl EditorCore {
         }
     }
 
-    /// Load source text verbatim (byte-lossless).
+    // Load source text verbatim (byte-lossless).
     pub fn from_source(src: &str, format: Format) -> Self {
         let mut ed = EditorCore::new(format);
         ed.rope = Rope::from_str(src);
@@ -334,12 +334,12 @@ impl EditorCore {
         self.rope.len_chars() == 0
     }
 
-    /// The raw markdown — exactly what was loaded/typed, byte-for-byte.
+    // The raw markdown — exactly what was loaded/typed, byte-for-byte.
     pub fn text(&self) -> String {
         self.rope.to_string()
     }
 
-    /// In the source-anchored model the source *is* the buffer.
+    // In the source-anchored model the source *is* the buffer.
     pub fn source(&self) -> String {
         self.text()
     }
@@ -382,8 +382,8 @@ impl EditorCore {
         self.cursor = e;
     }
 
-    /// Select the whole line containing `idx` (including its trailing newline, so
-    /// paste reinserts a clean line). Used by triple-click.
+    // Select the whole line containing `idx` (including its trailing newline, so
+    // paste reinserts a clean line). Used by triple-click.
     pub fn select_line_at(&mut self, idx: usize) {
         let line = self.rope.char_to_line(idx.min(self.len()));
         let s = self.rope.line_to_char(line);
@@ -398,13 +398,13 @@ impl EditorCore {
 
     // ---- clipboard contract (portable; host owns the system clipboard) -------
 
-    /// The selected source text (empty if no selection) — what a host puts on the
-    /// clipboard for Copy.
+    // The selected source text (empty if no selection) — what a host puts on the
+    // clipboard for Copy.
     pub fn copy(&self) -> String {
         self.selected_text()
     }
 
-    /// Like [`copy`](Self::copy) but also deletes the selection — for Cut.
+    // Like [`copy`](Self::copy) but also deletes the selection — for Cut.
     pub fn cut(&mut self) -> String {
         let text = self.selected_text();
         if !text.is_empty() {
@@ -414,7 +414,7 @@ impl EditorCore {
         text
     }
 
-    /// Insert clipboard text at the caret (replacing any selection) — for Paste.
+    // Insert clipboard text at the caret (replacing any selection) — for Paste.
     pub fn paste(&mut self, text: &str) {
         self.checkpoint(EditKind::InsertBoundary);
         self.insert(text);
@@ -426,8 +426,8 @@ impl EditorCore {
     // composition; it is injected only into `display_text()` for rendering, with
     // its range available via `preedit_range()` for an underline decoration.
 
-    /// Set/replace the in-flight IME composition. `caret` is the caret offset (in
-    /// chars) within `text`. Starting a composition replaces any active selection.
+    // Set/replace the in-flight IME composition. `caret` is the caret offset (in
+    // chars) within `text`. Starting a composition replaces any active selection.
     pub fn set_preedit(&mut self, text: &str, caret: usize) {
         if self.preedit.is_none() {
             // Begin: a composition replaces the selection (committed edit history).
@@ -449,7 +449,7 @@ impl EditorCore {
         }
     }
 
-    /// Commit the composition (or `text` if given) as a real edit and end it.
+    // Commit the composition (or `text` if given) as a real edit and end it.
     pub fn commit_preedit(&mut self, text: &str) {
         self.preedit = None;
         if !text.is_empty() {
@@ -458,7 +458,7 @@ impl EditorCore {
         }
     }
 
-    /// Cancel the composition with no insertion.
+    // Cancel the composition with no insertion.
     pub fn clear_preedit(&mut self) {
         self.preedit = None;
     }
@@ -467,15 +467,15 @@ impl EditorCore {
         self.preedit.is_some()
     }
 
-    /// The preedit's char range in **display** space, for an underline decoration.
+    // The preedit's char range in **display** space, for an underline decoration.
     pub fn preedit_range(&self) -> Option<(usize, usize)> {
         self.preedit
             .as_ref()
             .map(|p| (p.pos, p.pos + p.text.chars().count()))
     }
 
-    /// The text to render: the buffer with any preedit injected at its position.
-    /// Equals [`text`](Self::text) when not composing.
+    // The text to render: the buffer with any preedit injected at its position.
+    // Equals [`text`](Self::text) when not composing.
     pub fn display_text(&self) -> String {
         match &self.preedit {
             None => self.text(),
@@ -488,7 +488,7 @@ impl EditorCore {
         }
     }
 
-    /// Caret position in **display** space (inside the preedit while composing).
+    // Caret position in **display** space (inside the preedit while composing).
     pub fn display_cursor(&self) -> usize {
         match &self.preedit {
             None => self.cursor,
@@ -496,7 +496,7 @@ impl EditorCore {
         }
     }
 
-    /// Source line index of the display caret (for the styling projection).
+    // Source line index of the display caret (for the styling projection).
     pub fn display_cursor_line(&self) -> usize {
         // char_to_line on the display text would need the injected rope; the
         // preedit is intra-line, so the buffer's caret line is correct.
@@ -506,7 +506,7 @@ impl EditorCore {
 
     // ---- find / replace -----------------------------------------------------
 
-    /// All non-overlapping matches of `query` as char ranges, left to right.
+    // All non-overlapping matches of `query` as char ranges, left to right.
     pub fn find_all(&self, query: &str, opts: SearchOpts) -> Vec<(usize, usize)> {
         let mut out = Vec::new();
         if query.is_empty() {
@@ -540,7 +540,7 @@ impl EditorCore {
         out
     }
 
-    /// First match at/after `from` (wrapping to the top).
+    // First match at/after `from` (wrapping to the top).
     pub fn find_next(&self, from: usize, query: &str, opts: SearchOpts) -> Option<(usize, usize)> {
         let hits = self.find_all(query, opts);
         hits.iter()
@@ -549,7 +549,7 @@ impl EditorCore {
             .copied()
     }
 
-    /// Last match before `from` (wrapping to the bottom).
+    // Last match before `from` (wrapping to the bottom).
     pub fn find_prev(&self, from: usize, query: &str, opts: SearchOpts) -> Option<(usize, usize)> {
         let hits = self.find_all(query, opts);
         hits.iter()
@@ -559,8 +559,8 @@ impl EditorCore {
             .copied()
     }
 
-    /// Replace every match of `query` with `with`, as one undoable edit. Returns
-    /// the number of replacements. Byte-lossless except at the replaced spans.
+    // Replace every match of `query` with `with`, as one undoable edit. Returns
+    // the number of replacements. Byte-lossless except at the replaced spans.
     pub fn replace_all(&mut self, query: &str, with: &str, opts: SearchOpts) -> usize {
         let hits = self.find_all(query, opts);
         if hits.is_empty() {
@@ -577,7 +577,7 @@ impl EditorCore {
         hits.len()
     }
 
-    /// Replace one match span with `with` and select the result (for replace+find).
+    // Replace one match span with `with` and select the result (for replace+find).
     pub fn replace_range(&mut self, range: (usize, usize), with: &str) {
         let (s, e) = range;
         if s > e || e > self.len() {
@@ -592,10 +592,10 @@ impl EditorCore {
 
     // ---- accessibility ------------------------------------------------------
 
-    /// A host-agnostic accessibility snapshot of the editor as a multi-line text
-    /// field. Hosts map this onto their a11y backend (e.g. AccessKit). Offsets are
-    /// **character** indices into `value`. See the `accesskit` feature for a
-    /// ready-made node builder.
+    // A host-agnostic accessibility snapshot of the editor as a multi-line text
+    // field. Hosts map this onto their a11y backend (e.g. AccessKit). Offsets are
+    // **character** indices into `value`. See the `accesskit` feature for a
+    // ready-made node builder.
     pub fn a11y(&self) -> A11ySnapshot {
         let (sel_start, sel_end) = self.selection_range().unwrap_or((self.cursor, self.cursor));
         A11ySnapshot {
@@ -607,8 +607,8 @@ impl EditorCore {
         }
     }
 
-    /// Move the current selection's text to `target` (drag-and-drop). No-op
-    /// without a selection or when the target is inside the selection.
+    // Move the current selection's text to `target` (drag-and-drop). No-op
+    // without a selection or when the target is inside the selection.
     pub fn move_selection_to(&mut self, target: usize) {
         let Some((s, e)) = self.selection_range() else {
             return;
@@ -629,7 +629,7 @@ impl EditorCore {
 
     // ---- styling/decoration views (delegated to the view builder) ----------
 
-    /// Source line index of the caret.
+    // Source line index of the caret.
     pub fn cursor_line(&self) -> usize {
         self.rope.char_to_line(self.cursor)
     }
@@ -785,8 +785,8 @@ impl EditorCore {
         }
     }
 
-    /// Indent (`add`) or outdent every line touched by the selection / caret by
-    /// one [`INDENT`] level. Nests list items; plain lines just shift right/left.
+    // Indent (`add`) or outdent every line touched by the selection / caret by
+    // one [`INDENT`] level. Nests list items; plain lines just shift right/left.
     fn indent_lines(&mut self, add: bool) {
         let (s, e) = self.selection_range().unwrap_or((self.cursor, self.cursor));
         let first = self.rope.char_to_line(s);
@@ -869,9 +869,9 @@ impl EditorCore {
         }
     }
 
-    /// Auto-pairing for a single-char insert. Returns true if it handled the
-    /// insert: wraps a selection, inserts an empty pair with the caret inside, or
-    /// types over a matching closer. Otherwise returns false (normal insert).
+    // Auto-pairing for a single-char insert. Returns true if it handled the
+    // insert: wraps a selection, inserts an empty pair with the caret inside, or
+    // types over a matching closer. Otherwise returns false (normal insert).
     fn auto_pair_insert(&mut self, s: &str) -> bool {
         let mut chars = s.chars();
         let (Some(c), None) = (chars.next(), chars.next()) else {
@@ -911,8 +911,8 @@ impl EditorCore {
         false
     }
 
-    /// Enter with list/quote continuation + exit-on-empty. Returns true if it
-    /// fully handled the key.
+    // Enter with list/quote continuation + exit-on-empty. Returns true if it
+    // fully handled the key.
     fn handle_enter(&mut self) -> bool {
         if self.selection_range().is_some() {
             return false; // normal path replaces the selection
@@ -988,9 +988,9 @@ impl EditorCore {
         }
     }
 
-    /// Rewrite the leading marker of every line touched by the selection (or the
-    /// caret line) to express `kind`. `toggle` flips a matching kind back to a
-    /// plain paragraph.
+    // Rewrite the leading marker of every line touched by the selection (or the
+    // caret line) to express `kind`. `toggle` flips a matching kind back to a
+    // plain paragraph.
     fn set_block(&mut self, kind: BlockKind, toggle: bool) {
         let (s, e) = self.selection_range().unwrap_or((self.cursor, self.cursor));
         let first = self.rope.char_to_line(s);
@@ -1050,7 +1050,7 @@ impl EditorCore {
             .map(|a| (a.min(self.cursor), a.max(self.cursor)))
     }
 
-    /// The word (alphanumeric/underscore run) containing `idx`, as a char range.
+    // The word (alphanumeric/underscore run) containing `idx`, as a char range.
     pub fn word_at(&self, idx: usize) -> (usize, usize) {
         self.word_range(idx)
     }
@@ -1097,7 +1097,7 @@ impl EditorCore {
         }
     }
 
-    /// Previous word boundary: skip separators left, then the word run left.
+    // Previous word boundary: skip separators left, then the word run left.
     fn word_left(&self, idx: usize) -> usize {
         let is_word = |c: char| c.is_alphanumeric() || c == '_';
         let mut j = idx.min(self.len());
@@ -1110,7 +1110,7 @@ impl EditorCore {
         j
     }
 
-    /// Next word boundary: skip separators right, then the word run right.
+    // Next word boundary: skip separators right, then the word run right.
     fn word_right(&self, idx: usize) -> usize {
         let n = self.len();
         let is_word = |c: char| c.is_alphanumeric() || c == '_';
@@ -1204,7 +1204,7 @@ fn block_marker(kind: BlockKind) -> String {
     }
 }
 
-/// Char length of any leading block marker on a line (heading/list/quote).
+// Char length of any leading block marker on a line (heading/list/quote).
 fn existing_marker_len(line: &str) -> usize {
     let t = line;
     // heading
@@ -1237,7 +1237,7 @@ fn existing_marker_len(line: &str) -> usize {
     0
 }
 
-/// Classify a line's current block kind from its leading marker.
+// Classify a line's current block kind from its leading marker.
 fn line_kind(line: &str) -> BlockKind {
     let hashes = line.chars().take_while(|c| *c == '#').count();
     if (1..=6).contains(&hashes) && line[hashes..].starts_with(' ') {
@@ -1275,7 +1275,7 @@ impl Marker {
     }
 }
 
-/// A list/quote marker at the very start of a line (for Enter continuation).
+// A list/quote marker at the very start of a line (for Enter continuation).
 fn leading_marker(line: &str) -> Option<Marker> {
     for (m, k) in [
         ("- ", BlockKind::Bullet),

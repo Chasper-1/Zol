@@ -6,7 +6,7 @@ use crate::segment::{
 };
 use crate::theme::color::Rgba;
 
-/// Создать `TextRun` по битовым флагам стиля.
+// Создать `TextRun` по битовым флагам стиля.
 pub fn text_run_for_style(text: &str, style: u32, base_size: f32) -> TextRun {
     let mut color = shared::TEXT_DEFAULT;
     let mut size = base_size;

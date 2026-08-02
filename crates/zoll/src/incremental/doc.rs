@@ -7,20 +7,20 @@
 use crate::ParsedDoc;
 use crate::viewport::Viewport;
 
-/// Инкрементальный документ.
-///
-/// Единственное поле — `doc: ParsedDoc`. Никаких дополнительных структур.
+// Инкрементальный документ.
+//
+// Единственное поле — `doc: ParsedDoc`. Никаких дополнительных структур.
 pub struct IncrementalDoc {
-    /// Единственный кеш документа.
+    // Единственный кеш документа.
     pub doc: ParsedDoc,
-    /// Исходный текст (для обратной совместимости и быстрого доступа).
+    // Исходный текст (для обратной совместимости и быстрого доступа).
     pub source: String,
-    /// Байтовые начала строк.
+    // Байтовые начала строк.
     pub line_starts: Vec<usize>,
 }
 
 impl IncrementalDoc {
-    /// Создать новый документ из текста.
+    // Создать новый документ из текста.
     pub fn new(text: &str) -> Self {
         let line_starts = build_line_starts(text);
         let doc = ParsedDoc::parse(text);
@@ -31,10 +31,10 @@ impl IncrementalDoc {
         }
     }
 
-    /// Применить правку: удалить `[from..to)` и вставить `text`.
-    ///
-    /// Перепарсивает только затронутые строки.
-    /// Возвращает ссылку на обновлённый `ParsedDoc`.
+    // Применить правку: удалить `[from..to)` и вставить `text`.
+    //
+    // Перепарсивает только затронутые строки.
+    // Возвращает ссылку на обновлённый `ParsedDoc`.
     pub fn edit(&mut self, from: usize, to: usize, text: &str) -> &ParsedDoc {
         let start_line = self.line_at_byte(from);
         let _end_line_old = if to > from {
@@ -76,7 +76,7 @@ impl IncrementalDoc {
         &self.doc
     }
 
-    /// Применить правку и перепарсить только видимый диапазон.
+    // Применить правку и перепарсить только видимый диапазон.
     pub fn edit_visible(
         &mut self,
         from: usize,
@@ -88,7 +88,7 @@ impl IncrementalDoc {
         self.edit(from, to, text)
     }
 
-    /// Получить текст строки по индексу.
+    // Получить текст строки по индексу.
     fn get_line_text(&self, idx: usize) -> &str {
         if idx >= self.line_starts.len() {
             return "";
@@ -107,7 +107,7 @@ impl IncrementalDoc {
         }
     }
 
-    /// Номер строки по байтовой позиции.
+    // Номер строки по байтовой позиции.
     pub fn line_number(&self, byte_pos: usize) -> usize {
         let byte_pos = byte_pos.min(self.source.len());
         match self.line_starts.binary_search(&byte_pos) {
@@ -122,7 +122,7 @@ impl IncrementalDoc {
         }
     }
 
-    /// Количество строк.
+    // Количество строк.
     pub fn num_lines(&self) -> usize {
         self.line_starts.len()
     }
@@ -167,7 +167,7 @@ impl IncrementalDoc {
     }
 }
 
-/// Построить массив начал строк из текста.
+// Построить массив начал строк из текста.
 pub fn build_line_starts(text: &str) -> Vec<usize> {
     let mut starts = vec![0usize];
     for (i, c) in text.char_indices() {

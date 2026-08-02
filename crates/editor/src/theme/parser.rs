@@ -9,7 +9,7 @@ use rhai::Map;
 use super::color::{Rgba, parse_color};
 use super::theme::{EditorTheme, TextTheme};
 
-/// Парсит тему из Rhai-отображения.
+// Парсит тему из Rhai-отображения.
 pub fn parse_theme(rhai: Map) -> EditorTheme {
     let mut padding = 10.0f32;
     let mut radius = 16.0f32;

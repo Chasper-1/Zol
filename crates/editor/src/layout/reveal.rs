@@ -2,7 +2,7 @@
 
 use crate::segment::{MarkerCategory, Segment};
 
-/// Контекст авто-раскрытия маркеров.
+// Контекст авто-раскрытия маркеров.
 #[derive(Clone, Copy)]
 pub struct RevealCtx<'a> {
     pub cursor_raw: Option<usize>,
@@ -21,7 +21,7 @@ impl RevealCtx<'_> {
     }
 }
 
-/// Авто-раскрытие: определена ли позиция курсора рядом с маркерами сегмента.
+// Авто-раскрытие: определена ли позиция курсора рядом с маркерами сегмента.
 pub fn segment_is_revealed(seg: &Segment, line_index: usize, ctx: &RevealCtx) -> bool {
     let Some(cursor) = ctx.cursor_raw else {
         return false;

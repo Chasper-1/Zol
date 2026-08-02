@@ -22,7 +22,7 @@ use iced::Color;
 use iced::advanced::renderer;
 use iced::{Point, Rectangle};
 
-/// Точка входа для `Widget::draw()`.
+// Точка входа для `Widget::draw()`.
 pub fn draw<'a, Renderer>(
     this: &IcedEditor<'a>,
     renderer: &mut Renderer,
@@ -50,7 +50,7 @@ pub fn draw<'a, Renderer>(
     super::cursor::draw_cursor(this, renderer, origin);
 }
 
-/// Перестроить shaped-буфер, если контент изменился.
+// Перестроить shaped-буфер, если контент изменился.
 fn draw_reshape(this: &IcedEditor<'_>, bounds: Rectangle) {
     let needs_reshape = {
         let doc = this.inner.doc.borrow();
@@ -100,7 +100,7 @@ fn draw_reshape(this: &IcedEditor<'_>, bounds: Rectangle) {
     }
 }
 
-/// Заливка фона редактора.
+// Заливка фона редактора.
 fn draw_background<Renderer>(this: &IcedEditor<'_>, renderer: &mut Renderer, bounds: Rectangle)
 where
     Renderer: iced::advanced::text::Renderer<Font = iced::Font>,

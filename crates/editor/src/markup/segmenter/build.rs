@@ -3,7 +3,7 @@ use zoll::ast::{MarkupNode, MarkupStyle};
 use crate::markup::segment::{MarkerCategory, Segment};
 use crate::markup::segmenter::helpers::{combine_style, marker_open_len, to_style_flags};
 
-/// Рекурсивно обходит AST и собирает сегменты.
+// Рекурсивно обходит AST и собирает сегменты.
 pub fn build_segments(
     nodes: &[MarkupNode],
     inherited_style: MarkupStyle,
@@ -96,9 +96,9 @@ pub fn build_segments(
     raw_offset
 }
 
-/// Упрощённый вход: принимает `&[MarkupNode]`, возвращает `Vec<Segment>`.
-///
-/// Используется `incremental.rs` для построчной генерации сегментов из LineAST.
+// Упрощённый вход: принимает `&[MarkupNode]`, возвращает `Vec<Segment>`.
+//
+// Используется `incremental.rs` для построчной генерации сегментов из LineAST.
 pub fn build_segments_from_nodes(nodes: &[MarkupNode], raw_offset: usize) -> Vec<Segment> {
     let mut segments = Vec::new();
     build_segments(

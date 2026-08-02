@@ -1,7 +1,7 @@
 use super::detect::detect_format;
 use super::parse::ColorFormat;
 
-/// Проверяет, что все цвета в списке имеют один и тот же формат.
+// Проверяет, что все цвета в списке имеют один и тот же формат.
 pub fn enforce_consistency(colors: &[&str]) -> Result<ColorFormat, String> {
     let first = colors.first().ok_or("список цветов пуст")?;
     let fmt = detect_format(first)

@@ -1,6 +1,6 @@
-/// Вспомогательные функции для парсеров цветов.
+// Вспомогательные функции для парсеров цветов.
 
-/// Разобрать строку вида `func(a, b, c)` или `func(a, b, c, alpha)`.
+// Разобрать строку вида `func(a, b, c)` или `func(a, b, c, alpha)`.
 pub fn split_func_args<'a>(s: &'a str, name: &str) -> Result<Vec<&'a str>, String> {
     let inner = s
         .trim_start_matches(|c: char| c.is_alphabetic() || c == '_')
@@ -19,7 +19,7 @@ pub fn split_func_args<'a>(s: &'a str, name: &str) -> Result<Vec<&'a str>, Strin
     Ok(parts)
 }
 
-/// Парсит опциональный альфа-канал из 4-го аргумента.
+// Парсит опциональный альфа-канал из 4-го аргумента.
 pub fn parse_alpha(parts: &[&str], name: &str) -> Result<f32, String> {
     if parts.len() == 4 {
         let a: f32 = parts[3]

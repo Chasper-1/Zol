@@ -1,6 +1,6 @@
 use unicode_segmentation::GraphemeCursor;
 
-/// Нормализовать позицию до char-границы (не режет multi-byte).
+// Нормализовать позицию до char-границы (не режет multi-byte).
 pub fn clamp_to_char_boundary(content: &str, pos: usize) -> usize {
     if content.is_empty() {
         return 0;
@@ -19,7 +19,7 @@ pub fn clamp_to_char_boundary(content: &str, pos: usize) -> usize {
     prev
 }
 
-/// Найти предыдущую grapheme-границу (для внешних модулей).
+// Найти предыдущую grapheme-границу (для внешних модулей).
 pub fn prev_grapheme_boundary(content: &str, raw: usize) -> Option<usize> {
     if raw == 0 {
         return None;
@@ -28,7 +28,7 @@ pub fn prev_grapheme_boundary(content: &str, raw: usize) -> Option<usize> {
     gc.prev_boundary(content, 0).ok()?
 }
 
-/// Найти следующую grapheme-границу (для внешних модулей).
+// Найти следующую grapheme-границу (для внешних модулей).
 pub fn next_grapheme_boundary(content: &str, raw: usize) -> Option<usize> {
     if raw >= content.len() {
         return None;

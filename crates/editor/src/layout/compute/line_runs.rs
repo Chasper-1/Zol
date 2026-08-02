@@ -6,12 +6,12 @@ use crate::layout::reveal::{RevealCtx, segment_is_revealed};
 use crate::layout::types::TextRun;
 use crate::theme::EditorTheme;
 
-/// Разобрать строку на стилизованные фрагменты.
-///
-/// Если `show_markers == false` — маркеры скрыты, но автоматически
-/// раскрываются, если курсор рядом (inline) / на той же строке (line) /
-/// внутри того же блока (block). `reveal` — контекст раскрытия;
-/// `None` — маркеры всегда скрыты.
+// Разобрать строку на стилизованные фрагменты.
+//
+// Если `show_markers == false` — маркеры скрыты, но автоматически
+// раскрываются, если курсор рядом (inline) / на той же строке (line) /
+// внутри того же блока (block). `reveal` — контекст раскрытия;
+// `None` — маркеры всегда скрыты.
 #[allow(clippy::too_many_arguments)]
 pub fn compute_line_runs(
     line: &str,
@@ -38,7 +38,7 @@ pub fn compute_line_runs(
     )
 }
 
-/// Разобрать строку + вернуть мета-информацию (скрытые диапазоны).
+// Разобрать строку + вернуть мета-информацию (скрытые диапазоны).
 #[allow(clippy::too_many_arguments)]
 pub fn compute_line_runs_with_meta(
     line: &str,
@@ -70,8 +70,8 @@ pub fn compute_line_runs_with_meta(
     }
 }
 
-/// Внутренняя реализация: если `hidden_out` — Some(&mut Vec), заполняет
-/// его диапазонами скрытых маркеров `[start, end)`.
+// Внутренняя реализация: если `hidden_out` — Some(&mut Vec), заполняет
+// его диапазонами скрытых маркеров `[start, end)`.
 #[allow(clippy::too_many_arguments)]
 fn compute_line_runs_inner(
     line: &str,

@@ -8,8 +8,8 @@
 use sred_core::view::{self, Span};
 use sred_core::{Format, MarkSet};
 
-/// Render markdown with the caret on `caret_line`; return (display lines, deltas,
-/// spans). Display is the concatenation of all span text, re-split on '\n'.
+// Render markdown with the caret on `caret_line`; return (display lines, deltas,
+// spans). Display is the concatenation of all span text, re-split on '\n'.
 fn render(src: &str, caret: usize) -> (Vec<String>, Vec<i32>, Vec<Span>) {
     let (spans, deltas) = view::styled_runs(src, Format::Markdown, 16.0, caret, &[], 0);
     let joined: String = spans.iter().map(|s| s.text.as_str()).collect();
@@ -17,7 +17,7 @@ fn render(src: &str, caret: usize) -> (Vec<String>, Vec<i32>, Vec<Span>) {
     (lines, deltas, spans)
 }
 
-/// Marks covering the (first) span whose text contains `needle`.
+// Marks covering the (first) span whose text contains `needle`.
 fn marks_of(spans: &[Span], needle: &str) -> MarkSet {
     spans
         .iter()

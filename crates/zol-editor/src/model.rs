@@ -35,7 +35,7 @@ impl Format {
 }
 
 bitflags! {
-    /// Inline character-level styling. One run carries the union of its marks.
+    // Inline character-level styling. One run carries the union of its marks.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct MarkSet: u16 {
         const BOLD   = 1 << 0;
@@ -48,7 +48,7 @@ bitflags! {
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct DocMeta {
-    /// The format this document was opened from (drives default-save target).
+    // The format this document was opened from (drives default-save target).
     pub origin: Option<Format>,
 }
 
@@ -72,8 +72,8 @@ pub enum Block {
     },
     BlockQuote(Vec<Block>),
     ThematicBreak,
-    /// Format-specific block we can preserve but not structurally edit
-    /// (e.g. a Typst `#figure(...)` call, or an HTML block in Markdown).
+    // Format-specific block we can preserve but not structurally edit
+    // (e.g. a Typst `#figure(...)` call, or an HTML block in Markdown).
     Raw {
         format: Format,
         src: String,
@@ -90,8 +90,8 @@ pub struct List {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Inline {
     Text(String),
-    /// A run of inline content carrying a set of marks. `link` holds the href
-    /// when `marks` contains `LINK`.
+    // A run of inline content carrying a set of marks. `link` holds the href
+    // when `marks` contains `LINK`.
     Styled {
         marks: MarkSet,
         link: Option<String>,
@@ -117,7 +117,7 @@ impl Document {
         Document::default()
     }
 
-    /// Convenience for tests / quick construction.
+    // Convenience for tests / quick construction.
     pub fn paragraph(text: &str) -> Self {
         Document {
             blocks: vec![Block::Paragraph(vec![Inline::Text(text.to_string())])],
@@ -125,8 +125,8 @@ impl Document {
         }
     }
 
-    /// Flatten the document to plain text (used as a cheap layout/debug view and
-    /// as the basis for the editing rope in later phases).
+    // Flatten the document to plain text (used as a cheap layout/debug view and
+    // as the basis for the editing rope in later phases).
     pub fn plain_text(&self) -> String {
         let mut out = String::new();
         for (i, b) in self.blocks.iter().enumerate() {

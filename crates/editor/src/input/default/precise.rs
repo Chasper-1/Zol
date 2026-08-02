@@ -4,8 +4,8 @@ use super::r#trait::InputModel;
 #[derive(Debug)]
 pub struct PreciseInput;
 
-/// Делегирует базовые move/delete FastInput,
-/// а word-операции использует precise (с учётом is_word_char).
+// Делегирует базовые move/delete FastInput,
+// а word-операции использует precise (с учётом is_word_char).
 impl InputModel for PreciseInput {
     // ─── Move (delegate basic to FastInput) ────────────────
 

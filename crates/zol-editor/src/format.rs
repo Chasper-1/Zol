@@ -6,8 +6,8 @@
 use crate::model::{Document, Format};
 
 bitflags::bitflags! {
-    /// What a backend can faithfully represent. Used to decide when to fall back
-    /// to a `Raw` node rather than silently dropping content.
+    // What a backend can faithfully represent. Used to decide when to fall back
+    // to a `Raw` node rather than silently dropping content.
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct Caps: u32 {
         const HEADINGS    = 1 << 0;
@@ -46,7 +46,7 @@ pub trait DocumentFormat {
     fn serialize(&self, doc: &Document) -> Result<String, FormatError>;
 }
 
-/// Resolve a backend by format id.
+// Resolve a backend by format id.
 pub fn backend_for(format: Format) -> Box<dyn DocumentFormat> {
     match format {
         Format::Markdown => Box::new(crate::markdown::Markdown),

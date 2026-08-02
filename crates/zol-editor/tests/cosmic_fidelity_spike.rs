@@ -28,8 +28,8 @@ fn reconstruct(buf: &Buffer) -> String {
     out
 }
 
-/// Lossless extraction with the single documented guard: an empty buffer is one
-/// default-`Lf` line, so reconstruct `""` for that degenerate case.
+// Lossless extraction with the single documented guard: an empty buffer is one
+// default-`Lf` line, so reconstruct `""` for that degenerate case.
 fn buffer_text(buf: &Buffer) -> String {
     if buf.lines.len() == 1 && buf.lines[0].text().is_empty() {
         return String::new();

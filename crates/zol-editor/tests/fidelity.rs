@@ -6,8 +6,8 @@
 
 use sred_core::{Command, EditorCore, Format, Motion};
 
-/// A spread of real-world markdown shapes that a structured/reconstructive editor
-/// would silently normalize.
+// A spread of real-world markdown shapes that a structured/reconstructive editor
+// would silently normalize.
 const CORPUS: &[&str] = &[
     "",
     "plain text with no trailing newline",

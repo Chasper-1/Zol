@@ -7,16 +7,16 @@
 
 use crate::cache::MarkupCache;
 
-/// Если `raw` находится внутри маркера какого-либо сегмента,
-/// возвращает первый байт содержимого этого сегмента.
-/// Иначе возвращает `raw` без изменений.
-///
-/// Сегмент в MarkupCache:
-///   - raw_start … raw_end — область контента
-///   - left_marker_len — длина левого маркера, который расположен
-///     в промежутке [raw_start - left_marker_len, raw_start)
-///   - right_marker_len — длина правого маркера, расположенного
-///     в промежутке [raw_end - right_marker_len, raw_end)
+// Если `raw` находится внутри маркера какого-либо сегмента,
+// возвращает первый байт содержимого этого сегмента.
+// Иначе возвращает `raw` без изменений.
+//
+// Сегмент в MarkupCache:
+//   - raw_start … raw_end — область контента
+//   - left_marker_len — длина левого маркера, который расположен
+//     в промежутке [raw_start - left_marker_len, raw_start)
+//   - right_marker_len — длина правого маркера, расположенного
+//     в промежутке [raw_end - right_marker_len, raw_end)
 pub fn snap_forward(raw: usize, line_cache: &MarkupCache) -> usize {
     for seg in &line_cache.segments {
         let seg_start = seg.raw_start;
@@ -36,8 +36,8 @@ pub fn snap_forward(raw: usize, line_cache: &MarkupCache) -> usize {
     raw
 }
 
-/// Если `raw` находится внутри маркера, возвращает позицию сразу за
-/// концом правого маркера (т.е. на начале следующего за сегментом текста).
+// Если `raw` находится внутри маркера, возвращает позицию сразу за
+// концом правого маркера (т.е. на начале следующего за сегментом текста).
 pub fn snap_backward(raw: usize, line_cache: &MarkupCache) -> usize {
     for seg in &line_cache.segments {
         let seg_start = seg.raw_start;
@@ -57,8 +57,8 @@ pub fn snap_backward(raw: usize, line_cache: &MarkupCache) -> usize {
     raw
 }
 
-/// Как `snap_forward`, но также учитывает заголовки `#N#` (их нет в кеше).
-/// `line` — текст строки, `line_start` — её байтовый оффсет в документе.
+// Как `snap_forward`, но также учитывает заголовки `#N#` (их нет в кеше).
+// `line` — текст строки, `line_start` — её байтовый оффсет в документе.
 pub fn snap_forward_line(
     raw: usize,
     line: &str,
@@ -85,7 +85,7 @@ pub fn snap_forward_line(
     snap_forward(raw, line_cache)
 }
 
-/// Проверить, находится ли `raw` внутри какого-либо маркера.
+// Проверить, находится ли `raw` внутри какого-либо маркера.
 pub fn is_on_marker(raw: usize, line_cache: &MarkupCache) -> bool {
     for seg in &line_cache.segments {
         let seg_start = seg.raw_start;

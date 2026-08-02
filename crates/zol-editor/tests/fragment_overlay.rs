@@ -10,8 +10,8 @@ use sred_core::api::FragmentImage;
 use sred_core::view::MathFragment;
 use sred_core::{Editor, Format};
 
-/// Deterministic fragment image: a gradient with a left transparent margin (so the
-/// alpha-skip and blend paths are both exercised). Same input → same pixels.
+// Deterministic fragment image: a gradient with a left transparent margin (so the
+// alpha-skip and blend paths are both exercised). Same input → same pixels.
 fn gradient(w: u32, h: u32) -> FragmentImage {
     let mut rgba = vec![0u8; (w * h * 4) as usize];
     for y in 0..h {

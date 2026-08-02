@@ -1,6 +1,6 @@
 pub mod convert;
 
-/// Описание одной ручки темы.
+// Описание одной ручки темы.
 #[derive(Debug, Clone)]
 pub struct Handle<T> {
     pub category: &'static str,
@@ -9,13 +9,13 @@ pub struct Handle<T> {
 }
 
 impl<T> Handle<T> {
-    /// Строковый ключ для использования в `ThemeSystem`.
+    // Строковый ключ для использования в `ThemeSystem`.
     pub fn key(&self) -> String {
         format!("{}.{}", self.category, self.name)
     }
 }
 
-/// Типизированное значение ручки внутри [`ThemeSystem`].
+// Типизированное значение ручки внутри [`ThemeSystem`].
 #[derive(Debug, Clone)]
 pub enum HandleValue {
     Float(f32),
@@ -23,7 +23,7 @@ pub enum HandleValue {
     String(String),
 }
 
-/// Система управления ручками темы.
+// Система управления ручками темы.
 #[derive(Debug, Clone)]
 pub struct ThemeSystem {
     values: std::collections::HashMap<String, HandleValue>,

@@ -57,8 +57,8 @@ impl DocumentFormat for Typst {
 
 // ---- parse: green tree -> model -------------------------------------------
 
-/// Walk a Markup node's children, accumulating inline content into `para` and
-/// pushing block-level constructs (headings, code, lists) into `blocks`.
+// Walk a Markup node's children, accumulating inline content into `para` and
+// pushing block-level constructs (headings, code, lists) into `blocks`.
 fn flush_markup(node: &SyntaxNode, blocks: &mut Vec<Block>, para: &mut Vec<Inline>) {
     for child in node.children() {
         match child.kind() {
@@ -200,8 +200,8 @@ fn push_list_item(blocks: &mut Vec<Block>, ordered: bool, item: Vec<Block>) {
     }));
 }
 
-/// Reconstruct a node's source by concatenating its leaf text (the green tree is
-/// lossless, so this recovers the exact bytes).
+// Reconstruct a node's source by concatenating its leaf text (the green tree is
+// lossless, so this recovers the exact bytes).
 fn node_text(node: &SyntaxNode) -> String {
     if node.children().len() == 0 {
         return node.text().to_string();

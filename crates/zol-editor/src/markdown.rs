@@ -64,7 +64,7 @@ struct TreeBuilder<'a> {
 }
 
 impl<'a> TreeBuilder<'a> {
-    /// Parse blocks until we hit the `End` matching `stop` (or run out).
+    // Parse blocks until we hit the `End` matching `stop` (or run out).
     fn parse_blocks(&mut self, stop: Option<&TagEnd>) -> Vec<Block> {
         let mut blocks = Vec::new();
         while let Some(ev) = self.iter.peek() {

@@ -42,7 +42,7 @@ fn shaped_live(text: &str, cache: &DocumentCache, reveal: Option<&RevealCtx>) ->
     doc
 }
 
-/// Cache for `"**bold**"`: one Segment at raw_start=2, raw_end=6, left_marker_len=2.
+// Cache for `"**bold**"`: one Segment at raw_start=2, raw_end=6, left_marker_len=2.
 fn cache_bold() -> DocumentCache {
     DocumentCache {
         lines: vec![MarkupCache {

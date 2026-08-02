@@ -11,7 +11,7 @@ use zoll::incremental::IncrementalDoc;
 mod helpers;
 use helpers::make_plain;
 
-/// O(log n) — через `line_starts.binary_search()`.
+// O(log n) — через `line_starts.binary_search()`.
 fn bench_line_number_middle(c: &mut Criterion) {
     let text = make_plain(10000);
     let doc = IncrementalDoc::new(&text);
@@ -24,7 +24,7 @@ fn bench_line_number_middle(c: &mut Criterion) {
     });
 }
 
-/// O(log n) — начало документа.
+// O(log n) — начало документа.
 fn bench_line_number_start(c: &mut Criterion) {
     let text = make_plain(10000);
     let doc = IncrementalDoc::new(&text);
@@ -36,7 +36,7 @@ fn bench_line_number_start(c: &mut Criterion) {
     });
 }
 
-/// O(log n) — конец документа.
+// O(log n) — конец документа.
 fn bench_line_number_end(c: &mut Criterion) {
     let text = make_plain(10000);
     let doc = IncrementalDoc::new(&text);
@@ -49,7 +49,7 @@ fn bench_line_number_end(c: &mut Criterion) {
     });
 }
 
-/// Эмуляция старого O(n) подхода: count newlines.
+// Эмуляция старого O(n) подхода: count newlines.
 fn bench_scan_newlines(c: &mut Criterion) {
     let text = make_plain(10000);
     let doc = IncrementalDoc::new(&text);

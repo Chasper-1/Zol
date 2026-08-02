@@ -2,12 +2,12 @@
 
 use super::HandleValue;
 
-/// Преобразование значения в [`HandleValue`].
+// Преобразование значения в [`HandleValue`].
 pub trait IntoHandleValue {
     fn into_handle_value(self) -> HandleValue;
 }
 
-/// Обратное преобразование из [`HandleValue`].
+// Обратное преобразование из [`HandleValue`].
 pub trait FromHandleValue: Sized {
     fn from_handle_value(v: &HandleValue) -> Option<Self>;
 }

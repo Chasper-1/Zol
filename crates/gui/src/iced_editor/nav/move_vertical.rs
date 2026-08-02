@@ -2,7 +2,7 @@ use super::cursor_x::cursor_x_on_line;
 use super::raw_at_x::raw_at_x_on_line;
 use crate::iced_editor::EditorInner;
 
-/// Переместить курсор на строку `target_line`, сохраняя пиксельную X.
+// Переместить курсор на строку `target_line`, сохраняя пиксельную X.
 pub fn move_vertical(inner: &EditorInner, target_line: usize) {
     let x = {
         let doc = inner.doc.borrow();

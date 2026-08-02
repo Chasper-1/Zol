@@ -9,24 +9,24 @@ use crate::cursor::Cursor;
 use crate::input::default::InputModel;
 use zoll::incremental::IncrementalDoc;
 
-/// Состояние редактируемого документа.
-///
-/// Содержит только то, что нужно API-операциям (move, insert, delete).
-/// Всё, что связано с рендерингом (ShapedDocument, DocumentCache) —
-/// в `gui::iced_editor::EditorInner`.
+// Состояние редактируемого документа.
+//
+// Содержит только то, что нужно API-операциям (move, insert, delete).
+// Всё, что связано с рендерингом (ShapedDocument, DocumentCache) —
+// в `gui::iced_editor::EditorInner`.
 pub struct Document {
-    /// Инкрементальный парсер: source + line_starts + line_asts + merged_ast.
+    // Инкрементальный парсер: source + line_starts + line_asts + merged_ast.
     pub incremental: IncrementalDoc,
-    /// Позиция курсора (байт, строка, визуальная колонка).
+    // Позиция курсора (байт, строка, визуальная колонка).
     pub cursor: Cursor,
-    /// Флаг: нужно перестроить ShapedDocument.
+    // Флаг: нужно перестроить ShapedDocument.
     pub dirty: bool,
-    /// Модель управления (Fast, Precise и т.д.).
+    // Модель управления (Fast, Precise и т.д.).
     pub input: Box<dyn InputModel>,
 }
 
 impl Document {
-    /// Создать новый документ из текста.
+    // Создать новый документ из текста.
     pub fn new(text: &str) -> Self {
         Self {
             incremental: IncrementalDoc::new(text),
@@ -36,14 +36,14 @@ impl Document {
         }
     }
 
-    /// Получить сырой текст документа.
+    // Получить сырой текст документа.
     pub fn content(&self) -> &str {
         &self.incremental.source
     }
 
     // ─── Обёртки для cursor + content (borrow-checker helper) ────────
 
-    /// Установить курсор на байт (с проверкой границ).
+    // Установить курсор на байт (с проверкой границ).
     pub fn set_cursor_raw(&mut self, raw: usize) {
         let (src, ls) = (&self.incremental.source, &self.incremental.line_starts);
         self.cursor.set_raw(src, ls, raw);
@@ -51,7 +51,7 @@ impl Document {
 
     // ─── Move ─────────────────────────────────────────────
 
-    /// Двигать курсор влево.
+    // Двигать курсор влево.
     pub fn move_left(&mut self) {
         let raw = self.cursor.raw();
         let new = self.input.move_left(self.content(), raw);
@@ -60,7 +60,7 @@ impl Document {
         self.cursor.clear_selection();
     }
 
-    /// Двигать курсор вправо.
+    // Двигать курсор вправо.
     pub fn move_right(&mut self) {
         let raw = self.cursor.raw();
         let new = self.input.move_right(self.content(), raw);
@@ -69,7 +69,7 @@ impl Document {
         self.cursor.clear_selection();
     }
 
-    /// В начало строки.
+    // В начало строки.
     pub fn move_home(&mut self) {
         let line = self.cursor.line();
         let new = self.input.move_home(&self.incremental.line_starts, line);
@@ -79,7 +79,7 @@ impl Document {
         self.cursor.clear_selection();
     }
 
-    /// В конец строки.
+    // В конец строки.
     pub fn move_end(&mut self) {
         let line = self.cursor.line();
         let new = self
@@ -91,7 +91,7 @@ impl Document {
         self.cursor.clear_selection();
     }
 
-    /// Вверх (с сохранением колонки).
+    // Вверх (с сохранением колонки).
     pub fn move_up(&mut self) {
         let raw = self.cursor.raw();
         let line = self.cursor.line();
@@ -109,7 +109,7 @@ impl Document {
         self.cursor.clear_selection();
     }
 
-    /// Вниз (с сохранением колонки).
+    // Вниз (с сохранением колонки).
     pub fn move_down(&mut self) {
         let raw = self.cursor.raw();
         let line = self.cursor.line();
@@ -127,7 +127,7 @@ impl Document {
         self.cursor.clear_selection();
     }
 
-    /// Влево на слово.
+    // Влево на слово.
     pub fn move_word_left(&mut self) {
         let raw = self.cursor.raw();
         let new = self.input.word_left(self.content(), raw);
@@ -139,7 +139,7 @@ impl Document {
         }
     }
 
-    /// Вправо на слово.
+    // Вправо на слово.
     pub fn move_word_right(&mut self) {
         let raw = self.cursor.raw();
         let new = self.input.word_right(self.content(), raw);
@@ -287,8 +287,8 @@ impl Document {
 
     // ─── Выделение ─────────────────────────────────────
 
-    /// Удалить выделенный текст, если он есть.
-    /// Возвращает `true`, если что-то удалено.
+    // Удалить выделенный текст, если он есть.
+    // Возвращает `true`, если что-то удалено.
     pub fn delete_selection(&mut self) -> bool {
         if let Some((start, end)) = self.cursor.selection_range() {
             self.incremental.edit(start, end, "");
@@ -302,7 +302,7 @@ impl Document {
         }
     }
 
-    /// Выделить весь текст.
+    // Выделить весь текст.
     pub fn select_all(&mut self) {
         if self.content().is_empty() {
             return;
@@ -316,8 +316,8 @@ impl Document {
 
     // ─── Вставка (selection-aware) ─────────────────────
 
-    /// Вставить текст в позицию курсора.
-    /// Если есть выделение — заменяет его.
+    // Вставить текст в позицию курсора.
+    // Если есть выделение — заменяет его.
     pub fn insert_text(&mut self, text: &str) {
         self.delete_selection();
         let raw = self.cursor.raw();
@@ -327,7 +327,7 @@ impl Document {
         self.dirty = true;
     }
 
-    /// Вставить `\n` в позицию курсора (selection-aware).
+    // Вставить `\n` в позицию курсора (selection-aware).
     pub fn insert_newline(&mut self) {
         self.delete_selection();
         let raw = self.cursor.raw();
@@ -340,8 +340,8 @@ impl Document {
 
     // ─── Удаление (selection-aware) ────────────────────
 
-    /// Удалить grapheme перед курсором (Backspace).
-    /// Если есть выделение — удаляет его.
+    // Удалить grapheme перед курсором (Backspace).
+    // Если есть выделение — удаляет его.
     pub fn delete_before_cursor(&mut self) {
         if self.delete_selection() {
             return;
@@ -356,8 +356,8 @@ impl Document {
         }
     }
 
-    /// Удалить grapheme после курсора (Delete).
-    /// Если есть выделение — удаляет его.
+    // Удалить grapheme после курсора (Delete).
+    // Если есть выделение — удаляет его.
     pub fn delete_after_cursor(&mut self) {
         if self.delete_selection() {
             return;
@@ -370,7 +370,7 @@ impl Document {
         }
     }
 
-    /// Удалить слово перед курсором (Ctrl+Backspace).
+    // Удалить слово перед курсором (Ctrl+Backspace).
     pub fn delete_word_before(&mut self) {
         if self.delete_selection() {
             return;
@@ -385,7 +385,7 @@ impl Document {
         }
     }
 
-    /// Удалить слово после курсора (Ctrl+Delete).
+    // Удалить слово после курсора (Ctrl+Delete).
     pub fn delete_word_after(&mut self) {
         if self.delete_selection() {
             return;
@@ -398,7 +398,7 @@ impl Document {
         }
     }
 
-    /// Удалить всю текущую строку (Ctrl+Shift+Backspace).
+    // Удалить всю текущую строку (Ctrl+Shift+Backspace).
     pub fn delete_line(&mut self) {
         let line = self.cursor.line();
         if let Some((start, end)) =
@@ -413,7 +413,7 @@ impl Document {
         }
     }
 
-    /// Удалить от курсора до конца строки (Ctrl+Shift+Delete).
+    // Удалить от курсора до конца строки (Ctrl+Shift+Delete).
     pub fn delete_to_line_end(&mut self) {
         if self.delete_selection() {
             return;
@@ -431,7 +431,7 @@ impl Document {
 
     // ─── O(1) line helpers via IncrementalDoc.line_starts ────────
 
-    /// Границы строки (start..end) по индексу.
+    // Границы строки (start..end) по индексу.
     pub fn line_bounds(&self, line: usize) -> Option<crate::utils::LineBounds> {
         let starts = &self.incremental.line_starts;
         let start = *starts.get(line)?;
@@ -442,13 +442,13 @@ impl Document {
         Some(crate::utils::LineBounds { start, end })
     }
 
-    /// Текст строки по индексу.
+    // Текст строки по индексу.
     pub fn line_text(&self, line: usize) -> Option<&str> {
         self.line_bounds(line)
             .map(|b| unsafe { self.incremental.source.get_unchecked(b.start..b.end) })
     }
 
-    /// Номер строки, содержащей байтовую позицию (O(log n) бинарный поиск).
+    // Номер строки, содержащей байтовую позицию (O(log n) бинарный поиск).
     pub fn line_of_byte(&self, byte: usize) -> usize {
         let starts = &self.incremental.line_starts;
         if self.incremental.source.is_empty() || starts.is_empty() || byte == 0 {
@@ -462,7 +462,7 @@ impl Document {
         }
     }
 
-    /// Конечный байт строки (позиция после последнего символа, без \n).
+    // Конечный байт строки (позиция после последнего символа, без \n).
     pub fn line_end_byte(&self, line: usize) -> usize {
         self.line_bounds(line).map(|b| b.end).unwrap_or(0)
     }

@@ -21,22 +21,22 @@ use cosmic_text::fontdb;
 pub(crate) struct FontGlobal {
     pub font_system: cosmic_text::FontSystem,
     pub swash_cache: cosmic_text::SwashCache,
-    /// Счётчик вызовов shape для периодической очистки SwashCache.
+    // Счётчик вызовов shape для периодической очистки SwashCache.
     pub shape_count: u64,
 }
 
-/// Максимальное количество вызовов shape между очистками SwashCache.
+// Максимальное количество вызовов shape между очистками SwashCache.
 const SWASH_CACHE_RESET_INTERVAL: u64 = 100;
 
-/// Глобальный синглтон. Инициализируется один раз в [`init()`].
+// Глобальный синглтон. Инициализируется один раз в [`init()`].
 static GLOBAL: OnceLock<Mutex<FontGlobal>> = OnceLock::new();
 
-/// Получить ссылку на глобальный мьютекс (паникует, если не инициализирован).
+// Получить ссылку на глобальный мьютекс (паникует, если не инициализирован).
 pub fn lock() -> &'static Mutex<FontGlobal> {
     GLOBAL.get().expect("font::init() must be called first")
 }
 
-/// Проинициализировать глобальный `FontSystem`.
+// Проинициализировать глобальный `FontSystem`.
 pub fn init() {
     GLOBAL.get_or_init(|| {
         let mut db = fontdb::Database::new();
@@ -77,7 +77,7 @@ pub fn init() {
     });
 }
 
-/// Периодический сброс SwashCache для предотвращения бесконтрольного роста.
+// Периодический сброс SwashCache для предотвращения бесконтрольного роста.
 pub fn after_shape() {
     let mut guard = lock().lock().unwrap();
     guard.shape_count += 1;
@@ -87,7 +87,7 @@ pub fn after_shape() {
     }
 }
 
-/// Найти файл шрифта для семейства через fc-match.
+// Найти файл шрифта для семейства через fc-match.
 fn resolve_font_file(family: &str) -> Option<std::path::PathBuf> {
     let out = std::process::Command::new("fc-match")
         .args(["-f", "%{file}", family])

@@ -1,9 +1,9 @@
 use editor::render::ShapedDocument;
 
-/// X-позиция курсора на строке `line` по глифам буфера.
-///
-/// Учитывает компенсацию: если на строке есть скрытые маркеры,
-/// буферный `byte_in_line` транслируется в shaped-оффсет.
+// X-позиция курсора на строке `line` по глифам буфера.
+//
+// Учитывает компенсацию: если на строке есть скрытые маркеры,
+// буферный `byte_in_line` транслируется в shaped-оффсет.
 pub fn cursor_x_on_line(shaped: &ShapedDocument, line: usize, byte_in_line: usize) -> f32 {
     // Компенсация: буферный оффсет → shaped-оффсет
     let shaped_byte = shaped

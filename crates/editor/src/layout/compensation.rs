@@ -9,18 +9,18 @@
 //! - Позиции внутри скрытых **открывающих** маркеров → snap к началу контента
 //! - Позиции внутри скрытых **закрывающих** маркеров → snap к концу контента
 
-/// Предвычисленная компенсация для одной строки.
+// Предвычисленная компенсация для одной строки.
 #[derive(Debug, Clone)]
 pub struct LineCompensation {
-    /// Байтовые диапазоны в исходной строке, которые скрыты (не рендерятся).
-    /// Сортированы, не пересекаются.
+    // Байтовые диапазоны в исходной строке, которые скрыты (не рендерятся).
+    // Сортированы, не пересекаются.
     hidden_ranges: Vec<(usize, usize)>,
-    /// Общая длина исходной строки в байтах.
+    // Общая длина исходной строки в байтах.
     line_len: usize,
 }
 
 impl LineCompensation {
-    /// Создать identity-компенсацию (ничего не скрыто).
+    // Создать identity-компенсацию (ничего не скрыто).
     pub fn identity(line_len: usize) -> Self {
         Self {
             hidden_ranges: vec![],
@@ -28,7 +28,7 @@ impl LineCompensation {
         }
     }
 
-    /// Создать из скрытых диапазонов.
+    // Создать из скрытых диапазонов.
     pub fn new(hidden_ranges: Vec<(usize, usize)>, line_len: usize) -> Self {
         debug_assert!(
             hidden_ranges.windows(2).all(|w| w[0].1 <= w[1].0),
@@ -40,20 +40,20 @@ impl LineCompensation {
         }
     }
 
-    /// Общее количество скрытых байт.
+    // Общее количество скрытых байт.
     pub fn hidden_len(&self) -> usize {
         self.hidden_ranges.iter().map(|&(s, e)| e - s).sum()
     }
 
-    /// Компенсация identity (ничего не скрыто)?
+    // Компенсация identity (ничего не скрыто)?
     pub fn is_identity(&self) -> bool {
         self.hidden_ranges.is_empty()
     }
 
-    /// Преобразовать буферный оффсет в shaped-оффсет.
-    ///
-    /// Для позиций внутри скрытых маркеров возвращает оффсет
-    /// ближайшего видимого контента.
+    // Преобразовать буферный оффсет в shaped-оффсет.
+    //
+    // Для позиций внутри скрытых маркеров возвращает оффсет
+    // ближайшего видимого контента.
     pub fn buffer_to_shaped(&self, buffer_pos: usize) -> usize {
         let mut hidden_before = 0;
         for &(start, end) in &self.hidden_ranges {
@@ -71,11 +71,11 @@ impl LineCompensation {
             .min(self.line_len - self.hidden_len())
     }
 
-    /// Преобразовать shaped-оффсет в буферный оффсет.
-    ///
-    /// Возвращает позицию первого байта контента (пропуская скрытые
-    /// открывающие маркеры) или позицию после контента (перед скрытыми
-    /// закрывающими маркерами).
+    // Преобразовать shaped-оффсет в буферный оффсет.
+    //
+    // Возвращает позицию первого байта контента (пропуская скрытые
+    // открывающие маркеры) или позицию после контента (перед скрытыми
+    // закрывающими маркерами).
     pub fn shaped_to_buffer(&self, shaped_pos: usize) -> usize {
         let visible_len = self.line_len - self.hidden_len();
 
@@ -107,11 +107,11 @@ impl LineCompensation {
     }
 }
 
-/// Результат `compute_line_runs_with_meta` — runs + скрытые диапазоны.
+// Результат `compute_line_runs_with_meta` — runs + скрытые диапазоны.
 pub struct LineRunsResult {
-    /// Стилизованные фрагменты строки.
+    // Стилизованные фрагменты строки.
     pub runs: Vec<crate::layout::TextRun>,
-    /// Скрытые диапазоны маркеров (для компенсации).
+    // Скрытые диапазоны маркеров (для компенсации).
     pub hidden_ranges: Vec<(usize, usize)>,
 }
 

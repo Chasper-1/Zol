@@ -19,12 +19,12 @@ use cosmic_text::Buffer;
 use crate::layout::LineCompensation;
 use crate::layout::TextRun;
 
-/// Сформованный документ — обёртка над cosmic-text `Buffer`.
+// Сформованный документ — обёртка над cosmic-text `Buffer`.
 #[derive(Debug)]
 pub struct ShapedDocument {
     pub buffer: Buffer,
     pub line_runs: Vec<Vec<TextRun>>,
-    /// Компенсация смещения для каждой строки (буфер → shaped).
+    // Компенсация смещения для каждой строки (буфер → shaped).
     pub compensation: Vec<LineCompensation>,
 }
 

@@ -20,14 +20,14 @@ pub const STYLE_COMMENT: StyleFlags = 1 << 11;
 pub const STYLE_FORMULA: StyleFlags = 1 << 12;
 pub const STYLE_DISPLAY_FORMULA: StyleFlags = 1 << 13;
 
-/// Категория маркера для авто-раскрытия.
+// Категория маркера для авто-раскрытия.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MarkerCategory {
-    /// **, //, $ — рядом с курсором
+    // **, //, $ — рядом с курсором
     Inline,
-    /// %% до конца строки, #N#, $$, !! — курсор на строке
+    // %% до конца строки, #N#, $$, !! — курсор на строке
     Line,
-    /// %%%..%%%, $$$..$$$, внутри блоков
+    // %%%..%%%, $$$..$$$, внутри блоков
     Block,
 }
 
@@ -43,6 +43,6 @@ pub struct Segment {
     pub raw_start: usize,
     pub raw_end: usize,
 
-    /// Категория для авто-раскрытия маркеров.
+    // Категория для авто-раскрытия маркеров.
     pub category: MarkerCategory,
 }

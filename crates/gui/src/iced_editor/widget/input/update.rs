@@ -4,7 +4,7 @@ use iced::advanced::Layout;
 use iced::advanced::{Shell, mouse as iced_mouse};
 use iced::{Event, Point, Rectangle};
 
-/// Точка входа для `Widget::update()`.
+// Точка входа для `Widget::update()`.
 pub fn update<'a, Message>(
     this: &mut IcedEditor<'a>,
     event: &Event,
@@ -26,7 +26,7 @@ pub fn update<'a, Message>(
     }
 }
 
-/// Проверить, виден ли курсор, и если нет — скорректировать `scroll_y`.
+// Проверить, виден ли курсор, и если нет — скорректировать `scroll_y`.
 pub(crate) fn auto_scroll(this: &IcedEditor<'_>, bounds: Rectangle) {
     let cursor_line = this.inner.doc.borrow().cursor.line();
     let new_scroll_y = scroll::ensure_cursor_visible(

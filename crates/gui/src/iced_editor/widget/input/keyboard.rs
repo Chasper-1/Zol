@@ -13,12 +13,12 @@ use editor::state::EditMode;
 use super::auto_scroll;
 use crate::iced_editor::widget::editor::IcedEditor;
 
-/// Применить замыкание к документу в `edit_doc` и запросить redraw.
+// Применить замыкание к документу в `edit_doc` и запросить redraw.
 fn edit(this: &mut IcedEditor<'_>, f: impl FnOnce(&mut editor::document::Document)) {
     this.inner.edit_doc(f);
 }
 
-/// Переместить курсор и пометить документ как грязный для перешейпа.
+// Переместить курсор и пометить документ как грязный для перешейпа.
 fn move_cursor(this: &mut IcedEditor<'_>, f: impl FnOnce(&mut editor::document::Document)) {
     let mut doc = this.inner.doc.borrow_mut();
     f(&mut *doc);

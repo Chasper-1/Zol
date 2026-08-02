@@ -2,17 +2,17 @@ use zoll::ast::MarkupStyle;
 
 use crate::markup::segment::StyleFlags;
 
-/// Комбинирует стили (наследование).
+// Комбинирует стили (наследование).
 pub fn combine_style(parent: MarkupStyle, child: MarkupStyle) -> MarkupStyle {
     MarkupStyle(parent.bits() | child.bits())
 }
 
-/// Преобразует AST-стиль в StyleFlags редактора.
+// Преобразует AST-стиль в StyleFlags редактора.
 pub fn to_style_flags(style: MarkupStyle) -> StyleFlags {
     style.bits()
 }
 
-/// Длина открывающего маркера по стилю.
+// Длина открывающего маркера по стилю.
 pub fn marker_open_len(style: MarkupStyle) -> usize {
     for m in zoll::ast::MARKERS {
         if m.style == style {

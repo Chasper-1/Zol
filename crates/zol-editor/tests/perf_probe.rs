@@ -46,11 +46,11 @@ fn keystroke_cost_vs_doc_length() {
     println!("(linear growth ⇒ shaping/scan dominate; flat ⇒ already viewport-bound)");
 }
 
-/// Attribute per-keystroke cost: a content **edit** (analyze cache miss → full
-/// re-analyze + full span rebuild) vs a **caret move** (analyze cache hit →
-/// per-line project cache mostly hits, but spans are still produced for the whole
-/// document). The gap = analyze cost; the caret-move floor = the O(doc) span +
-/// project-cache work that runs every render regardless. Targets #18.
+// Attribute per-keystroke cost: a content **edit** (analyze cache miss → full
+// re-analyze + full span rebuild) vs a **caret move** (analyze cache hit →
+// per-line project cache mostly hits, but spans are still produced for the whole
+// document). The gap = analyze cost; the caret-move floor = the O(doc) span +
+// project-cache work that runs every render regardless. Targets #18.
 #[test]
 #[ignore]
 fn edit_vs_caretmove_attribution() {

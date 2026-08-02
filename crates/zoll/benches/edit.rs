@@ -12,7 +12,7 @@ use zoll::viewport::Viewport;
 mod helpers;
 use helpers::make_plain;
 
-/// Вставить один символ в середину большого документа через `edit()`.
+// Вставить один символ в середину большого документа через `edit()`.
 fn bench_edit_one_char_middle(c: &mut Criterion) {
     let text = make_plain(5000);
     let mut doc = IncrementalDoc::new(&text);
@@ -26,7 +26,7 @@ fn bench_edit_one_char_middle(c: &mut Criterion) {
     });
 }
 
-/// Вставить один символ в середину через `edit_visible()` с viewport 50 строк.
+// Вставить один символ в середину через `edit_visible()` с viewport 50 строк.
 fn bench_edit_visible_50_viewport(c: &mut Criterion) {
     let text = make_plain(5000);
     let mut doc = IncrementalDoc::new(&text);
@@ -44,7 +44,7 @@ fn bench_edit_visible_50_viewport(c: &mut Criterion) {
     });
 }
 
-/// Сравнение edit() vs edit_visible() на 10000 строк.
+// Сравнение edit() vs edit_visible() на 10000 строк.
 fn bench_edit_vs_visible_10k(c: &mut Criterion) {
     let text = make_plain(10000);
     let mut group = c.benchmark_group("edit/vs_visible_10k");
@@ -75,7 +75,7 @@ fn bench_edit_vs_visible_10k(c: &mut Criterion) {
     group.finish();
 }
 
-/// Вставка многострочного текста через edit_visible().
+// Вставка многострочного текста через edit_visible().
 fn bench_edit_visible_multiline(c: &mut Criterion) {
     let text = make_plain(5000);
     let mut doc = IncrementalDoc::new(&text);

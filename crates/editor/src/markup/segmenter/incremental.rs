@@ -13,14 +13,14 @@ use crate::markup::segment::{MarkerCategory, Segment};
 use crate::markup::segmenter::build::build_segments_from_nodes;
 use crate::markup::segmenter::helpers::to_style_flags;
 
-/// Преобразовать `IncrementalDoc` в `DocumentCache` (все строки).
+// Преобразовать `IncrementalDoc` в `DocumentCache` (все строки).
 pub fn incremental_to_cache(inc: &IncrementalDoc) -> DocumentCache {
     incremental_to_cache_visible(inc, None)
 }
 
-/// Преобразовать `IncrementalDoc` в `DocumentCache`, генерируя сегменты
-/// только для строк в `viewport`. Строки вне viewport получают пустой
-/// `MarkupCache` — при рендеринге они отобразятся как plain-текст.
+// Преобразовать `IncrementalDoc` в `DocumentCache`, генерируя сегменты
+// только для строк в `viewport`. Строки вне viewport получают пустой
+// `MarkupCache` — при рендеринге они отобразятся как plain-текст.
 pub fn incremental_to_cache_visible(
     inc: &IncrementalDoc,
     viewport: Option<&Viewport>,
@@ -76,10 +76,10 @@ pub fn incremental_to_cache_visible(
     cache
 }
 
-/// Преобразовать `LineAST` одной строки в `Vec<Segment>`.
-///
-/// Каждый вариант `LineAST` превращается в соответствующие сегменты,
-/// с учётом raw-позиций в исходном тексте.
+// Преобразовать `LineAST` одной строки в `Vec<Segment>`.
+//
+// Каждый вариант `LineAST` превращается в соответствующие сегменты,
+// с учётом raw-позиций в исходном тексте.
 fn line_ast_to_segments(line_ast: &LineAST, line_start: usize) -> Vec<Segment> {
     match line_ast {
         LineAST::Empty => vec![],

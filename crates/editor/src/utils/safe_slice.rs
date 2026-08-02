@@ -1,4 +1,4 @@
-/// Безопасное извлечение подстроки с корректировкой UTF-8 границ.
+// Безопасное извлечение подстроки с корректировкой UTF-8 границ.
 pub fn safe_slice(content: &str, start: usize, end: usize) -> &str {
     let len = content.len();
     let start = start.min(len);

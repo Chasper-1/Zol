@@ -5,32 +5,32 @@
 
 use super::line::{BlockKind, BlockRole, ParsedLine};
 
-/// Разобранный документ zoll.
-///
-/// # Кеш
-///
-/// Всё состояние документа — `lines`. При редактировании строки
-/// перепарсивается только она, `lines[i] = parse_line(new_text)`.
-/// merge-фаза не нужна — каждая строка уже знает свой `BlockKind`.
-///
-/// # Сериализация
-///
-/// Для получения текста из документа: проход по `lines`,
-/// группировка блок-контейнеров (%%%, $$$, !!!, \`\`\`) по
-/// соседним `BlockKind::Block`.
+// Разобранный документ zoll.
+//
+// # Кеш
+//
+// Всё состояние документа — `lines`. При редактировании строки
+// перепарсивается только она, `lines[i] = parse_line(new_text)`.
+// merge-фаза не нужна — каждая строка уже знает свой `BlockKind`.
+//
+// # Сериализация
+//
+// Для получения текста из документа: проход по `lines`,
+// группировка блок-контейнеров (%%%, $$$, !!!, \`\`\`) по
+// соседним `BlockKind::Block`.
 #[derive(Debug, Clone)]
 pub struct ParsedDoc {
-    /// Строки документа, каждая со своим типом и сегментами.
+    // Строки документа, каждая со своим типом и сегментами.
     pub lines: Vec<ParsedLine>,
 }
 
 impl ParsedDoc {
-    /// Создать пустой документ.
+    // Создать пустой документ.
     pub fn new() -> Self {
         Self { lines: Vec::new() }
     }
 
-    /// Создать документ из текста (парсит всё сразу).
+    // Создать документ из текста (парсит всё сразу).
     pub fn parse(text: &str) -> Self {
         let lines: Vec<ParsedLine> = text
             .lines()
@@ -39,42 +39,42 @@ impl ParsedDoc {
         Self { lines }
     }
 
-    /// Количество строк.
+    // Количество строк.
     pub fn num_lines(&self) -> usize {
         self.lines.len()
     }
 
-    /// Получить строку по индексу.
+    // Получить строку по индексу.
     pub fn line(&self, idx: usize) -> Option<&ParsedLine> {
         self.lines.get(idx)
     }
 
-    /// Заменить строку по индексу (перепарсить новую).
+    // Заменить строку по индексу (перепарсить новую).
     pub fn set_line(&mut self, idx: usize, source: &str) {
         if idx < self.lines.len() {
             self.lines[idx] = crate::parser::parse_line(source);
         }
     }
 
-    /// Добавить строку в конец.
+    // Добавить строку в конец.
     pub fn push_line(&mut self, source: &str) {
         self.lines.push(crate::parser::parse_line(source));
     }
 
-    /// Вставить строку по индексу.
+    // Вставить строку по индексу.
     pub fn insert_line(&mut self, idx: usize, source: &str) {
         self.lines.insert(idx, crate::parser::parse_line(source));
     }
 
-    /// Удалить строку по индексу.
+    // Удалить строку по индексу.
     pub fn remove_line(&mut self, idx: usize) {
         self.lines.remove(idx);
     }
 
-    /// Полный текст документа (сериализация).
-    ///
-    /// Проходит по строкам, группируя блок-контейнеры,
-    /// и возвращает текст в формате zoll.
+    // Полный текст документа (сериализация).
+    //
+    // Проходит по строкам, группируя блок-контейнеры,
+    // и возвращает текст в формате zoll.
     pub fn to_text(&self) -> String {
         let mut out = String::new();
         let mut i = 0;

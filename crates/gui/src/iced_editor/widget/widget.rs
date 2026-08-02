@@ -99,7 +99,7 @@ where
 // Helper: Element из IcedEditor
 // ---------------------------------------------------------------------------
 
-/// Создать `Element` с редактором.
+// Создать `Element` с редактором.
 pub fn editor_element<'a, Message: 'a>(
     inner: &'a EditorInner,
 ) -> Element<'a, Message, iced::Theme, iced::Renderer> {

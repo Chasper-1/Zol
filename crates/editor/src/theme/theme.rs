@@ -5,25 +5,25 @@
 
 use super::color::Rgba;
 
-/// Тема текста (шрифт, размер, цвет).
+// Тема текста (шрифт, размер, цвет).
 #[derive(Debug, Clone)]
 pub struct TextTheme {
     pub size: f32,
     pub color: Rgba,
-    /// Если `None` — используется системный шрифт по умолчанию.
+    // Если `None` — используется системный шрифт по умолчанию.
     pub font_family: Option<String>,
 }
 
-/// Тема редактора — снимок всех настроек для быстрого доступа.
+// Тема редактора — снимок всех настроек для быстрого доступа.
 #[derive(Debug, Clone)]
 pub struct EditorTheme {
-    /// Название темы (для идентификации в конфигах).
+    // Название темы (для идентификации в конфигах).
     pub name: String,
     pub padding: f32,
     pub radius: f32,
     pub background: Rgba,
     pub text: TextTheme,
-    /// Цвет фона выделенного текста.
+    // Цвет фона выделенного текста.
     pub selection_bg: Rgba,
 }
 

@@ -1,7 +1,7 @@
 use super::parsers;
 use super::rgba::Rgba;
 
-/// Формат записи цвета.
+// Формат записи цвета.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ColorFormat {
     Hex,
@@ -11,7 +11,7 @@ pub enum ColorFormat {
     Named,
 }
 
-/// Парсит строку в цвет.
+// Парсит строку в цвет.
 pub fn parse_color(s: &str) -> Result<Rgba, String> {
     let s = s.trim();
     if s.starts_with('#') {

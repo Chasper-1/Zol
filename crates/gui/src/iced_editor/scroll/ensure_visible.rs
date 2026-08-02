@@ -1,7 +1,7 @@
 use editor::render::ShapedDocument;
 use super::layout_y::layout_line_y;
 
-/// Откорректировать `scroll_y` так, чтобы строка с курсором была видна.
+// Откорректировать `scroll_y` так, чтобы строка с курсором была видна.
 pub fn ensure_cursor_visible(
     scroll_y: f32,
     viewport_height: f32,

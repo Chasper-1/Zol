@@ -28,19 +28,19 @@ pub struct Theme {
     pub link: [u8; 4],
     pub code: [u8; 4],
     pub selection: [u8; 4],
-    /// Per-token syntax-highlight palette (Step D): keyword / function / number /
-    /// string / comment / operator. Drives Typst code-mode coloring (and fenced
-    /// code where syntect is unavailable). Host-overridable.
+    // Per-token syntax-highlight palette (Step D): keyword / function / number /
+    // string / comment / operator. Drives Typst code-mode coloring (and fenced
+    // code where syntect is unavailable). Host-overridable.
     pub syn_keyword: [u8; 4],
     pub syn_function: [u8; 4],
     pub syn_number: [u8; 4],
     pub syn_string: [u8; 4],
     pub syn_comment: [u8; 4],
     pub syn_operator: [u8; 4],
-    /// Body font family. `None` ⇒ cosmic-text's default sans. The named family
-    /// must be loaded into the renderer's `FontSystem` (host responsibility).
+    // Body font family. `None` ⇒ cosmic-text's default sans. The named family
+    // must be loaded into the renderer's `FontSystem` (host responsibility).
     pub font_family: Option<String>,
-    /// Monospace/code font family. `None` ⇒ the generic monospace family.
+    // Monospace/code font family. `None` ⇒ the generic monospace family.
     pub code_font_family: Option<String>,
 }
 
@@ -84,36 +84,36 @@ pub struct Caret {
 pub struct RenderOut {
     pub frame: Frame,
     pub caret: Caret,
-    /// Full document height in px. Equals `frame.height` here; see [`ViewOut`]
-    /// for the viewport-rendering variant.
+    // Full document height in px. Equals `frame.height` here; see [`ViewOut`]
+    // for the viewport-rendering variant.
     pub doc_height: u32,
 }
 
-/// Output of [`TextRenderer::render_viewport`]: a viewport-sized frame plus the
-/// scroll the renderer actually resolved to (after clamping + caret-follow).
+// Output of [`TextRenderer::render_viewport`]: a viewport-sized frame plus the
+// scroll the renderer actually resolved to (after clamping + caret-follow).
 pub struct ViewOut {
-    /// Viewport-sized RGBA image (host shows it at a fixed position).
+    // Viewport-sized RGBA image (host shows it at a fixed position).
     pub frame: Frame,
-    /// Caret rectangle in **viewport-relative** coordinates.
+    // Caret rectangle in **viewport-relative** coordinates.
     pub caret: Caret,
-    /// The scroll offset actually used (input clamped, then caret-follow).
+    // The scroll offset actually used (input clamped, then caret-follow).
     pub scroll_y: f32,
-    /// Full scrollable document height in px (for the host's scrollbar).
+    // Full scrollable document height in px (for the host's scrollbar).
     pub doc_height: u32,
 }
 
 pub struct TextRenderer {
     font_system: FontSystem,
     swash: SwashCache,
-    /// Persistent buffer for the viewport path: re-used across keystrokes so we
-    /// only rebuild the lines that actually changed (cosmic-text's
-    /// `set_rich_text` otherwise rebuilds every line's text + AttrsList — the
-    /// dominant per-keystroke cost on long notes).
+    // Persistent buffer for the viewport path: re-used across keystrokes so we
+    // only rebuild the lines that actually changed (cosmic-text's
+    // `set_rich_text` otherwise rebuilds every line's text + AttrsList — the
+    // dominant per-keystroke cost on long notes).
     cache_buf: Option<Buffer>,
-    /// Per-line content signature matching `cache_buf.lines`. A line is rebuilt
-    /// only when its signature changes.
+    // Per-line content signature matching `cache_buf.lines`. A line is rebuilt
+    // only when its signature changes.
     cache_sigs: Vec<u64>,
-    /// Signature of (width, font metrics): any change forces a full rebuild.
+    // Signature of (width, font metrics): any change forces a full rebuild.
     cache_key: u64,
 }
 
@@ -160,14 +160,14 @@ impl TextRenderer {
         buffer
     }
 
-    /// Build (or incrementally update) the persistent viewport buffer, rebuilding
-    /// only the lines whose content changed since the last call. Identical layout
-    /// to [`build_buffer`] (same text + attrs + metrics + line ending), so caret /
-    /// hit / delta geometry are unaffected — verified by
-    /// `incremental_matches_full_render`.
-    ///
-    /// Returns the buffer by value (taken out of `self`); the caller must store it
-    /// back into `self.cache_buf` after use.
+    // Build (or incrementally update) the persistent viewport buffer, rebuilding
+    // only the lines whose content changed since the last call. Identical layout
+    // to [`build_buffer`] (same text + attrs + metrics + line ending), so caret /
+    // hit / delta geometry are unaffected — verified by
+    // `incremental_matches_full_render`.
+    //
+    // Returns the buffer by value (taken out of `self`); the caller must store it
+    // back into `self.cache_buf` after use.
     fn build_buffer_cached(&mut self, spans: &[Span], full_width: f32, theme: &Theme) -> Buffer {
         let shaping_w = (full_width - 2.0 * theme.margin_x).max(16.0);
         let key = theme_key(theme, shaping_w);
@@ -235,8 +235,8 @@ impl TextRenderer {
         (bottom.max(theme.line_height) + 2.0 * theme.margin_y).ceil() as u32
     }
 
-    /// Render to an RGBA frame, painting selection behind the glyphs and
-    /// returning the exact caret rectangle.
+    // Render to an RGBA frame, painting selection behind the glyphs and
+    // returning the exact caret rectangle.
     #[allow(clippy::too_many_arguments)]
     pub fn render(
         &mut self,
@@ -371,19 +371,19 @@ impl TextRenderer {
         }
     }
 
-    /// Render only the visible slice `[scroll_y, scroll_y + viewport_h)` of the
-    /// document into a **viewport-sized** frame, so per-keystroke allocation and
-    /// GPU upload are flat regardless of document length.
-    ///
-    /// The buffer is still shaped in full (geometry/caret/hit stay identical to
-    /// [`render`]); only rasterization is bounded. Caret `y` is returned in
-    /// viewport-relative coordinates. `doc_height` carries the full scrollable
-    /// height for the host's scrollbar.
-    ///
-    /// When `follow` is set the scroll is nudged so the caret stays on screen,
-    /// using the same buffer (one shaping pass) so the rasterized slice always
-    /// matches the resolved scroll — typing at the bottom can never paint a
-    /// stale slice.
+    // Render only the visible slice `[scroll_y, scroll_y + viewport_h)` of the
+    // document into a **viewport-sized** frame, so per-keystroke allocation and
+    // GPU upload are flat regardless of document length.
+    //
+    // The buffer is still shaped in full (geometry/caret/hit stay identical to
+    // [`render`]); only rasterization is bounded. Caret `y` is returned in
+    // viewport-relative coordinates. `doc_height` carries the full scrollable
+    // height for the host's scrollbar.
+    //
+    // When `follow` is set the scroll is nudged so the caret stays on screen,
+    // using the same buffer (one shaping pass) so the rasterized slice always
+    // matches the resolved scroll — typing at the bottom can never paint a
+    // stale slice.
     #[allow(clippy::too_many_arguments)]
     pub fn render_viewport(
         &mut self,
@@ -599,8 +599,8 @@ impl TextRenderer {
         }
     }
 
-    /// Document-space caret rects for many char offsets, in one buffer build
-    /// (for multiple cursors). Margins included, like the primary caret.
+    // Document-space caret rects for many char offsets, in one buffer build
+    // (for multiple cursors). Margins included, like the primary caret.
     pub fn caret_rects(
         &mut self,
         spans: &[Span],
@@ -622,8 +622,8 @@ impl TextRenderer {
             .collect()
     }
 
-    /// Document-space rects covering the char range `[start, end)` (one per visual
-    /// line it spans). Used to position overlays (e.g. rendered math fragments).
+    // Document-space rects covering the char range `[start, end)` (one per visual
+    // line it spans). Used to position overlays (e.g. rendered math fragments).
     pub fn range_rects(
         &mut self,
         spans: &[Span],
@@ -698,8 +698,8 @@ impl TextRenderer {
 
 // ---- flat-index <-> rendered-cursor mapping -------------------------------
 
-/// Editable char index → (logical line, byte offset within the line's *editable*
-/// text).
+// Editable char index → (logical line, byte offset within the line's *editable*
+// text).
 fn linecol(text: &str, char_idx: usize) -> (usize, usize) {
     let mut line = 0usize;
     let mut byte_in_line = 0usize;
@@ -717,7 +717,7 @@ fn linecol(text: &str, char_idx: usize) -> (usize, usize) {
     (line, byte_in_line)
 }
 
-/// Inverse of [`linecol`]: (line, editable byte offset) → editable char index.
+// Inverse of [`linecol`]: (line, editable byte offset) → editable char index.
 fn flat_of(text: &str, target_line: usize, target_byte: usize) -> usize {
     let mut line = 0usize;
     let mut chars = 0usize;
@@ -740,7 +740,7 @@ fn flat_of(text: &str, target_line: usize, target_byte: usize) -> usize {
     chars
 }
 
-/// Source (line, byte) → display Cursor: `display_byte = src_byte + delta`.
+// Source (line, byte) → display Cursor: `display_byte = src_byte + delta`.
 fn flat_to_render_cursor(text: &str, deltas: &[i32], char_idx: usize) -> Cursor {
     let (line, byte) = linecol(text, char_idx);
     let d = deltas.get(line).copied().unwrap_or(0);
@@ -748,7 +748,7 @@ fn flat_to_render_cursor(text: &str, deltas: &[i32], char_idx: usize) -> Cursor 
     Cursor::new(line, display_byte)
 }
 
-/// Display Cursor → source char index: `src_byte = display_byte − delta`.
+// Display Cursor → source char index: `src_byte = display_byte − delta`.
 fn render_cursor_to_flat(text: &str, deltas: &[i32], cursor: Cursor) -> usize {
     let d = deltas.get(cursor.line).copied().unwrap_or(0);
     let src_byte = (cursor.index as i32 - d).max(0) as usize;
@@ -757,7 +757,7 @@ fn render_cursor_to_flat(text: &str, deltas: &[i32], cursor: Cursor) -> usize {
 
 // ---- raster helpers --------------------------------------------------------
 
-/// The base attributes for unstyled text: the host body font family if set.
+// The base attributes for unstyled text: the host body font family if set.
 fn base_attrs(theme: &Theme) -> Attrs<'_> {
     let mut a = Attrs::new();
     if let Some(f) = &theme.font_family {
@@ -800,16 +800,16 @@ fn rgba(c: [u8; 4]) -> Color {
 
 // ---- incremental buffer support -------------------------------------------
 
-/// One display line, split out of the flat span list: its style runs (borrowed,
-/// no allocation) plus a content signature used to detect changes cheaply.
+// One display line, split out of the flat span list: its style runs (borrowed,
+// no allocation) plus a content signature used to detect changes cheaply.
 struct LineParts<'a> {
     runs: Vec<(&'a str, MarkSet, Option<[u8; 4]>, f32)>,
     sig: u64,
 }
 
-/// Split the flat spans into per-display-line run lists, splitting on `\n` (the
-/// same hard break cosmic-text uses for typical LF markdown). Unchanged lines
-/// cost only a hash — no string allocation.
+// Split the flat spans into per-display-line run lists, splitting on `\n` (the
+// same hard break cosmic-text uses for typical LF markdown). Unchanged lines
+// cost only a hash — no string allocation.
 fn split_lines(spans: &[Span]) -> Vec<LineParts<'_>> {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
@@ -862,9 +862,9 @@ fn split_lines(spans: &[Span]) -> Vec<LineParts<'_>> {
     out
 }
 
-/// Source character range `[start, end)` spanned by the visible runs, used to
-/// skip decorations that aren't on screen. Display line index == source line
-/// index (1:1; long lines wrap into multiple runs sharing a `line_i`).
+// Source character range `[start, end)` spanned by the visible runs, used to
+// skip decorations that aren't on screen. Display line index == source line
+// index (1:1; long lines wrap into multiple runs sharing a `line_i`).
 fn visible_source_range(
     vis: &[cosmic_text::LayoutRun],
     text: &str,
@@ -879,9 +879,9 @@ fn visible_source_range(
     (flat_of(text, min_line, 0), flat_of(text, max_line + 1, 0))
 }
 
-/// Build a cosmic-text `BufferLine` (unshaped) for one display line, matching
-/// exactly what `set_rich_text` would produce for it (same text + AttrsList +
-/// metrics + line ending) so layout/caret/hit geometry are unaffected.
+// Build a cosmic-text `BufferLine` (unshaped) for one display line, matching
+// exactly what `set_rich_text` would produce for it (same text + AttrsList +
+// metrics + line ending) so layout/caret/hit geometry are unaffected.
 fn make_buffer_line(lp: &LineParts, theme: &Theme) -> BufferLine {
     let default_attrs = base_attrs(theme);
     let mut text = String::new();
@@ -898,8 +898,8 @@ fn make_buffer_line(lp: &LineParts, theme: &Theme) -> BufferLine {
     BufferLine::new(text, LineEnding::default(), attrs_list, Shaping::Advanced)
 }
 
-/// Signature of the render parameters that, when changed, require a full buffer
-/// rebuild rather than a per-line update.
+// Signature of the render parameters that, when changed, require a full buffer
+// rebuild rather than a per-line update.
 fn theme_key(theme: &Theme, shaping_w: f32) -> u64 {
     use std::hash::{Hash, Hasher};
     let mut h = std::collections::hash_map::DefaultHasher::new();

@@ -6,7 +6,7 @@
 use crate::model::{BlockContainer, BlockRole};
 use crate::{BlockKind, MarkStyle, ParsedLine, Segment};
 
-/// Парсит одну строку (без `\n`) в `ParsedLine`.
+// Парсит одну строку (без `\n`) в `ParsedLine`.
 pub fn parse_line(line: &str) -> ParsedLine {
     let trimmed = line.trim_start();
 
@@ -147,10 +147,10 @@ pub fn parse_line(line: &str) -> ParsedLine {
     ParsedLine::new(line, BlockKind::Paragraph, segments)
 }
 
-/// Парсит inline-маркеры в тексте и возвращает плоский список сегментов.
-///
-/// Сегменты — диапазоны (start, end) от начала `text`.
-/// Вложенные маркеры схлопываются: `**//text//**` → один сегмент со стилем BOLD|ITALIC.
+// Парсит inline-маркеры в тексте и возвращает плоский список сегментов.
+//
+// Сегменты — диапазоны (start, end) от начала `text`.
+// Вложенные маркеры схлопываются: `**//text//**` → один сегмент со стилем BOLD|ITALIC.
 pub fn parse_inline_to_segments(text: &str, offset: usize) -> Vec<Segment> {
     if text.is_empty() {
         return Vec::new();
@@ -285,8 +285,8 @@ fn find_close_for_single(bytes: &[u8], open_pos: usize, len: usize) -> Option<(u
     None
 }
 
-/// Вычислить байтовое смещение подстроки `child` внутри `parent`.
-/// `child` должен быть подстрокой `parent` (возвращает 0 если нет).
+// Вычислить байтовое смещение подстроки `child` внутри `parent`.
+// `child` должен быть подстрокой `parent` (возвращает 0 если нет).
 #[inline]
 fn base_offset(parent: &str, child: &str) -> usize {
     if child.is_empty() || parent.is_empty() {
@@ -301,7 +301,7 @@ fn base_offset(parent: &str, child: &str) -> usize {
     }
 }
 
-/// Распарсить заголовок спойлера `!!!title:` или `!!!`
+// Распарсить заголовок спойлера `!!!title:` или `!!!`
 fn parse_spoiler_title(rest: &str) -> Option<String> {
     let s = rest.trim();
     if let Some(end) = s.find(':') {
@@ -313,7 +313,7 @@ fn parse_spoiler_title(rest: &str) -> Option<String> {
     None
 }
 
-/// Создать пустую блок-строку (только маркер, без контента).
+// Создать пустую блок-строку (только маркер, без контента).
 fn empty_block(
     line: &str,
     kind: BlockContainer,

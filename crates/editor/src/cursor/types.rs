@@ -2,27 +2,27 @@ use std::time::Instant;
 
 use super::grapheme::clamp_to_char_boundary;
 
-/// Позиция курсора в тексте.
-///
-/// `raw` всегда указывает на валидную **grapheme**-границу.
-/// `line` — кешированный номер строки.
-/// `anchor` — фиксированный конец выделения (None = нет выделения).
+// Позиция курсора в тексте.
+//
+// `raw` всегда указывает на валидную **grapheme**-границу.
+// `line` — кешированный номер строки.
+// `anchor` — фиксированный конец выделения (None = нет выделения).
 #[derive(Debug)]
 pub struct Cursor {
-    /// Байтовый оффсет от начала текста (активный конец выделения).
+    // Байтовый оффсет от начала текста (активный конец выделения).
     pub(crate) raw: usize,
-    /// Строка, в которой находится `raw`.
+    // Строка, в которой находится `raw`.
     pub(crate) line: usize,
-    /// Горизонтальная позиция для move_up/down (в пикселях).
+    // Горизонтальная позиция для move_up/down (в пикселях).
     pub(crate) col_visual: f32,
-    /// Время последнего изменения видимости курсора.
+    // Время последнего изменения видимости курсора.
     pub(crate) last_blink: Instant,
-    /// Фиксированный конец выделения; None = нет выделения.
+    // Фиксированный конец выделения; None = нет выделения.
     pub(crate) anchor: Option<usize>,
 }
 
 impl Cursor {
-    /// Создать курсор в начале текста.
+    // Создать курсор в начале текста.
     pub fn new() -> Self {
         Self {
             raw: 0,
@@ -45,14 +45,14 @@ impl Cursor {
         self.col_visual
     }
 
-    /// Установить `raw` с проверкой границ и пересчётом строки.
+    // Установить `raw` с проверкой границ и пересчётом строки.
     pub fn set_raw(&mut self, content: &str, line_starts: &[usize], new_raw: usize) {
         self.raw = clamp_to_char_boundary(content, new_raw);
         self.line = line_of_byte(line_starts, self.raw);
         self.force_blink();
     }
 
-    /// Установить номер строки напрямую (используется в api/).
+    // Установить номер строки напрямую (используется в api/).
     pub fn set_line(&mut self, line: usize) {
         self.line = line;
         self.force_blink();
@@ -67,22 +67,22 @@ impl Cursor {
 
     // ── Выделение ──
 
-    /// Диапазон выделения `(start, end)`, если выделение активно.
+    // Диапазон выделения `(start, end)`, если выделение активно.
     pub fn selection_range(&self) -> Option<(usize, usize)> {
         self.anchor.map(|a| (a.min(self.raw), a.max(self.raw)))
     }
 
-    /// Есть ли активное выделение.
+    // Есть ли активное выделение.
     pub fn has_selection(&self) -> bool {
         self.anchor.is_some()
     }
 
-    /// Сбросить выделение.
+    // Сбросить выделение.
     pub fn clear_selection(&mut self) {
         self.anchor = None;
     }
 
-    /// Установить anchor в текущую позицию (начало shift-расширения).
+    // Установить anchor в текущую позицию (начало shift-расширения).
     pub fn begin_selection(&mut self) {
         if self.anchor.is_none() {
             self.anchor = Some(self.raw);
@@ -114,7 +114,7 @@ impl Cursor {
     }
 }
 
-/// O(log n) бинарный поиск строки по байтовой позиции.
+// O(log n) бинарный поиск строки по байтовой позиции.
 pub(crate) fn line_of_byte(line_starts: &[usize], byte: usize) -> usize {
     if line_starts.is_empty() || byte == 0 {
         return 0;

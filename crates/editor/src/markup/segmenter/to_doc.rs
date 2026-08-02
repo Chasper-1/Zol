@@ -4,7 +4,7 @@ use crate::cache::DocumentCache;
 use crate::markup::segment::Segment;
 use crate::markup::segmenter::build::build_segments;
 
-/// Преобразует AST-документ zoll в DocumentCache для редактора.
+// Преобразует AST-документ zoll в DocumentCache для редактора.
 pub fn to_document_cache(doc: &MarkupDoc) -> DocumentCache {
     // 1. Собираем все сегменты в плоский список с raw-позициями
     let mut segments = Vec::new();

@@ -22,7 +22,7 @@ use crate::layout::reveal::RevealCtx;
 use crate::state::EditMode;
 use crate::theme::EditorTheme;
 
-/// Собрать документ: вычислить TextRun'ы → сшейпить → готово к отрисовке.
+// Собрать документ: вычислить TextRun'ы → сшейпить → готово к отрисовке.
 #[allow(clippy::too_many_arguments)]
 pub fn build(
     doc: &mut ShapedDocument,

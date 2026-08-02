@@ -8,13 +8,13 @@ use iced::{Element, Subscription, Task, Theme};
 
 use crate::iced_editor::{editor_element, EditorInner};
 
-/// Сообщения приложения.
+// Сообщения приложения.
 #[derive(Debug, Clone)]
 pub enum Message {
     Tick,
 }
 
-/// Состояние приложения.
+// Состояние приложения.
 struct AppState {
     inner: EditorInner,
 }
@@ -55,7 +55,7 @@ fn view(app_state: &AppState) -> Element<'_, Message, Theme, iced::Renderer> {
         .into()
 }
 
-/// Запустить Iced-приложение.
+// Запустить Iced-приложение.
 pub fn run() -> iced::Result {
     iced::application(boot, update, view)
         .subscription(subscription)

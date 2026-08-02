@@ -14,7 +14,7 @@
 use super::color::Rgba;
 use super::handle::Handle;
 
-/// Реестр ручек темы.
+// Реестр ручек темы.
 pub mod handles {
     use super::*;
 
