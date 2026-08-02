@@ -3,7 +3,7 @@
 //! Определяет тип строки по первой колонке, парсит inline-маркеры
 //! и возвращает готовый кеш-объект с сегментами.
 
-use crate::model::{BlockContainer, BlockRole};
+use crate::model::{BlockContainer, BlockRole, MARKERS, MarkerCategory};
 use crate::{BlockKind, MarkStyle, ParsedLine, Segment};
 
 // Парсит одну строку (без `\n`) в `ParsedLine`.
@@ -49,22 +49,23 @@ pub fn parse_line(line: &str) -> ParsedLine {
     if let Some(pos) = trimmed.find("!!") {
         let after = &trimmed[pos + 2..];
         let rest = after.trim();
-        let title = if let Some(end) = rest.find(':') {
-            Some(rest[..end].trim().to_string())
-        } else {
-            None
-        };
-        let content = if title.is_some() {
-            if let Some(end) = rest.find(':') {
-                rest[end + 1..].trim().to_string()
+        // rest — подслайс строки: считаем реальное смещение для сегментов.
+        // (Раньше контент был owned String с base=0 — сегменты указывали
+        //  не в то место исходной строки.)
+        let (title, content) = if let Some(end) = rest.find(':') {
+            let title = rest[..end].trim();
+            let content = rest[end + 1..].trim();
+            let title = if title.is_empty() {
+                None
             } else {
-                String::new()
-            }
+                Some(title.to_string())
+            };
+            (title, content)
         } else {
-            rest.to_string()
+            (None, rest)
         };
-        // content — owned String, не подстрока line → base=0, неважно
-        let segments = parse_inline_to_segments(&content, 0);
+        let base = base_offset(line, content);
+        let segments = parse_inline_to_segments(content, base);
         return ParsedLine::new(line, BlockKind::SpoilerLine(title), segments);
     }
 
@@ -180,8 +181,7 @@ pub fn parse_inline_to_segments(text: &str, offset: usize) -> Vec<Segment> {
         }
 
         // ── Поиск inline-маркеров ──
-        if let Some((close_pos, style)) = match_inline_marker(bytes, pos, len) {
-            let open_len = marker_len(style);
+        if let Some((close_pos, open_len, style)) = match_inline_marker(bytes, pos, len) {
             let open_end = pos + open_len;
             if close_pos > open_end {
                 flush_text(&mut segments, &mut text_start, pos, offset);
@@ -214,10 +214,6 @@ pub fn parse_inline_to_segments(text: &str, offset: usize) -> Vec<Segment> {
 
 // ─── Помощники ─────────────────────────────────────────────────
 
-fn marker_len(style: MarkStyle) -> usize {
-    if style == MarkStyle::FORMULA { 1 } else { 2 }
-}
-
 fn utf8_char_len(b: u8) -> usize {
     if b < 128 {
         1
@@ -238,49 +234,33 @@ fn flush_text(segments: &mut Vec<Segment>, start: &mut Option<usize>, end: usize
     }
 }
 
-fn match_inline_marker(bytes: &[u8], pos: usize, len: usize) -> Option<(usize, MarkStyle)> {
-    if pos + 1 >= len {
-        return None;
-    }
-    let (style, open_len) = match (bytes[pos], bytes[pos + 1]) {
-        (b'*', b'*') => (MarkStyle::BOLD, 2),
-        (b'/', b'/') => (MarkStyle::ITALIC, 2),
-        (b'_', b'_') => (MarkStyle::UNDERLINE, 2),
-        (b'~', b'~') => (MarkStyle::STRIKETHROUGH, 2),
-        (b'=', b'=') => (MarkStyle::HIGHLIGHT, 2),
-        (b'+', b'+') => (MarkStyle::INSERTION, 2),
-        (b'-', b'-') => (MarkStyle::DELETION, 2),
-        (b'\'', b'\'') => (MarkStyle::SUPERSCRIPT, 2),
-        (b',', b',') => (MarkStyle::SUBSCRIPT, 2),
-        (b'$', _) => return find_close_for_single(bytes, pos, len),
-        _ => return None,
-    };
-    find_close(bytes, pos, open_len, style)
-}
-
-fn find_close(
-    bytes: &[u8],
-    open_pos: usize,
-    open_len: usize,
-    style: MarkStyle,
-) -> Option<(usize, MarkStyle)> {
-    let start = open_pos + open_len;
-    let mut i = start;
-    while i + open_len <= bytes.len() {
-        if bytes[i] == bytes[open_pos] && bytes[i + 1] == bytes[open_pos + 1] {
-            return Some((i, style));
+// Ищет inline-маркер в `bytes` начиная с `pos`.
+// Возвращает `(close_pos, open_len, style)` — позицию закрывающего,
+// длину открывающего и стиль. Маркеры берутся из `MARKERS`.
+fn match_inline_marker(bytes: &[u8], pos: usize, len: usize) -> Option<(usize, usize, MarkStyle)> {
+    for def in MARKERS {
+        if def.category != MarkerCategory::Inline {
+            continue;
         }
-        i += 1;
+        let open = def.open.as_bytes();
+        let open_len = open.len();
+        if pos + open_len > len || &bytes[pos..pos + open_len] != open {
+            continue;
+        }
+        let close_pos = find_close(bytes, pos + open_len, def.close.as_bytes(), len)?;
+        return Some((close_pos, open_len, def.style));
     }
     None
 }
 
-fn find_close_for_single(bytes: &[u8], open_pos: usize, len: usize) -> Option<(usize, MarkStyle)> {
-    let start = open_pos + 1;
-    for i in start..len {
-        if bytes[i] == b'$' {
-            return Some((i, MarkStyle::FORMULA));
+// Ищет закрывающую последовательность `close` начиная с `start`.
+fn find_close(bytes: &[u8], start: usize, close: &[u8], len: usize) -> Option<usize> {
+    let mut i = start;
+    while i + close.len() <= len {
+        if &bytes[i..i + close.len()] == close {
+            return Some(i);
         }
+        i += 1;
     }
     None
 }
